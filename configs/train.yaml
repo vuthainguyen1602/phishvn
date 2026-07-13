@@ -1,0 +1,15 @@
+# Central config for reproducibility (seed + paths + hyperparams).
+seed: 42
+data:
+  raw: data/raw
+  processed: data/processed
+url_model:
+  in: data/processed/dataset_url.csv
+  out: models/url_rf.joblib
+text_model:
+  in: data/processed/dataset_sms.csv
+  base: vinai/phobert-base
+  epochs: 4
+  batch: 16
+  maxlen: 128
+  out: models/phobert_sms
