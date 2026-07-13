@@ -12,8 +12,8 @@ date-released: "2026-07-13"
 license: CC-BY-4.0
 # TODO: replace with the DOI assigned by Mendeley Data (or Zenodo) after curation.
 doi: 10.17632/XXXXXXXX
-url: "https://github.com/USERNAME/PhishVN"
-repository-code: "https://github.com/USERNAME/PhishVN"
+url: "https://github.com/vuthainguyen1602/phishvn"
+repository-code: "https://github.com/vuthainguyen1602/phishvn"
 keywords:
   - phishing detection
   - Vietnamese
