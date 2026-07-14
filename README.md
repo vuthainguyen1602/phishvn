@@ -8,7 +8,7 @@ impersonation-scenario labels, gold/silver confidence tiers, and a group-aware t
 > This repository holds the **code** (MIT); the **data** is archived separately at the DOI above.
 
 ## What's here
-- `scripts/` — collection, normalisation, feature extraction, baselines, robustness, release tools.
+- `scripts/` — URL data collection, normalisation, CompPhish features, baselines, audit, release tools.
 - `docs/` — datasheet, column schema, data-source notes.
 - `tests/`, `configs/`, `Makefile`, `dvc.yaml` — reproducibility.
 
