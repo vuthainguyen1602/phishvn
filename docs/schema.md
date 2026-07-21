@@ -15,7 +15,8 @@ study. Text-message/email/QR channels are NOT part of this release.
 | `source` | string | Provenance | `tinnhiemmang`, `tinnhiem_web`, `tinnhiem_org`, `tranco` |
 | `scenario` | enum | Impersonation sector (from URL brand tokens) | `bank`, `gov`, `tax`, `ecommerce`, `telecom`, `delivery`, `social`, `gaming`, `other` |
 | `impersonated_org` | string | Impersonated org (if provided; often empty) | `Vietcombank` |
-| `collected_at` | date | First-seen date (temporal split) | `2025-02-18` |
+| `collected_at` | date | Event date attested by the source (detection/certification date); empty for whitelist/top-list benign | `18/02/2025` |
+| `scraped_at` | datetime | When we fetched the row (provenance only; never used for splitting) | `2026-07-13T09:30:47+00:00` |
 | `label_source` | enum | How the label was assigned | `feed` |
 | `tier` | enum | Label-confidence tier | `gold`, `silver` |
 | `status` | string | Original source handling status | `Đã xử lý`, `Đang xử lý` |
@@ -50,6 +51,8 @@ are available, referenced by record id, with `title`, `num_forms`, `html_len` wh
 ## Conventions
 - **PII** (phone numbers, emails, names, account numbers): never in the released set; any `id↔PII`
   mapping stays private and encrypted, not released.
-- **Temporal split:** ordered by `collected_at`, grouped by registrable domain; train = oldest,
-  test = newest — measures drift and prevents campaign leakage.
+- **Split:** grouped by registrable domain (prevents campaign leakage). Groups with an event
+  date (`collected_at`) are ordered temporally — train = oldest, test = newest (measures drift);
+  groups without one (whitelist/top-list benign, which attest no event date) are assigned
+  70/15/15 at random. `scraped_at` is never used for splitting.
 - Never modify `raw/`; all transformations happen when building `processed/`.

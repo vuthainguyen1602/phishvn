@@ -48,7 +48,7 @@ from bs4 import BeautifulSoup
 
 BASE = "https://tinnhiemmang.vn/website-lua-dao"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (research-crawler; contact: your-email@example.edu.vn)",
+    "User-Agent": "Mozilla/5.0 (research-crawler; contact: nvthai1602@gmail.com)",
     "Accept-Language": "vi,en;q=0.8",
 }
 
@@ -254,7 +254,7 @@ def scrape(out_csv, start_page, end_page, delay, resume, query="", tags=None,
                   "from your browser (DevTools > Copy as cURL).", file=sys.stderr)
 
     with open(out_csv, mode, newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=fields)
+        w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         if is_new_file:
             w.writeheader()
 
@@ -352,7 +352,10 @@ def scrape_windows(out_csv, start, end, window_days, delay, resume, type_="fake"
 
 
 def fetch_feeds(out_csv: str):
-    """Bonus: OpenPhish + URLhaus public feeds (international phishing URLs, filter for VN later)."""
+    """Bonus: OpenPhish community feed (recent international phishing URLs — usually still LIVE,
+    so they are also the best candidates for HTML/screenshot capture). URLhaus was dropped on
+    purpose: it tracks malware distribution, not phishing, so its rows must not be labelled
+    phishing."""
     rows = []
     now = datetime.now(timezone.utc).isoformat()
     # OpenPhish community feed (text, one URL per line)
@@ -363,18 +366,8 @@ def fetch_feeds(out_csv: str):
                 rows.append({"url": u.strip(), "source": "openphish", "scraped_at": now})
     except requests.RequestException as e:
         print(f"[!] OpenPhish error: {e}", file=sys.stderr)
-    # URLhaus (CSV online)
-    try:
-        csv_txt = requests.get("https://urlhaus.abuse.ch/downloads/csv_online/", headers=HEADERS, timeout=60).text
-        for line in csv_txt.splitlines():
-            if line.startswith("#") or not line.strip():
-                continue
-            parts = next(csv.reader([line]))
-            if len(parts) > 2:
-                rows.append({"url": parts[2], "source": "urlhaus", "scraped_at": now})
-    except requests.RequestException as e:
-        print(f"[!] URLhaus error: {e}", file=sys.stderr)
 
+    os.makedirs(os.path.dirname(out_csv) or ".", exist_ok=True)
     with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["url", "source", "scraped_at"])
         w.writeheader()
@@ -409,8 +402,8 @@ def main():
     ap.add_argument("--from", dest="from_date", default="2020-01-01", help="Window start (yyyy-mm-dd)")
     ap.add_argument("--to", dest="to_date", default="", help="Window end (yyyy-mm-dd; default today)")
     ap.add_argument("--window-days", type=int, default=15, help="Days per window (smaller = safer vs the ~1k/query cap)")
-    ap.add_argument("--feeds", action="store_true", help="Also fetch OpenPhish + URLhaus")
-    ap.add_argument("--out-feeds", default="feeds.csv")
+    ap.add_argument("--feeds", action="store_true", help="Also fetch the OpenPhish community feed")
+    ap.add_argument("--out-feeds", default="data/raw/openphish/feed.csv")
     args = ap.parse_args()
 
     tags = {}

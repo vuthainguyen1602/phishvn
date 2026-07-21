@@ -32,3 +32,39 @@ def test_map_scenario():
     assert nm.map_scenario("Bộ Công An") == "gov"
     assert nm.map_scenario("Shopee khuyến mãi") == "ecommerce"
     assert nm.map_scenario("Một tổ chức lạ") == "other"
+
+
+def test_clean_title():
+    from watch_chongluadao import clean_title
+    assert clean_title("Ngân hàng \x00bảo mật\r\n") == "Ngân hàng  bảo mật"
+    assert clean_title(None) == ""
+    assert len(clean_title("x" * 999)) == 200
+
+
+def test_brand_token_extraction():
+    import build_brand_tokens as bbt
+    assert bbt.domain_token("vietcombank.com.vn") == "vietcombank"
+    assert bbt.domain_token("tiki.vn") == "tiki"
+    assert bbt.domain_token("www.moet.gov.vn") == "moet"
+    assert bbt.name_token("Công ty Cổ phần Thế Giới Di Động") == "thegioididong"
+    assert bbt.token_mode("airlines", 3) is None       # deny list
+    assert bbt.token_mode("tiki", 3) == "word"          # short -> boundary match
+    assert bbt.token_mode("thegioididong", 3) == "substring"
+
+
+def test_brand_tokens_extend_is_vn_target(tmp_path):
+    import json
+    import build_brand_tokens as bbt
+    import vn_filter as vf
+
+    rows = [{"org_name": "Tiki", "domain": "tiki.vn"},
+            {"org_name": "Vietcombank", "domain": "vietcombank.com.vn"}]
+    result = bbt.build(rows, min_len=3)
+    assert [t["token"] for t in result["tokens"]] == ["tiki"]
+    assert "vietcombank" in result["covered_by_static"]  # static VN_TOKENS has "vietcom"
+
+    p = tmp_path / "brand_tokens.json"
+    p.write_text(json.dumps(result), encoding="utf-8")
+    rx = vf.load_brand_regex(p)
+    assert rx.search("tiki-khuyenmai.top")
+    assert not rx.search("batiki.com")                   # word boundary holds

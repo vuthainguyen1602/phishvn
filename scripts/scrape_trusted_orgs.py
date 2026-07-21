@@ -25,10 +25,15 @@ from bs4 import BeautifulSoup
 
 BASE = "https://tinnhiemmang.vn/to-chuc-tin-nhiem"
 SITE = "https://tinnhiemmang.vn"
-HEADERS = {"User-Agent": "research-crawler (contact: you@example.edu.vn)", "Accept-Language": "vi"}
+HEADERS = {"User-Agent": "research-crawler (contact: nvthai1602@gmail.com)", "Accept-Language": "vi"}
 CERT_RE = re.compile(r"Tín nhiệm mạng:\s*(\d{2}/\d{2}/\d{4})")
 MST_RE = re.compile(r"Mã số thuế[:\s]*([0-9]{10}(?:-[0-9]{3})?)")
-SKIP = ("tinnhiemmang", "facebook", "youtube", "google", "cdn-cgi", "javascript")
+# enrich(): links to skip when hunting the org's own website on its detail page. Social/platform
+# links matter — when an org has no website, the first external link is often its fanpage, and a
+# wrong pick turns e.g. instagram.com into that org's "official domain" downstream.
+SKIP = ("tinnhiemmang", "facebook", "youtube", "google", "cdn-cgi", "javascript",
+        "instagram", "twitter", "x.com", "linkedin", "tiktok", "github", "wordpress",
+        "discord", "whatsapp", "telegram", "zalo.me", "apps.apple", "goo.gl", "bit.ly")
 
 
 def fetch(url, retries=4):
@@ -50,9 +55,12 @@ def parse_list(html: str):
     soup = BeautifulSoup(html, "html.parser")
     out = []
     for a in soup.select('a[href*="/danh-ba-tin-nhiem/"]'):
+        # NOTE: hrefs are absolute (https://tinnhiemmang.vn/danh-ba-tin-nhiem/...) — do not apply
+        # SKIP here ("tinnhiemmang" would drop every entry); the CERT_RE gate below already drops
+        # nav/footer links. SKIP is for enrich(), where internal links must be ignored.
         href = a.get("href", "")
         name = a.get_text(" ", strip=True)
-        if not name or any(s in href.lower() for s in SKIP):
+        if not name:
             continue
         box = a.find_parent(["li", "div"])
         text = box.get_text(" ", strip=True) if box else ""

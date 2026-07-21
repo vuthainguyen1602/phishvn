@@ -7,8 +7,8 @@ abstract: >-
   gold/silver label-confidence tiers, and a group-aware temporal split. Includes a preliminary
   paired HTML/screenshot subset.
 type: dataset
-version: 1.0.0
-date-released: "2026-07-13"
+version: 2.0.0
+date-released: "2026-07-21"
 license: CC-BY-4.0
 # TODO: replace with the DOI assigned by Mendeley Data (or Zenodo) after curation.
 doi: 10.17632/XXXXXXXX

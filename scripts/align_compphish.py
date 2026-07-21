@@ -55,9 +55,10 @@ def main():
         raise SystemExit(f"No URL column found; have {cols}. Pass --url-col.")
     lcol = lower.get(args.label_col.lower(), args.label_col)
     scol = lower.get("split")   # carry over the group-aware split if the input has one
+    tcol = lower.get("tier")    # carry the label-confidence tier so benchmarks can slice on it
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-    fields = COLUMNS + ["label"] + (["split"] if scol else [])
+    fields = COLUMNS + ["label"] + (["split"] if scol else []) + (["tier"] if tcol else [])
     n = 0
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
@@ -70,6 +71,8 @@ def main():
             feat["label"] = to_label(r.get(lcol, ""))
             if scol:
                 feat["split"] = r.get(scol, "")
+            if tcol:
+                feat["tier"] = r.get(tcol, "")
             w.writerow(feat); n += 1
     print(f"Wrote {n} rows -> {args.out} (CompPhish schema)")
 

@@ -12,23 +12,37 @@
 
 ## 2. Composition
 - **Unit:** URLs (not people, not messages).
-- **Size:** 8,510 records — 2,588 phishing, 5,922 legitimate.
+- **Size:** 51,362 records — 36,871 phishing, 14,491 legitimate. Verified gold+silver core:
+  17,079 (2,588 NCSC phishing + 14,491 benign); bronze expansion: 34,283 (33,983 ChongLuaDao +
+  ~300 OpenPhish), ~50% of the ChongLuaDao rows carry a reconstructed first-seen date.
 - **Channels:** `url` (with a few `social`). No SMS/email/QR in this release.
 - **Labels:** `phishing` / `benign`, inherited from the sources.
-- **Confidence tiers:** `gold` (7,588: source-verified/handled + curated benign) and `silver`
-  (922: under-processing phishing + Tranco benign).
+- **Confidence tiers:** `gold` (7,588: source-verified/handled + curated benign), `silver`
+  (9,491: under-processing NCSC phishing + Tranco benign), and `bronze` (34,283: ChongLuaDao
+  community snapshot + OpenPhish feed — undated, excluded from the primary benchmark).
 - **Scenario labels:** impersonation sector inferred from URL brand tokens (bank, government, tax,
   e-commerce, telecom, delivery, social, gaming, other).
-- **Preliminary content subset:** ~112 rendered HTML pages and ~104 screenshots (phishing side),
-  referenced by record id.
+- **Preliminary content subset:** 933 rendered HTML pages and 869 screenshots (209 phishing, 660 benign;
+  screenshots include urlscan.io archive captures of live OpenPhish URLs), referenced by record
+  id / scan UUID. Note: unauthenticated urlscan DOM downloads are rate-limited — set
+  `URLSCAN_API_KEY` (free registration) before scaling the HTML capture.
 
 ## 3. Collection
-- **Phishing URLs:** NCSC "Tin Nhiem Mang" blacklist (single-source in this release; international
-  feeds such as PhishTank/OpenPhish/URLhaus are a planned addition).
-- **Benign URLs:** the certified trusted-organisation registry (easy negatives) + a Tranco top-list
-  sample (hard negatives) + the trusted-org directory.
-- **Time span:** phishing first-seen dates span 2020–2025; benign registry entries are largely
-  undated (a current snapshot).
+- **Phishing URLs:** three sources — NCSC "Tin Nhiem Mang" blacklist (verified, time-stamped;
+  gold/silver), the ChongLuaDao community blacklist (last public snapshot 2024-05-16, via the
+  daily-scrape mirror, since the project's API went offline; bronze — per-domain first-seen dates
+  reconstructed for ~50% via `chongluadao_first_seen.py` from Wayback-archived API ObjectIds and
+  mirror git history), and the OpenPhish community feed (recent international URLs, bronze).
+  623 registrable domains appear independently in both NCSC and ChongLuaDao (cross-source
+  agreement). URLhaus is excluded on purpose: it tracks malware distribution rather than phishing.
+- **Benign URLs:** three source-tagged strata of increasing difficulty — the certified
+  trusted-organisation registry/whitelist (`tinnhiem_web`/`tinnhiem_org`, easy), a `.vn`-filtered
+  Tranco slice (`tranco_vn`, popular sites Vietnamese users actually visit), and a global Tranco
+  sample (`tranco`, hard negatives that break the "non-.vn → phishing" TLD shortcut).
+- **Time span:** phishing first-seen dates span 2020-02-08 – 2025-02-18; benign registry entries
+  are largely undated (a current snapshot). Note: the public NCSC feed has published no detections
+  dated after 2025-02-18 (verified against the feed's date-filter endpoint on 2026-07-14), so this
+  release captures the feed's full published history; monitoring continues in case it resumes.
 - **Method:** polite web scraping (rate-limited, robots-respecting); content subset via urlscan.io
   snapshots.
 - **Legal:** public NCSC data; complies with Decree 13/2023/ND-CP and the Personal Data Protection
@@ -41,7 +55,9 @@
 - **Group-aware temporal split** (70/15/15) grouped by registrable domain, so campaign subdomains
   never span train/test.
 - **PII redaction** (phone/email/account numbers → tokens); no id↔PII mapping is released.
-- Label-quality audit: two annotators re-check a random sample; Cohen's `κ` = [to be filled].
+- Label-quality audit: two annotators independently re-check a blinded 200-row stratified sample
+  (annotation in progress); Cohen's `κ` and the consensus-vs-source label-noise estimate will be
+  reported here on completion (`make_verification_sample.py score`).
 
 ## 5. Distribution
 - **Open tier (CC BY 4.0):** URL table, CompPhish-aligned features, labels, splits, documentation.
@@ -50,7 +66,7 @@
 - **License:** CC BY 4.0 (data); MIT (code). **Attribution:** NCSC "Tin Nhiem Mang"; the Tranco list.
 
 ## 6. Maintenance
-- **Versioning:** semantic version + date (this is v1.0.0). **Updates:** planned to counter concept
+- **Versioning:** semantic version + date (this is v2.0.0). **Updates:** planned to counter concept
   drift and to add channels/coverage. **Contact:** nvthai@utc2.edu.vn.
 
 ## 7. Limitations & bias
@@ -58,5 +74,8 @@
   content, which is only a small preliminary subset here.
 - **Benign composition:** dominated by a curated trusted-organisation registry; the Tranco sample
   adds harder negatives but should be scaled up for stronger external validity.
-- **Single phishing source** (NCSC) may skew toward brand-impersonation sites.
-- **Content subset covers the phishing side**; benign page capture is future work.
+- **Verified core is single-source** (NCSC); the bronze expansion adds ChongLuaDao + OpenPhish but is undated and community-labelled.
+- **Content subset spans both classes but is a fraction of the URL table.** Phishing and benign
+  pages are captured through one urlscan pipeline (209 phishing, 660 benign; 933 paired pages), so
+  both classes share one capture method. As coverage is still well below the full URL table,
+  content-level results remain preliminary.

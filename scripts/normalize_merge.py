@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 import pandas as pd
 
 CORE = ["id", "channel", "label", "source", "is_llm", "lang", "scenario",
-        "impersonated_org", "collected_at", "label_source", "split"]
+        "impersonated_org", "collected_at", "scraped_at", "label_source", "split"]
 
 SUSPICIOUS_TLDS = {"top", "xyz", "cc", "online", "info", "click", "shop", "vip", "icu", "buzz"}
 
@@ -110,18 +110,26 @@ def url_features(url: str) -> dict:
     else:
         u2 = u
     p = urlparse(u2)
-    host = p.hostname or ""
-    tld = host.rsplit(".", 1)[-1].lower() if "." in host else ""
+    host = (p.hostname or "").lower()
+    tld = host.rsplit(".", 1)[-1] if "." in host else ""
     labels = host.split(".")
     has_ip = 1 if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", host) else 0
+    # subdomain count relative to the registrable domain (eTLD+1), so multi-part TLDs
+    # (.com.vn, .gov.vn) don't inflate the count for one class of domains
+    rd = reg_domain(host)
+    if rd and host.endswith(rd):
+        sub = host[: -len(rd)].rstrip(".")
+        num_sub = len(sub.split(".")) if sub else 0
+    else:
+        num_sub = max(0, len(labels) - 2)
     return {
         "url": u,
         "url_norm": u2.lower(),
-        "domain": host.lower(),
+        "domain": host,
         "tld": tld,
         "url_len": len(u),
         "num_dots": u.count("."),
-        "num_subdomains": max(0, len(labels) - 2),
+        "num_subdomains": num_sub,
         "has_ip": has_ip,
         "has_at": 1 if "@" in u else 0,
         "suspicious_tld": 1 if tld in SUSPICIOUS_TLDS else 0,
@@ -129,10 +137,15 @@ def url_features(url: str) -> dict:
 
 
 def base_row(channel, label, source, is_llm=0, lang="vi", scenario="other",
-             org="", collected_at="", label_source="feed"):
+             org="", collected_at="", label_source="feed", scraped_at=""):
+    """collected_at = the EVENT date attested by the source (detection date, certification
+    date, receive date) — this is what the temporal split orders by. scraped_at = when WE
+    fetched the row; never used for splitting (it says nothing about the sample itself and
+    would dump every freshly-scraped source into the newest split)."""
     return {"channel": channel, "label": label, "source": source, "is_llm": is_llm,
             "lang": lang, "scenario": scenario, "impersonated_org": org,
-            "collected_at": collected_at, "label_source": label_source, "split": ""}
+            "collected_at": collected_at, "scraped_at": scraped_at,
+            "label_source": label_source, "split": ""}
 
 
 # ---------- Loaders per source ----------
@@ -150,7 +163,8 @@ def load_tinnhiemmang(path, keep_status=None) -> list[dict]:
         ch = "social" if str(r.get("type", "")).lower() == "social" else "url"
         row = base_row(ch, "phishing", "tinnhiemmang", 0, "vi",
                        map_scenario(org + " " + str(r.get("sector", "")) + " " + dom),
-                       org, str(r.get("detected_date", "")), "feed")
+                       org, str(r.get("detected_date", "")), "feed",
+                       scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(str(r.get("domain", ""))))
         row["status"] = status
         row["tier"] = STATUS_TIER.get(status, "silver")   # label-confidence tier
@@ -163,9 +177,49 @@ def load_url_feed(path, source) -> list[dict]:
     col = "url" if "url" in df.columns else df.columns[0]
     out = []
     for _, r in df.iterrows():
+        # feeds attest no event date — only when we fetched them (scraped_at)
         row = base_row("url", "phishing", source, 0, "mixed", "other", "",
-                       str(r.get("scraped_at", "") or ""), "feed")
+                       "", "feed", scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(str(r.get(col, ""))))
+        # bronze: international feed — kept out of the primary (Vietnamese-context) benchmark;
+        # its role is live-URL content capture and drift monitoring
+        row["tier"] = "bronze"
+        out.append(row)
+    return out
+
+
+def _load_cld_first_seen(path) -> dict:
+    """domain -> reconstructed first-seen date (see chongluadao_first_seen.py). Sits next to the
+    blacklist CSV as first_seen.csv; absent -> every ChongLuaDao row stays undated."""
+    fs_path = os.path.join(os.path.dirname(path), "first_seen.csv")
+    if not os.path.exists(fs_path):
+        return {}
+    fs = {}
+    for _, r in pd.read_csv(fs_path).iterrows():
+        d = str(r.get("first_seen", "") or "").strip()
+        if d:
+            fs[str(r.get("domain", "") or "").strip().lower()] = d
+    return fs
+
+
+def load_chongluadao(path) -> list[dict]:
+    """ChongLuaDao community blacklist snapshot (see fetch_chongluadao.py). Community-reported and
+    volunteer-verified, tier 'bronze' (below the NCSC-verified gold/silver), label_source
+    'community'. Per-domain first-seen dates are reconstructed from public traces (Wayback-archived
+    API ObjectIds + mirror git history, see chongluadao_first_seen.py): dated rows join the temporal
+    split, the rest stay undated (random split). Excluded from the primary gold+silver benchmark."""
+    df = pd.read_csv(path)
+    first_seen = _load_cld_first_seen(path)
+    out = []
+    for _, r in df.iterrows():
+        dom = str(r.get("domain", "") or "").strip()
+        if not dom:
+            continue
+        row = base_row("url", "phishing", "chongluadao", 0, "vi", map_scenario(dom), "",
+                       first_seen.get(dom.lower(), ""), "community",
+                       scraped_at=str(r.get("scraped_at", "") or ""))
+        row.update(url_features(dom))
+        row["tier"] = "bronze"
         out.append(row)
     return out
 
@@ -182,11 +236,15 @@ def load_text_csv(path, source, channel, is_llm=0) -> list[dict]:
         text = redact_pii(str(r.get(tcol, "")))
         ch = str(r.get("channel") or channel)                 # honor the channel column if present
         collected = str(r.get("collected_at", "") or "")
+        # honour an explicit scenario column (P2 corpus tags it) before falling back to inference
+        scenario = str(r.get("scenario", "") or "").strip() or map_scenario(text)
         row = base_row(ch, label, source, is_llm, "vi",
-                       map_scenario(text), str(r.get("brandname", "") or ""), collected,
+                       scenario, str(r.get("brandname", "") or ""), collected,
                        "human" if source == "author" else "auto")
         row["text"] = text
         row["msg_len"] = len(text)
+        # carry gen_model for leave-one-LLM-out (empty for human/benign rows)
+        row["gen_model"] = str(r.get("gen_model", "") or "")
         row["has_url"] = 1 if re.search(
             r"https?://|\b[a-z0-9-]+\.(?:com|net|org|top|xyz|cc|vn|info|online|shop|vip|icu|click|buzz)\b",
             text, re.I) else 0
@@ -206,7 +264,8 @@ def load_trusted_orgs(path) -> list[dict]:
             continue
         row = base_row("url", "benign", "tinnhiem_org", 0, "vi",
                        map_scenario(str(r.get("org_name", "")) + " " + url),
-                       str(r.get("org_name", "")), str(r.get("cert_date", "")), "feed")
+                       str(r.get("org_name", "")), str(r.get("cert_date", "")), "feed",
+                       scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(url))
         out.append(row)
     return out
@@ -221,27 +280,31 @@ def load_tinnhiem_web(path) -> list[dict]:
         dom = str(r.get("domain", "") or "").strip()
         if not dom:
             continue
+        # whitelist listing has no event date; the scrape date is NOT one (split-wise)
         row = base_row("url", "benign", "tinnhiem_web", 0, "vi", map_scenario(dom), "",
-                       str(r.get("scraped_at", "") or ""), "feed")
+                       "", "feed", scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(dom))
         row["tier"] = "gold"
         out.append(row)
     return out
 
 
-def load_tranco(path) -> list[dict]:
+def load_tranco(path, source="tranco", lang="mixed") -> list[dict]:
     """HARD benign domains from the Tranco top-list (see fetch_tranco.py). Labelled benign,
-    source 'tranco', tier 'silver' (traffic-based, not a curated whitelist) so it can be sliced
-    separately from the easy 'tinnhiem_web' benign when measuring external validity."""
+    tier 'silver' (traffic-based, not a curated whitelist) so it can be sliced separately from
+    the easy 'tinnhiem_web' benign when measuring external validity. Two strata:
+      source 'tranco'    = global top-list sample (breaks the 'not .vn -> phishing' shortcut)
+      source 'tranco_vn' = .vn-filtered slice (popular sites Vietnamese users actually visit)"""
     df = pd.read_csv(path)
     out = []
     for _, r in df.iterrows():
         dom = str(r.get("domain", "") or "").strip()
         if not dom:
             continue
-        row = base_row("url", "benign", "tranco", 0, "mixed", map_scenario(dom), "",
-                       str(r.get("scraped_at", "") or ""), "feed")
+        row = base_row("url", "benign", source, 0, lang, map_scenario(dom), "",
+                       "", "feed", scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(dom))
+        row["rank"] = r.get("rank", "")
         row["tier"] = "silver"
         out.append(row)
     return out
@@ -257,12 +320,20 @@ def collect(raw_dir, keep_status=None) -> pd.DataFrame:
         rows += load_trusted_orgs(p)
     for p in glob.glob(os.path.join(raw_dir, "tranco", "*.csv")):
         rows += load_tranco(p)
+    for p in glob.glob(os.path.join(raw_dir, "tranco_vn", "*.csv")):
+        rows += load_tranco(p, source="tranco_vn", lang="vi")
     for p in glob.glob(os.path.join(raw_dir, "openphish", "*.csv")):
         rows += load_url_feed(p, "openphish")
-    for p in glob.glob(os.path.join(raw_dir, "urlhaus", "*.csv")):
-        rows += load_url_feed(p, "urlhaus")
+    for p in glob.glob(os.path.join(raw_dir, "chongluadao", "*.csv")):
+        rows += load_chongluadao(p)
+    # NOTE: data/raw/urlhaus/ is deliberately NOT merged — URLhaus tracks malware
+    # distribution URLs, not phishing, so labelling those rows "phishing" would be wrong.
     for p in glob.glob(os.path.join(raw_dir, "author", "*.csv")):
         rows += load_text_csv(p, "author", "sms")   # change to 'email' if it is email
+    # real-world SMS reports (Telegram bot, gammu/Android import) — their OWN dir so they are never
+    # mis-merged as email. data/raw/reports/ is the EMAIL dir (parse_eml.py writes emails.csv there).
+    for p in glob.glob(os.path.join(raw_dir, "sms_reports", "*.csv")):
+        rows += load_text_csv(p, "report", "sms")
     for p in glob.glob(os.path.join(raw_dir, "reports", "*.csv")):
         rows += load_text_csv(p, "report", "email")
     for p in glob.glob(os.path.join(raw_dir, "llm", "*.csv")):
@@ -271,15 +342,27 @@ def collect(raw_dir, keep_status=None) -> pd.DataFrame:
     return df
 
 
+def parse_event_dates(s: pd.Series) -> pd.Series:
+    """Parse event dates with EXPLICIT formats (dd/mm/yyyy, then ISO yyyy-mm-dd), element-wise.
+    A bare pd.to_datetime() infers ONE format from the first non-null row and silently turns
+    every other format into NaT — with mixed sources this made whole benign sources 'undated'
+    (or, worse, could date them by scrape time and dump them all into the newest split)."""
+    s = s.astype(str).str.strip().str.slice(0, 10)  # 'yyyy-mm-ddThh:...' -> 'yyyy-mm-dd'
+    d = pd.to_datetime(s, format="%d/%m/%Y", errors="coerce")
+    return d.fillna(pd.to_datetime(s, format="%Y-%m-%d", errors="coerce"))
+
+
 def temporal_split(df: pd.DataFrame) -> pd.DataFrame:
     """GROUP-AWARE time-based split. Rows are grouped by registrable domain (or text hash for
     message channels) so that every URL of one campaign/domain lands in the SAME split — a plain
     per-row split leaks near-duplicate subdomains (hanoi.x.com.vn, hanoi3.x.com.vn, ...) across
-    train and test and inflates metrics. Dated groups split by their EARLIEST date (train=oldest,
-    test=newest); undated groups are assigned 70/15/15 at random so both classes appear everywhere."""
-    import random
+    train and test and inflates metrics. Groups with an EVENT date (collected_at: detection /
+    certification / receive date) split by their earliest date (train=oldest, test=newest);
+    groups without one (whitelist/top-list benign — the source attests no event date) are
+    assigned 70/15/15 at random, BY DESIGN. Document this in the paper: the split is temporal
+    for dated sources and random for undated ones. scraped_at is never used here."""
     df = df.copy()
-    df["_dt"] = pd.to_datetime(df["collected_at"], errors="coerce", dayfirst=True)
+    df["_dt"] = parse_event_dates(df["collected_at"])
 
     # group key: registrable domain for URL-ish rows, else text/id (message rows)
     def _grp(r):
@@ -300,10 +383,11 @@ def temporal_split(df: pd.DataFrame) -> pd.DataFrame:
     for i, g in enumerate(dated_groups.index):
         split_of[g] = "train" if i < tr else ("val" if i < va else "test")
 
-    rng = random.Random(42)
+    # undated groups: deterministic PER-GROUP hash (not a sequential RNG), so adding or removing
+    # a source never reshuffles the split of unrelated groups across dataset versions
     for g in gmin.index[gmin.isna()]:
-        r = rng.random()
-        split_of[g] = "train" if r < 0.70 else ("val" if r < 0.85 else "test")
+        h = int(hashlib.sha1(g.encode("utf-8")).hexdigest(), 16) % 10_000 / 10_000
+        split_of[g] = "train" if h < 0.70 else ("val" if h < 0.85 else "test")
 
     df["split"] = df["_grp"].map(split_of)
     return df.drop(columns=["_dt", "_grp"])
