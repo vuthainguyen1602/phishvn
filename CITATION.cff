@@ -2,16 +2,16 @@ cff-version: 1.2.0
 message: "If you use PhishVN, please cite the dataset as below."
 title: "PhishVN: A Time-Stamped Vietnamese URL Phishing Dataset with Impersonation-Scenario Labels and Confidence Tiers"
 abstract: >-
-  An open, time-stamped Vietnamese URL phishing dataset (2,588 phishing / 5,922 legitimate)
-  with a 21-feature CompPhish-aligned lexical schema, impersonation-scenario labels,
+  An open, time-stamped Vietnamese URL phishing dataset of 51,362 URLs (a 17,079-record
+  verified core of 2,588 phishing / 14,491 legitimate, plus a 34,283-record community/feed
+  expansion) with a 21-feature CompPhish-aligned lexical schema, impersonation-scenario labels,
   gold/silver label-confidence tiers, and a group-aware temporal split. Includes a preliminary
   paired HTML/screenshot subset.
 type: dataset
 version: 2.0.0
 date-released: "2026-07-21"
 license: CC-BY-4.0
-# TODO: replace with the DOI assigned by Mendeley Data (or Zenodo) after curation.
-doi: 10.17632/XXXXXXXX
+doi: 10.17632/b97hxbxtpd.2
 url: "https://github.com/vuthainguyen1602/phishvn"
 repository-code: "https://github.com/vuthainguyen1602/phishvn"
 keywords:

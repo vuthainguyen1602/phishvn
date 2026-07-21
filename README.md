@@ -1,10 +1,11 @@
 # PhishVN — Vietnamese URL Phishing Dataset & Baselines
 
 Code and documentation for **PhishVN**, an open, time-stamped Vietnamese URL phishing dataset
-(2,588 phishing / 5,922 legitimate) with a CompPhish-aligned 21-feature lexical schema,
+(51,362 URLs: a 17,079-record verified core of 2,588 phishing / 14,491 legitimate, plus a
+34,283-record community/feed expansion) with a CompPhish-aligned 21-feature lexical schema,
 impersonation-scenario labels, gold/silver confidence tiers, and a group-aware temporal split.
 
-> **Dataset (with DOI):** Mendeley Data `10.17632/XXXXXXXX` *(replace after curation)* — CC BY 4.0.
+> **Dataset (with DOI):** Mendeley Data [`10.17632/b97hxbxtpd.2`](https://doi.org/10.17632/b97hxbxtpd.2) — CC BY 4.0.
 > This repository holds the **code** (MIT); the **data** is archived separately at the DOI above.
 
 ## What's here
