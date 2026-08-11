@@ -14,6 +14,7 @@ RUN:
 """
 from __future__ import annotations
 import argparse
+import ast
 import os
 import re
 import shutil
@@ -43,6 +44,30 @@ INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
 # only once this constant names the version it describes, and the mirror keeps its published
 # citation until then. Bump this when the next version actually goes live on Mendeley.
 PUBLISHED_DOI = "10.17632/b97hxbxtpd.2"
+
+# PROSE GATE. The whitelist and the closure assertion read code; nothing read the comments and
+# docstrings, and those are what leaked. Four exported modules had been documented for a private
+# audience -- they named the papers a defect was found in and quoted the numbers involved, from
+# manuscripts that are not out. It surfaced only because a diff happened to be read before the
+# push, which is not a control.
+#
+# A label is the tell, because attributing a finding is what turns an engineering note into a
+# disclosure. "A floor pinned above a series minimum" says how the bug works and is safe;
+# naming the paper and quoting the two numbers involved publishes its result. Tested against that
+# incident, this catches all four files. It is a floor and not a ceiling: an unattributed leak
+# reads as ordinary prose and passes, so this raises the cost of leaking carelessly rather than
+# making it impossible.
+#
+# P1 is deliberately absent: it is the paper this mirror accompanies, so prose matching it is the
+# code describing itself. Including it took the flag rate from 4/19 to 12/19, all noise.
+PAPER_LABEL = re.compile(r"\bP[2-8][ab]?\b(?!\w)|papers/P[2-8]|P[2-8]_[a-z]+")
+
+# file -> why its labels are legitimate. A reason is required, and waived labels are still printed
+# on every export, so a NEW one appearing in a waived file cannot hide behind the old decision.
+PROSE_WAIVERS = {
+    "make_public_repo.py": "the export policy has to name which papers are held back",
+    "normalize_merge.py": "\"P2 corpus\" is the external benchmark corpus, not the manuscript",
+}
 
 # Only the scripts that build/reproduce the RELEASED P1a URL dataset and its baselines are exported,
 # so the public repo matches the published data. Scripts for unreleased channels/papers (SMS, email,
@@ -157,6 +182,23 @@ clean:
 """
 
 
+def _prose(path: str) -> str:
+    """Comments and docstrings only. The code is not what leaks -- a function named
+    make_p5_assets says nothing a reader could not infer from the repository layout."""
+    src = open(path, encoding="utf-8").read()
+    out = [m.group(1) for m in re.finditer(r"^\s*#\s?(.*)$", src, re.M)]
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return "\n".join(out)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            doc = ast.get_docstring(node)
+            if doc:
+                out.append(doc)
+    return "\n".join(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "public"))
@@ -264,6 +306,29 @@ def main():
     if dangling:
         raise SystemExit("SAFETY: exported file imports a non-exported script: "
                          + ", ".join(sorted(set(dangling))))
+
+    # PROSE ASSERTION: no exported comment or docstring may attribute anything to an unreleased
+    # paper. See PAPER_LABEL above for what this does and does not buy.
+    leaks = []
+    for sub, names in (("scripts", INCLUDE_SCRIPTS), ("tests", INCLUDE_TESTS)):
+        for fn in names:
+            p = os.path.join(args.out, sub, fn)
+            if not os.path.exists(p):
+                continue
+            labels = sorted({m.group(0) for m in PAPER_LABEL.finditer(_prose(p))})
+            if not labels:
+                continue
+            why = PROSE_WAIVERS.get(fn)
+            if why:
+                print(f"[waived] {sub}/{fn} names {', '.join(labels)} — {why}")
+            else:
+                leaks.append(f"{sub}/{fn}: {', '.join(labels)}")
+    if leaks:
+        raise SystemExit(
+            "SAFETY: exported prose attributes something to an unreleased paper:\n  "
+            + "\n  ".join(leaks)
+            + "\n  Describe the mechanism without the attribution, or add a PROSE_WAIVERS entry"
+              " saying why the mention is legitimate.")
 
     n = sum(len(fs) for _, _, fs in os.walk(args.out))
     print(f"[+] public repo assembled at {args.out}  ({n} files)")
