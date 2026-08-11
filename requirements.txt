@@ -39,7 +39,9 @@ pytest>=8.0           # unit tests / CI
 tldextract>=5.0   # CompPhish-compatible URL features (multi-part TLDs)
 # Optional enrichment / analysis
 python-whois           # whois_dns_enrich.py
-dnspython              # whois_dns_enrich.py
+dnspython              # whois_dns_enrich.py; REQUIRED by watch_host_infra.py -- it is the only
+                       # way that collector asks a DNS question, and without it every row it
+                       # writes records "no A record" for a domain nothing ever queried
 opencv-python          # qr_decode.py (or: pyzbar + pillow)
 underthesea            # vi_segment.py (or: py_vncorenlp + Java for best quality)
 statsmodels            # analyze_p3.py (GEE/McNemar)
