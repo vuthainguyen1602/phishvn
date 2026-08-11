@@ -161,9 +161,10 @@ def load_tinnhiemmang(path, keep_status=None) -> list[dict]:
         org = str(r.get("impersonated_org", "") or "")
         dom = str(r.get("domain", "") or "")
         ch = "social" if str(r.get("type", "")).lower() == "social" else "url"
+        dd = r.get("detected_date", "")
         row = base_row(ch, "phishing", "tinnhiemmang", 0, "vi",
                        map_scenario(org + " " + str(r.get("sector", "")) + " " + dom),
-                       org, str(r.get("detected_date", "")), "feed",
+                       org, "" if pd.isna(dd) else str(dd), "feed",
                        scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(str(r.get("domain", ""))))
         row["status"] = status
@@ -196,7 +197,9 @@ def _load_cld_first_seen(path) -> dict:
         return {}
     fs = {}
     for _, r in pd.read_csv(fs_path).iterrows():
-        d = str(r.get("first_seen", "") or "").strip()
+        v = r.get("first_seen", "")
+        # NaN is truthy, so `v or ""` does not catch it and str() would bake a literal "nan"
+        d = "" if pd.isna(v) else str(v).strip()
         if d:
             fs[str(r.get("domain", "") or "").strip().lower()] = d
     return fs
@@ -253,7 +256,16 @@ def load_text_csv(path, source, channel, is_llm=0) -> list[dict]:
 
 
 def load_trusted_orgs(path) -> list[dict]:
-    """Trusted organizations (benign). Only produce a benign URL when --enrich ran (has domain/website)."""
+    """Trusted organizations (benign). Only produce a benign URL when --enrich ran (has domain/website).
+    The enrichment heuristic (first external link on the org's detail page) is known to misfire, so
+    two guards apply: malformed hostnames are dropped mechanically, and exclude_domains.txt next to
+    the CSV lists reviewed misattributions (see the 2026-07-26 audit of all 266 commercial rows)."""
+    excl = set()
+    xp = os.path.join(os.path.dirname(path), "exclude_domains.txt")
+    if os.path.exists(xp):
+        with open(xp, encoding="utf-8") as f:
+            excl = {l.strip().lower().removeprefix("www.")
+                    for l in f if l.strip() and not l.startswith("#")}
     df = pd.read_csv(path)
     out = []
     for _, r in df.iterrows():
@@ -267,6 +279,11 @@ def load_trusted_orgs(path) -> list[dict]:
                        str(r.get("org_name", "")), str(r.get("cert_date", "")), "feed",
                        scraped_at=str(r.get("scraped_at", "") or ""))
         row.update(url_features(url))
+        host = row["domain"]
+        if not host or " " in host or "." not in host:   # address text, "c", empty
+            continue
+        if host.removeprefix("www.") in excl:            # reviewed misattribution
+            continue
         out.append(row)
     return out
 
@@ -324,7 +341,9 @@ def collect(raw_dir, keep_status=None) -> pd.DataFrame:
         rows += load_tranco(p, source="tranco_vn", lang="vi")
     for p in glob.glob(os.path.join(raw_dir, "openphish", "*.csv")):
         rows += load_url_feed(p, "openphish")
-    for p in glob.glob(os.path.join(raw_dir, "chongluadao", "*.csv")):
+    # blacklist*.csv only: the same directory holds first_seen.csv, a domain->date side file
+    # that load_chongluadao would otherwise ingest as 163 extra "phishing" rows
+    for p in glob.glob(os.path.join(raw_dir, "chongluadao", "blacklist*.csv")):
         rows += load_chongluadao(p)
     # NOTE: data/raw/urlhaus/ is deliberately NOT merged — URLhaus tracks malware
     # distribution URLs, not phishing, so labelling those rows "phishing" would be wrong.
@@ -420,14 +439,53 @@ def main():
         if len(df) < n0:
             print(f"[i] dropped {n0 - len(df)} weak-label 'pending' rows (use --include-pending to keep)")
 
+    # ---- site-level label-conflict resolution. Must run BEFORE dedup, which otherwise keeps
+    # whichever source loaded first and hides the conflict. A community blacklist sometimes
+    # carries a BARE domain (no path) that a benign source also lists; two cases:
+    #   * platform sites: the blacklist entry is a truncated page-level report (a scam profile
+    #     on facebook.com does not make facebook.com phishing) -> drop the bare phishing row,
+    #     keep the benign row AND any path-carrying phishing rows (real scam pages).
+    #   * anything else (loan/shop domains reported wholesale vs. Tranco popularity): neither
+    #     label is trustworthy -> drop EVERY row of that site, and say so.
+    PLATFORM_SITES = {"facebook.com", "youtube.com", "zalo.me", "linktr.ee", "tiktok.com",
+                      "instagram.com", "google.com", "telegram.org"}
+
+    def _bare(r):
+        u = r.get("url_norm")
+        u = "" if pd.isna(u) else str(u)
+        return re.sub(r"^https?://", "", u).rstrip("/") == str(r.get("domain") or "")
+    site = df.apply(lambda r: str(r.get("domain") or "").removeprefix("www."), axis=1)
+    urlish = df["channel"].isin(["url", "qr", "social"]) & (site != "")
+    bare_ph = urlish & (df["label"] == "phishing") & df.apply(_bare, axis=1)
+    conflicted = set(site[bare_ph]) & set(site[urlish & (df["label"] == "benign")])
+    plat, amb = conflicted & PLATFORM_SITES, conflicted - PLATFORM_SITES
+    drop = (bare_ph & site.isin(plat)) | (urlish & site.isin(amb))
+    if drop.any():
+        print(f"[i] label conflicts: kept {len(plat)} platform sites as benign "
+              f"(dropped their bare phishing rows), excluded {len(amb)} ambiguous sites "
+              f"entirely ({', '.join(sorted(amb))}) — {int(drop.sum())} rows removed")
+    df = df.loc[~drop].reset_index(drop=True)
+
     # id + deduplication
     def keyof(r):
         u = r.get("url_norm"); t = r.get("text")
         u = "" if pd.isna(u) else str(u)
         t = "" if pd.isna(t) else str(t)
         return u or t
+
+    def canon(r):
+        """Dedup key. url_norm still differs on scheme and trailing slash across sources
+        (tinnhiem_org emits https://, domain feeds get http:// prepended), which let the same
+        host in twice; strip both HERE ONLY — id stays a uuid5 of the raw url_norm so ids of
+        surviving rows are stable across dataset versions. First occurrence wins, i.e. the
+        earliest-loaded source in collect() (curated feeds before top-lists)."""
+        u = r.get("url_norm")
+        u = "" if pd.isna(u) else str(u)
+        if u:
+            return r["channel"] + "|" + re.sub(r"^https?://", "", u).rstrip("/")
+        return r["channel"] + "|" + keyof(r)
     df["id"] = df.apply(lambda r: make_id(r["channel"], keyof(r)), axis=1)
-    df = df.drop_duplicates(subset=["id"]).reset_index(drop=True)
+    df = df.loc[~df.apply(canon, axis=1).duplicated()].reset_index(drop=True)
 
     df = temporal_split(df)
 

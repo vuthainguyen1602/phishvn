@@ -12,10 +12,17 @@ Output: CSV with exactly: <25 CompPhish features>, label
 RUN:
   # our VN dataset -> CompPhish format
   python align_compphish.py --in data/processed/dataset_url.csv --out data/processed/vn_compphish.csv
-  # an EXTERNAL corpus (PhiUSIIL: columns 'URL','label') -> same schema:
-  python align_compphish.py --in phiusiil.csv --url-col URL --label-col label \
-         --out data/processed/phiusiil_compphish.csv
-  # Grambeddings / PhishTank / Mendeley URL sets work the same way (point --url-col/--label-col).
+  # an EXTERNAL corpus -> same schema. CHECK THE POLARITY FIRST: to_label() below reads a
+  # numeric 1 as PHISHING, and not every corpus agrees. PhiUSIIL ships 1 = LEGITIMATE
+  # (134,850 ones against 100,945 zeros, matching its published class counts), so feeding its
+  # raw file straight in --- as an earlier version of this very usage line told you to ---
+  # inverts the labels silently and produces a corpus that looks fine and scores below chance
+  # on transfer. Convert to the string labels first (data/external/phiusiil_urllabel.csv is the
+  # converted copy this project actually uses, spot-checked by hand) and pass those:
+  python align_compphish.py --in data/external/phiusiil_urllabel.csv --url-col url \
+         --label-col label --out data/processed/phiusiil_compphish.csv
+  # Grambeddings / PhishTank / Mendeley URL sets work the same way (point --url-col/--label-col),
+  # and each needs the same polarity check before it is trusted.
   # then concatenate the *_compphish.csv files (identical columns) and train/test across corpora.
 """
 from __future__ import annotations

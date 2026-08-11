@@ -144,7 +144,7 @@ def main():
         print(f"[+] gated tier -> {gated_zip}  ({len(pages)} artefacts, {os.path.getsize(gated_zip)} bytes)")
 
     print("Next: upload the OPEN zip to Mendeley Data (or Zenodo), get the DOI, then set it in "
-          "CITATION.cff and papers/P1a_dataset/preamble.tex (\\datadoi).")
+          "CITATION.cff and papers/P1_dataset/preamble.tex (\\datadoi).")
 
 
 if __name__ == "__main__":

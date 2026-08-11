@@ -15,13 +15,34 @@ RUN:
 from __future__ import annotations
 import argparse
 import os
+import re
 import shutil
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-COPY_DIRS = ["tests", "configs"]                      # safe: config + tests only
-COPY_FILES = ["requirements.txt", "LICENSE", "LICENSE-CODE", "CITATION.cff"]
-DOCS_FROM = "data/docs"                                # schema/datasheet/data_sources -> docs/
+COPY_DIRS = ["configs"]                                # safe: config only
+# dvc.yaml ships because the README lists it and both its stages (normalize, train_url) are exported.
+# CITATION.cff is NOT here: it is version-bound and handled below.
+COPY_FILES = ["requirements.txt", "LICENSE", "LICENSE-CODE", "dvc.yaml"]
+DOCS_FROM = "data/docs"
+
+# WHITELIST EVERYTHING THAT GROWS. tests/ and data/docs/ were copied wholesale until 2026-08-11,
+# on the assumption that anything landing there is public-safe. Both grew: tests/ gained suites for
+# the private papers (the claims verifier, P2's paired eval, P3's Jaccard band) and data/docs/
+# gained scenario_grounding.md, which documents an unpublished paper's lure generator. A re-export
+# would have published all four -- and the three test files import scripts that are deliberately
+# NOT exported, so `pytest -q` on the mirror did not even collect. Name what ships, like scripts do.
+INCLUDE_TESTS = ["test_pipeline.py"]                   # the only suite whose imports are exported
+INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
+
+# The mirror describes the deposit a reader can actually download, which is not necessarily the cut
+# this tree builds. CITATION.cff tracks the local corpus: it had already moved to version 3.0.0,
+# 53,116 records and the reserved `.3` DOI while the deposit serving readers was still v2. Exporting
+# it verbatim would ship a citation resolving nowhere, describing a corpus nobody can fetch, and
+# contradicting the README two paragraphs later. So the citation is version-bound: it is exported
+# only once this constant names the version it describes, and the mirror keeps its published
+# citation until then. Bump this when the next version actually goes live on Mendeley.
+PUBLISHED_DOI = "10.17632/b97hxbxtpd.2"
 
 # Only the scripts that build/reproduce the RELEASED P1a URL dataset and its baselines are exported,
 # so the public repo matches the published data. Scripts for unreleased channels/papers (SMS, email,
@@ -38,6 +59,9 @@ INCLUDE_SCRIPTS = [
     "align_compphish.py",          # re-featurise URLs into the CompPhish schema
     "train_url_baseline.py",       # URL baselines (multi-seed + bootstrap CI)
     "make_verification_sample.py", # label-quality audit (Cohen's kappa)
+    "watch_chongluadao.py",        # the live ChongLuaDao watcher feeding the corpus
+    "vn_filter.py",                # is-this-VN-targeting test used across collection
+    "build_brand_tokens.py",       # registry-derived brand tokens the filter matches on
     "make_p1a_assets.py",          # regenerate the paper's figure + tables from data
     "make_release.py",             # package the citable open/gated release
     "make_public_repo.py",         # this exporter
@@ -65,7 +89,7 @@ DATA_README = """# Data
 The PhishVN **dataset is not stored in this Git repository**. It is archived with a DOI:
 
 - Open tier (URL table, features, labels, splits, docs) — CC BY 4.0 — Mendeley Data,
-  DOI: [`10.17632/b97hxbxtpd.2`](https://doi.org/10.17632/b97hxbxtpd.2).
+  DOI: [`{doi}`](https://doi.org/{doi}).
 - Captured phishing HTML/screenshots — research-only **gated** tier, on request.
 
 To reproduce the baselines, download the open tier and place `dataset_url.csv` (and the `splits/`)
@@ -79,7 +103,7 @@ Code and documentation for **PhishVN**, an open, time-stamped Vietnamese URL phi
 34,283-record community/feed expansion) with a CompPhish-aligned 21-feature lexical schema,
 impersonation-scenario labels, gold/silver confidence tiers, and a group-aware temporal split.
 
-> **Dataset (with DOI):** Mendeley Data [`10.17632/b97hxbxtpd.2`](https://doi.org/10.17632/b97hxbxtpd.2) — CC BY 4.0.
+> **Dataset (with DOI):** Mendeley Data [`{doi}`](https://doi.org/{doi}) — CC BY 4.0.
 > This repository holds the **code** (MIT); the **data** is archived separately at the DOI above.
 
 ## What's here
@@ -138,6 +162,9 @@ def main():
 
     # Clean existing contents but PRESERVE .git (so the repo/remote survives a re-export). Then
     # `git add -A` in the export picks up removals, dropping stale files from the tracked repo.
+    prev_cff = ""                                  # survives the clean; see PUBLISHED_DOI
+    if os.path.exists(p := os.path.join(args.out, "CITATION.cff")):
+        prev_cff = open(p, encoding="utf-8").read()
     if os.path.exists(args.out):
         for entry in os.listdir(args.out):
             if entry == ".git":
@@ -157,6 +184,16 @@ def main():
         if os.path.exists(f):
             shutil.copy2(f, os.path.join(args.out, f))
 
+    # the citation ships only when it describes the published deposit (see PUBLISHED_DOI)
+    local_cff = open("CITATION.cff", encoding="utf-8").read() if os.path.exists("CITATION.cff") else ""
+    cited = re.search(r"^doi:\s*(\S+)\s*$", local_cff, re.M)
+    if cited and cited.group(1) == PUBLISHED_DOI:
+        open(os.path.join(args.out, "CITATION.cff"), "w", encoding="utf-8").write(local_cff)
+    elif prev_cff:
+        open(os.path.join(args.out, "CITATION.cff"), "w", encoding="utf-8").write(prev_cff)
+        print(f"[!] CITATION.cff describes {cited.group(1) if cited else 'an unknown DOI'}, not the "
+              f"published {PUBLISHED_DOI} — kept the mirror's published citation instead.")
+
     # copy ONLY the whitelisted, P1a-relevant scripts (not the whole scripts/ dir)
     os.makedirs(os.path.join(args.out, "scripts"), exist_ok=True)
     for s in INCLUDE_SCRIPTS:
@@ -167,19 +204,25 @@ def main():
     with open(os.path.join(args.out, "Makefile"), "w", encoding="utf-8") as f:
         f.write(MAKEFILE)
 
+    os.makedirs(os.path.join(args.out, "tests"), exist_ok=True)
+    for t in INCLUDE_TESTS:
+        src = os.path.join("tests", t)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(args.out, "tests", t))
+
     os.makedirs(os.path.join(args.out, "docs"), exist_ok=True)
-    if os.path.isdir(DOCS_FROM):
-        for fn in os.listdir(DOCS_FROM):
-            if fn.endswith(".md"):
-                shutil.copy2(os.path.join(DOCS_FROM, fn), os.path.join(args.out, "docs", fn))
+    for fn in INCLUDE_DOCS:
+        src = os.path.join(DOCS_FROM, fn)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(args.out, "docs", fn))
 
     os.makedirs(os.path.join(args.out, "data"), exist_ok=True)
     with open(os.path.join(args.out, "data", "README.md"), "w", encoding="utf-8") as f:
-        f.write(DATA_README)
+        f.write(DATA_README.format(doi=PUBLISHED_DOI))
     with open(os.path.join(args.out, ".gitignore"), "w", encoding="utf-8") as f:
         f.write(PUBLIC_GITIGNORE)
     with open(os.path.join(args.out, "README.md"), "w", encoding="utf-8") as f:
-        f.write(README)
+        f.write(README.format(doi=PUBLISHED_DOI))
 
     # safety assertion: nothing forbidden slipped in
     forbidden = ("private", "raw", "interim", "processed")
@@ -192,6 +235,29 @@ def main():
                 leaked.append(p)
     if leaked:
         raise SystemExit("SAFETY: forbidden files present: " + ", ".join(leaked))
+
+    # CLOSURE ASSERTION: an exported file may not import a script we deliberately kept back. This
+    # is how a whitelist rots -- the export still succeeds, but the mirror cannot run, and the
+    # failure only shows up for whoever clones it (which is a reviewer). Nested imports count:
+    # test_pipeline.py reaches for its collection modules inside test bodies.
+    private = {f[:-3] for f in os.listdir("scripts")
+               if f.endswith(".py") and f not in INCLUDE_SCRIPTS}
+    # hpo_gwo backs `--tune --tune-method gwo`, an unreleased paper's study, and is imported only
+    # on that path; the default baseline the mirror advertises never touches it.
+    private -= {"hpo_gwo"}
+    dangling = []
+    for sub, names in (("scripts", INCLUDE_SCRIPTS), ("tests", INCLUDE_TESTS)):
+        for fn in names:
+            p = os.path.join(args.out, sub, fn)
+            if not os.path.exists(p):
+                continue
+            src = open(p, encoding="utf-8").read()
+            for m in re.findall(r"^\s*(?:from|import)\s+([a-z_][a-z0-9_]*)", src, re.M):
+                if m in private:
+                    dangling.append(f"{sub}/{fn} -> {m}")
+    if dangling:
+        raise SystemExit("SAFETY: exported file imports a non-exported script: "
+                         + ", ".join(sorted(set(dangling))))
 
     n = sum(len(fs) for _, _, fs in os.walk(args.out))
     print(f"[+] public repo assembled at {args.out}  ({n} files)")

@@ -108,18 +108,25 @@ def report(name, y, pred, score):
 
 
 def make_model(name, seed, params=None):
+    # tuned params must OVERRIDE the defaults, not collide with them: passing e.g. a tuned
+    # n_estimators alongside a hard-coded one raises TypeError, which the HPO fitness then
+    # silently swallows as "invalid config" — so merge dicts instead of stacking kwargs.
     params = params or {}
     if name == "LogReg":
-        return LogisticRegression(max_iter=1000, class_weight="balanced", **params)
+        kw = {"max_iter": 1000, "class_weight": "balanced"} | params
+        return LogisticRegression(**kw)
     if name == "RandomForest":
-        return RandomForestClassifier(n_estimators=300, class_weight="balanced",
-                                      n_jobs=-1, random_state=seed, **params)
+        kw = {"n_estimators": 300, "class_weight": "balanced",
+              "n_jobs": -1, "random_state": seed} | params
+        return RandomForestClassifier(**kw)
     if name == "HistGB":
-        return HistGradientBoostingClassifier(class_weight="balanced", random_state=seed, **params)
+        kw = {"class_weight": "balanced", "random_state": seed} | params
+        return HistGradientBoostingClassifier(**kw)
     if name == "MLP":  # scaled inputs matter for a neural net on tabular features
-        return make_pipeline(StandardScaler(),
+        pipe = make_pipeline(StandardScaler(),
                              MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=400,
-                                           random_state=seed, **params))
+                                           random_state=seed))
+        return pipe.set_params(**params) if params else pipe  # keys use mlpclassifier__ prefix
     raise ValueError(f"unknown model: {name}")
 
 

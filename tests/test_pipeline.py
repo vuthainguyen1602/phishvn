@@ -52,6 +52,35 @@ def test_brand_token_extraction():
     assert bbt.token_mode("thegioididong", 3) == "substring"
 
 
+def test_host_of_normalises():
+    import vn_filter as vf
+    assert vf.host_of("https://Sub.Example.VN:443/path?q=1") == "sub.example.vn"
+    assert vf.host_of("http://tiki.vn./") == "tiki.vn"
+    assert vf.host_of("vietcombank.com.vn/login") == "vietcombank.com.vn"
+    assert vf.host_of("") == "" and vf.host_of(None) == ""
+
+
+def test_is_vn_target_signals():
+    import vn_filter as vf
+    assert vf.is_vn_target("vksnghean.gov.vn")            # .vn TLD alone
+    assert vf.is_vn_target("vietcombank-secure.top")      # unaccented brand token on foreign TLD
+    assert vf.is_vn_target("dichvucong-online.xyz")       # service token
+    assert vf.is_vn_target("tcb-login.com")               # \btcb\b bounded by the hyphen
+    assert not vf.is_vn_target("atcb.com")                # boundary holds — no match inside a word
+    assert not vf.is_vn_target("qqzzxx.top")
+    assert not vf.is_vn_target("") and not vf.is_vn_target(None)
+
+
+def test_is_vietnamese_text_threshold():
+    import vn_filter as vf
+    assert vf.is_vietnamese_text("Cảnh báo: tài khoản của bạn sẽ bị khóa")
+    assert not vf.is_vietnamese_text("Your account will be suspended today")
+    assert not vf.is_vietnamese_text("")
+    # density is strictly-greater-than 0.008: 8 marked chars in 1000 is a miss, 9 is a hit
+    assert not vf.is_vietnamese_text("a" * 992 + "ă" * 8)
+    assert vf.is_vietnamese_text("a" * 991 + "ă" * 9)
+
+
 def test_brand_tokens_extend_is_vn_target(tmp_path):
     import json
     import build_brand_tokens as bbt

@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup
 
 BASE = "https://tinnhiemmang.vn/to-chuc-tin-nhiem"
 SITE = "https://tinnhiemmang.vn"
-HEADERS = {"User-Agent": "research-crawler (contact: nvthai1602@gmail.com)", "Accept-Language": "vi"}
+HEADERS = {"User-Agent": "research-crawler (contact: nvthai@utc2.edu.vn)", "Accept-Language": "vi"}
 CERT_RE = re.compile(r"Tín nhiệm mạng:\s*(\d{2}/\d{2}/\d{4})")
 MST_RE = re.compile(r"Mã số thuế[:\s]*([0-9]{10}(?:-[0-9]{3})?)")
 # enrich(): links to skip when hunting the org's own website on its detail page. Social/platform

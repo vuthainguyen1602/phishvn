@@ -12,14 +12,14 @@
 
 ## 2. Composition
 - **Unit:** URLs (not people, not messages).
-- **Size:** 51,362 records — 36,871 phishing, 14,491 legitimate. Verified gold+silver core:
-  17,079 (2,588 NCSC phishing + 14,491 benign); bronze expansion: 34,283 (33,983 ChongLuaDao +
-  ~300 OpenPhish), ~50% of the ChongLuaDao rows carry a reconstructed first-seen date.
+- **Size:** 53,116 records — 36,706 phishing, 16,410 legitimate. Verified gold+silver core:
+  18,997 (2,587 NCSC phishing + 16,410 benign); bronze expansion: 34,119 (33,823 ChongLuaDao +
+  296 OpenPhish), ~50% of the ChongLuaDao rows carry a reconstructed first-seen date.
 - **Channels:** `url` (with a few `social`). No SMS/email/QR in this release.
 - **Labels:** `phishing` / `benign`, inherited from the sources.
-- **Confidence tiers:** `gold` (7,588: source-verified/handled + curated benign), `silver`
-  (9,491: under-processing NCSC phishing + Tranco benign), and `bronze` (34,283: ChongLuaDao
-  community snapshot + OpenPhish feed — undated, excluded from the primary benchmark).
+- **Confidence tiers:** `gold` (9,593: source-verified/handled phishing + curated benign),
+  `silver` (9,404: under-processing NCSC phishing + Tranco benign), and `bronze` (34,119:
+  ChongLuaDao community snapshot + OpenPhish feed — undated, excluded from the primary benchmark).
 - **Scenario labels:** impersonation sector inferred from URL brand tokens (bank, government, tax,
   e-commerce, telecom, delivery, social, gaming, other).
 - **Preliminary content subset:** 933 rendered HTML pages and 869 screenshots (209 phishing, 660 benign;
@@ -66,8 +66,18 @@
 - **License:** CC BY 4.0 (data); MIT (code). **Attribution:** NCSC "Tin Nhiem Mang"; the Tranco list.
 
 ## 6. Maintenance
-- **Versioning:** semantic version + date (this is v2.0.0). **Updates:** planned to counter concept
-  drift and to add channels/coverage. **Contact:** nvthai@utc2.edu.vn.
+- **Versioning:** semantic version + date (this is **v3.0.0**, DOI `10.17632/b97hxbxtpd.3`).
+  **Changes since v2.0.0** (DOI `.2`, 51,362 records): three `normalize_merge` ingestion fixes
+  (the `first_seen.csv` date file is no longer mis-read as a blocklist; canonical dedup strips
+  scheme and trailing slash; no literal `nan` dates survive); site-level label-conflict resolution
+  excludes 5 ambiguous loan/shop `.vn` sites; 21 reviewed `tinnhiem_org` misattributions removed
+  via `exclude_domains.txt`; and the trusted-organisation registry was re-scraped with `--enrich`,
+  taking `tinnhiem_org` benign rows from 20 to 2,026. Net effect is compositional: the benign pool
+  moves from 56.9% to 61.6% `.vn` and P(benign | `.vn`) from 89.3% to 91.3% — the exact `.vn`
+  shortcut the companion benchmark/XAI papers measure, so the artefact under study is ~2 pp larger
+  in v3. An audit (2026-08-04) confirms the 2,026 new rows carry no label defect (0 appear on any
+  phishing blocklist; 88% are `.gov.vn`/`.edu.vn`/`.org.vn`). **Updates:** planned to counter
+  concept drift and to add channels/coverage. **Contact:** nvthai@utc2.edu.vn.
 
 ## 7. Limitations & bias
 - **URL-only:** the released data is the URL modality; the "Vietnamese" signal is strongest in page

@@ -12,8 +12,8 @@ not part of this release.
 | Source | How / tool | In release | Legal / ethical | Mitigation |
 |---|---|---|---|---|
 | tinnhiemmang.vn (NCSC "Tin Nhiem Mang" blacklist, `type=fake`) | `scrape_vn_phishing.py --endpoint filter --type fake` (full list via `filterObj`; plain `?page=` is capped ~1k) | **Yes** — 2,588 phishing URLs, tier gold/silver. NOTE: the public feed has published no detections after 2025-02-18 (verified 2026-07-14) | Public-interest data; respect robots/rate limits | Throttle (`--delay`); auto CSRF+session; never re-host live payloads |
-| ChongLuaDao community blacklist (chongluadao.vn) | `fetch_chongluadao.py` — the project's public API is offline; imports the last daily-scrape mirror snapshot (2024-05-16, github.com/elliotwutingfeng/ChongLuaDao-Phishing-Blocklist). `chongluadao_first_seen.py` reconstructs per-domain first-seen dates (~51%) from Wayback-archived API ObjectIds + mirror git history | **Yes** — 33,983 domains, tier **bronze** (community-reported; ~50% dated, rest random-split; excluded from the primary benchmark; with 300 OpenPhish URLs the bronze stratum totals 34,283) | Community project data; cite chongluadao.vn + mirror | 623 registrable domains independently confirmed by the NCSC feed (cross-source agreement) |
-| OpenPhish community feed | `scrape_vn_phishing.py --feeds` | **Yes** — 300 recent URLs, tier **bronze** (international; kept out of the Vietnamese-context benchmark; role: live-URL content capture + drift) | Community feed licence (attribution) | Refresh regularly; per-record `scraped_at` |
+| ChongLuaDao community blacklist (chongluadao.vn) | `fetch_chongluadao.py` — the project's public API is offline; imports the last daily-scrape mirror snapshot (2024-05-16, github.com/elliotwutingfeng/ChongLuaDao-Phishing-Blocklist). `chongluadao_first_seen.py` reconstructs per-domain first-seen dates (~51%) from Wayback-archived API ObjectIds + mirror git history | **Yes** — 33,823 domains, tier **bronze** (community-reported; ~50% dated, rest random-split; excluded from the primary benchmark; with 296 OpenPhish URLs the bronze stratum totals 34,119) | Community project data; cite chongluadao.vn + mirror | 623 registrable domains independently confirmed by the NCSC feed (cross-source agreement) |
+| OpenPhish community feed | `scrape_vn_phishing.py --feeds` | **Yes** — 296 recent URLs, tier **bronze** (international; kept out of the Vietnamese-context benchmark; role: live-URL content capture + drift) | Community feed licence (attribution) | Refresh regularly; per-record `scraped_at` |
 | urlscan.io snapshots | `fetch_urlscan.py` | Preliminary content subset (HTML + screenshots) | API quota / ToS | Use existing snapshots; store scan UUID; gated tier |
 | URLhaus | — | **Excluded on purpose** — tracks malware distribution, not phishing | — | — |
 | PhishTank | feed download, filter `.vn` | Planned | Feed licence | Keep per-record licence note |
@@ -25,7 +25,7 @@ not part of this release.
 | Certified trusted-organisation registry (Tin Nhiem Mang, `type=web`) | `scrape_trusted_orgs.py` | **Yes** — 5,879 benign (easy negatives) | Curated, verified `.vn` sites |
 | Tranco top-list (global sample) | `fetch_tranco.py` (stratified across rank bands) | **Yes** — 6,000 hard benign negatives | Avoids trusted-vs-malicious and "non-.vn → phishing" shortcuts; cite the list ID |
 | Tranco top-list (`.vn` slice) | `fetch_tranco.py --vn-only` | **Yes** — 2,592 popular `.vn` domains (`tranco_vn`) | Anchors FPR on sites Vietnamese users actually visit |
-| Trusted-org directory | `scrape_trusted_orgs.py --enrich` | **Yes** — 20 benign | Org name + website |
+| Trusted-org directory | `scrape_trusted_orgs.py --enrich` | **Yes** — 2,026 benign (re-scraped with `--enrich` 2026-07-16; was 20 in v2) | Org name + website |
 
 ---
 
