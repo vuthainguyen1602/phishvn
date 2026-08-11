@@ -59,6 +59,15 @@ absence of suspicion.
 URLs and archives alone and needs its capture tier extended. Report the resolvable share alongside
 kappa; a noise estimate computed on 40 resolvable rows is not the same claim as one computed on 200.
 
+## `MACHINE_PASS.csv` — do not open it before your sheet is complete
+
+That file holds a rule-based pass over the same 200 archived pages, produced by
+`scripts/machine_pass_composition.py`. It exists to estimate coverage — how much of this corpus can
+be adjudicated from archives at all — and it is **not** an annotator. It casts no vote, it is not
+one of the two sheets, and κ is not computed against it. Reading it before you judge would replace
+your independent judgement with its rules and destroy the only quantity the audit produces. Compare
+against it afterwards if you like; that comparison is a note, not a result.
+
 ## Before you start
 
 Both annotators read this file, agree the four categories mean the same thing to each of them on

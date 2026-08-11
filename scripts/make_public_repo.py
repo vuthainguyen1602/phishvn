@@ -40,7 +40,11 @@ INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
 # the codebook ship; key.csv NEVER does -- it maps each blinded id to the source label, so
 # publishing it would hand a future annotator the answers and destroy the blinding the whole
 # instrument depends on.
-INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv"]
+# MACHINE_PASS.csv ships because a negative result nobody can inspect is just an assertion: it holds
+# the rule-based verdicts whose failure against the sample's benign control is the reason the
+# datasheet says this corpus cannot be adjudicated from archives. It carries no source labels, so it
+# un-blinds nothing; the codebook forbids annotators opening it before their own sheet is done.
+INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv", "MACHINE_PASS.csv"]
 VERIFY_FROM = "data/docs/verify"
 
 # The mirror describes the deposit a reader can actually download, which is not necessarily the cut
@@ -97,6 +101,7 @@ INCLUDE_SCRIPTS = [
     "make_p1a_assets.py",          # regenerate the paper's figure + tables from data
     "derive_abuse_type.py",        # types the positive class; its output ships in the open tier
     "collect_audit_evidence.py",   # gathers the lookup evidence the released audit sheets need
+    "machine_pass_composition.py", # the archive-content pass, and the control showing it fails
     "make_release.py",             # package the citable open/gated release
     "make_public_repo.py",         # this exporter
     "genfile.py",                  # atomic writer every asset generator goes through
@@ -163,6 +168,12 @@ make test         # unit tests
 - `train_url_baseline.py` — URL baseline; `--seeds` (mean±std) and `--bootstrap` (95% CI).
 - `fetch_tranco.py` — hard benign negatives from the Tranco top-list.
 - `make_verification_sample.py` — two-annotator label audit + Cohen's kappa.
+- `machine_pass_composition.py` — rule-based pass over the archived page behind each sampled
+  domain. It reports a negative result and `docs/verify/MACHINE_PASS.csv` is that result: the
+  sample's known-legitimate stratum acts as a control, the credential rule fires on it as often as
+  on listed domains (13.9% vs 12.5%, Fisher p = 1.00), and only 17% of listed rows resolve at all.
+  Read it as evidence that this corpus cannot be adjudicated from web archives — not as a
+  composition estimate, and never as a substitute for the human audit.
 - `make_release.py` — build the citable open / gated release bundles.
 
 ## Citation
