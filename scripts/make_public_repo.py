@@ -95,6 +95,8 @@ INCLUDE_SCRIPTS = [
     "vn_filter.py",                # is-this-VN-targeting test used across collection
     "build_brand_tokens.py",       # registry-derived brand tokens the filter matches on
     "make_p1a_assets.py",          # regenerate the paper's figure + tables from data
+    "derive_abuse_type.py",        # types the positive class; its output ships in the open tier
+    "collect_audit_evidence.py",   # gathers the lookup evidence the released audit sheets need
     "make_release.py",             # package the citable open/gated release
     "make_public_repo.py",         # this exporter
     "genfile.py",                  # atomic writer every asset generator goes through

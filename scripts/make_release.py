@@ -38,6 +38,8 @@ OPEN_FILES = [
     # shipping. Both files are guardrail-checked before they are packed.
     ("data/processed/p3_paraphrase.csv", "data/attacks/p3_paraphrase.csv"),
     ("data/processed/p3_paraphrase_band.csv", "data/attacks/p3_paraphrase_band.csv"),
+    # Typed where a conservative rule can type it; the datasheet explains why 89% is `unknown`.
+    ("data/processed/abuse_type.csv", "data/abuse_type.csv"),
     ("data/docs/datasheet.md", "docs/datasheet.md"),
     ("data/docs/schema.md", "docs/schema.md"),
     ("data/docs/data_sources.md", "docs/data_sources.md"),
@@ -82,6 +84,8 @@ Released {_dt.date.today().isoformat()} under CC BY 4.0 (see LICENSE). Cite via 
   `http://sim.example.vn/x` and no other URL, contains no real brand token, and is stripped of
   diacritics: the set is for re-running a detector against a published attack, and resolves
   nowhere.
+- `data/abuse_type.csv` — what KIND of abuse each listed domain is, where a conservative rule can
+  say; 89% is `unknown` by design. See the datasheet on what the positive label means.
 - `docs/` — datasheet, column schema, and data-source notes.
 - `MANIFEST.txt` — SHA-256 checksums and row counts for every file.
 

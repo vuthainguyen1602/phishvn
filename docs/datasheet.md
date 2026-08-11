@@ -21,7 +21,24 @@
   `silver` (9,404: under-processing NCSC phishing + Tranco benign), and `bronze` (34,119:
   ChongLuaDao community snapshot + OpenPhish feed — undated, excluded from the primary benchmark).
 - **Scenario labels:** impersonation sector inferred from URL brand tokens (bank, government, tax,
-  e-commerce, telecom, delivery, social, gaming, other).
+  e-commerce, telecom, delivery, social, gaming, other). **`other` is not "unclassified
+  phishing".** This is a brand-impersonation taxonomy, so a domain that impersonates nobody has
+  nowhere else to go: `other` holds 90.8% of the positive class, and much of it is abuse that was
+  never impersonation.
+- **What the positive label means.** `phishing` marks *a domain listed by a Vietnamese anti-fraud
+  feed*, of which credential phishing is one category. ChongLuaDao supplies 92% of positives and is
+  a *chống lừa đảo* (anti-fraud) project — the "Phishing-Blocklist" name belongs to its GitHub
+  mirror, not to the project's scope — so gambling, betting streams, investment and crypto fraud,
+  counterfeit shops and adult sites are listed alongside credential phishing and inherit the same
+  label. A detector trained on this class is doing abuse detection; treating it as credential-
+  phishing detection overstates what the labels support.
+- **`abuse_type.csv`** (side file, joinable on `url`) types the positive class where a conservative
+  rule can: `brand_impersonation` where the brand-token inference fired, then `gambling`,
+  `betting_stream`, `investment`, `adult` from an explicit vocabulary, and `unknown` otherwise.
+  Only 11% is typed. The remaining 89% is `unknown` **by design, not by omission**: opaque names
+  (`mc622.com`, `s567.live`, `tse6971.com`) are the norm here and no lexical rule can read them.
+  The registered label audit (`verify/`) is what will estimate the true composition, on a sample,
+  with humans; this file is a lower bound, not that estimate.
 - **Preliminary content subset:** 933 rendered HTML pages and 869 screenshots (209 phishing, 660 benign;
   screenshots include urlscan.io archive captures of live OpenPhish URLs), referenced by record
   id / scan UUID. Note: unauthenticated urlscan DOM downloads are rate-limited — set
