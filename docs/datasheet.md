@@ -106,3 +106,23 @@
   pages are captured through one urlscan pipeline (209 phishing, 660 benign; 933 paired pages), so
   both classes share one capture method. As coverage is still well below the full URL table,
   content-level results remain preliminary.
+- **The positive class cannot be adjudicated from web archives, so its composition is not
+  established.** We attempted this before asking annotators to (`scripts/machine_pass_composition.py`,
+  run 2026-08-11 over the 200-row verification sample): fetch the archived page nearest each
+  domain's first-seen date and classify it by rule on objective signals, never on the domain string.
+  It failed, and the sample's own structure is what proved it. Because the draw is stratified over
+  (label x tier) across the whole dataset, 56 of the 200 rows are known-legitimate sites — an
+  unplanned control group. The credential rule fired on 13.9% of listed domains and 12.5% of those
+  controls (Fisher p = 1.00): a password field marks a login, not a harvest, and a provincial
+  e-government portal trips it exactly as a bank clone does. Coverage bounds it further — only
+  24 of 144 listed rows (17%) resolved at all, the rest having no retrievable archived body or
+  being JavaScript shells. Among those 24 the pass found no legitimate site, which bounds the
+  feed-error rate at 13.8% (Wilson 95%) **over 17% of the arm and says nothing about the rest**.
+  Two consequences for users of this data. First, the human audit's `unsure` share will be large
+  for the same reason, and that share should be read as a property of the corpus rather than as
+  annotator failure. Second, `abuse_type.csv`'s 89% `unknown` is not a gap a better lexical rule
+  would close: the archives cannot close it either, so establishing what the positive class is
+  made of requires contemporaneous capture at detection time, which is what the infrastructure
+  collection now does. `docs/verify/MACHINE_PASS.csv` ships the verdicts so this negative result
+  can be inspected rather than taken on trust; its verdict percentages are not quotable as
+  composition estimates.

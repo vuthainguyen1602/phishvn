@@ -362,7 +362,13 @@ def main():
             + "\n  Describe the mechanism without the attribution, or add a PROSE_WAIVERS entry"
               " saying why the mention is legitimate.")
 
-    n = sum(len(fs) for _, _, fs in os.walk(args.out))
+    # Skip .git: os.walk counted the mirror's own object database, so the "files" figure moved with
+    # every commit made there (272 -> 282 across one commit) and read as if the export had grown.
+    # A number printed by the safety script has to mean what it says.
+    n = 0
+    for dp, dns, fs in os.walk(args.out):
+        dns[:] = [d for d in dns if d != ".git"]
+        n += len(fs)
     print(f"[+] public repo assembled at {args.out}  ({n} files)")
     print("    excluded: papers/, proposal/, data/raw, data/interim, data/processed, data/private")
 
