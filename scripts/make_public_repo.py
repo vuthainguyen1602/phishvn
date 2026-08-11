@@ -36,6 +36,13 @@ DOCS_FROM = "data/docs"
 INCLUDE_TESTS = ["test_pipeline.py"]                   # the only suite whose imports are exported
 INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
 
+# The label-audit instruments, which P1 states are released with the code. The blinded sheets and
+# the codebook ship; key.csv NEVER does -- it maps each blinded id to the source label, so
+# publishing it would hand a future annotator the answers and destroy the blinding the whole
+# instrument depends on.
+INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv"]
+VERIFY_FROM = "data/docs/verify"
+
 # The mirror describes the deposit a reader can actually download, which is not necessarily the cut
 # this tree builds. CITATION.cff tracks the local corpus: it had already moved to version 3.0.0,
 # 53,116 records and the reserved `.3` DOI while the deposit serving readers was still v2. Exporting
@@ -255,6 +262,12 @@ def main():
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(args.out, "tests", t))
 
+    os.makedirs(os.path.join(args.out, "docs", "verify"), exist_ok=True)
+    for fn in INCLUDE_VERIFY:
+        src = os.path.join(VERIFY_FROM, fn)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(args.out, "docs", "verify", fn))
+
     os.makedirs(os.path.join(args.out, "docs"), exist_ok=True)
     for fn in INCLUDE_DOCS:
         src = os.path.join(DOCS_FROM, fn)
@@ -280,6 +293,12 @@ def main():
                 leaked.append(p)
     if leaked:
         raise SystemExit("SAFETY: forbidden files present: " + ", ".join(leaked))
+
+    for dp, _, fns in os.walk(args.out):
+        if "key.csv" in fns:
+            raise SystemExit("SAFETY: the audit key reached the export at "
+                             + os.path.relpath(os.path.join(dp, "key.csv"), args.out)
+                             + " — it un-blinds the annotation sheets and must never ship.")
 
     # CLOSURE ASSERTION: an exported file may not import a script we deliberately kept back. This
     # is how a whitelist rots -- the export still succeeds, but the mirror cannot run, and the
