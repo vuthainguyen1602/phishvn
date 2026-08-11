@@ -21,6 +21,7 @@ import datetime as _dt
 import hashlib
 import os
 import shutil
+import sys
 import zipfile
 from collections import Counter
 
@@ -32,6 +33,11 @@ OPEN_FILES = [
     ("data/processed/splits/url_train.csv", "data/splits/url_train.csv"),
     ("data/processed/splits/url_val.csv", "data/splits/url_val.csv"),
     ("data/processed/splits/url_test.csv", "data/splits/url_test.csv"),
+    # An ethics statement that argues release is the safe direction -- because a defender can
+    # re-run our detector against our own attack set -- is only as good as the artefact actually
+    # shipping. Both files are guardrail-checked before they are packed.
+    ("data/processed/p3_paraphrase.csv", "data/attacks/p3_paraphrase.csv"),
+    ("data/processed/p3_paraphrase_band.csv", "data/attacks/p3_paraphrase_band.csv"),
     ("data/docs/datasheet.md", "docs/datasheet.md"),
     ("data/docs/schema.md", "docs/schema.md"),
     ("data/docs/data_sources.md", "docs/data_sources.md"),
@@ -71,6 +77,11 @@ Released {_dt.date.today().isoformat()} under CC BY 4.0 (see LICENSE). Cite via 
 - `data/dataset_url.csv` — full record table ({n} rows).
 - `data/vn_compphish.csv` — the same URLs re-featurised into the exact CompPhish schema.
 - `data/splits/url_{{train,val,test}}.csv` — the official group-aware temporal split.
+- `data/attacks/p3_paraphrase{{,_band}}.csv` — the 386 paraphrased lures of the evasion study and
+  their Jaccard-controlled counterparts. Every lure carries the simulated link
+  `http://sim.example.vn/x` and no other URL, contains no real brand token, and is stripped of
+  diacritics: the set is for re-running a detector against a published attack, and resolves
+  nowhere.
 - `docs/` — datasheet, column schema, and data-source notes.
 - `MANIFEST.txt` — SHA-256 checksums and row counts for every file.
 
@@ -99,6 +110,26 @@ def write_bundle(zip_path, files, extra_texts):
             z.writestr(arc, text)
 
 
+def _check_attack_guardrails():
+    """The attack set ships only if every lure is still defused. This is the last gate before the
+    bundle leaves the machine, so it re-checks rather than trusting the build that wrote the CSVs:
+    the rules (simulated link only, no real brand token, no diacritics) are what make publishing an
+    evasion corpus defensible, and the README about to be written asserts them."""
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    from p3_jaccard_check import guardrail_problems
+
+    for src, _ in OPEN_FILES:
+        if "p3_paraphrase" not in src:
+            continue
+        with open(src, newline="", encoding="utf-8") as f:
+            bad = [(r.get("src_id", "?"), r.get("variant", "?"), p)
+                   for r in csv.DictReader(f) if (p := guardrail_problems(r["text"]))]
+        if bad:
+            raise SystemExit(f"REFUSING to package {src}: {len(bad)} lure(s) fail the guardrail — "
+                             + "; ".join(f"{i}/{v}: {', '.join(p)}" for i, v, p in bad[:5]))
+        print(f"[ok] {src}: every lure passes the attack-set guardrail")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", default="1.0.0")
@@ -111,6 +142,8 @@ def main():
     missing = [s for s, _ in OPEN_FILES if not os.path.exists(s)]
     if missing:
         raise SystemExit("Missing (run `make data` first?): " + ", ".join(missing))
+
+    _check_attack_guardrails()
 
     stats = _dataset_stats("data/processed/dataset_url.csv")
     readme = _readme(args.version, stats)

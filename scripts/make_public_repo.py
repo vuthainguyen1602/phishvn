@@ -65,6 +65,9 @@ INCLUDE_SCRIPTS = [
     "make_p1a_assets.py",          # regenerate the paper's figure + tables from data
     "make_release.py",             # package the citable open/gated release
     "make_public_repo.py",         # this exporter
+    "genfile.py",                  # atomic writer every asset generator goes through
+    "figstyle.py",                 # house palette + rcParams (and it installs the axis guard)
+    "axguard.py",                  # refuses to write a figure that clips its own data
 ]
 
 PUBLIC_GITIGNORE = """# never commit data or private material to the public repo
@@ -242,9 +245,12 @@ def main():
     # test_pipeline.py reaches for its collection modules inside test bodies.
     private = {f[:-3] for f in os.listdir("scripts")
                if f.endswith(".py") and f not in INCLUDE_SCRIPTS}
-    # hpo_gwo backs `--tune --tune-method gwo`, an unreleased paper's study, and is imported only
-    # on that path; the default baseline the mirror advertises never touches it.
-    private -= {"hpo_gwo"}
+    # Two deliberate exemptions, both imports on paths this mirror cannot reach:
+    #   hpo_gwo backs `--tune --tune-method gwo`, an unreleased paper's study;
+    #   p3_jaccard_check defines the guardrail make_release applies to the paraphrase attack set,
+    #     which belongs to an unreleased paper and whose CSVs are absent here -- make_release
+    #     aborts on the missing input before it can reach the import.
+    private -= {"hpo_gwo", "p3_jaccard_check"}
     dangling = []
     for sub, names in (("scripts", INCLUDE_SCRIPTS), ("tests", INCLUDE_TESTS)):
         for fn in names:
