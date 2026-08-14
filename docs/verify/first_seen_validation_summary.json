@@ -1,0 +1,28 @@
+{
+  "n_reconstructed_dated": 17650,
+  "basis_counts": {
+    "objectid": 17633,
+    "censored-first-commit": 78,
+    "adguard-mirror": 15,
+    "main-mirror": 2
+  },
+  "ncsc_overlap": {
+    "n": 530,
+    "median_delta_days": 5.0,
+    "iqr_days": [
+      0.0,
+      14.0
+    ],
+    "share_abs_within_30d": 0.8264150943396227,
+    "share_abs_within_90d": 0.9264150943396227
+  },
+  "mirror_consistency": {
+    "n": 7477,
+    "violations": 870,
+    "violation_rate": 0.11635682760465427,
+    "median_lag_days": 0.0,
+    "violation_median_days": 5.0,
+    "violation_share_within_30d": 0.9988505747126437,
+    "violation_max_days": 65.0
+  }
+}

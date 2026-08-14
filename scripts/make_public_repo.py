@@ -46,6 +46,17 @@ INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
 # un-blinds nothing; the codebook forbids annotators opening it before their own sheet is done.
 INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv", "MACHINE_PASS.csv"]
 VERIFY_FROM = "data/docs/verify"
+# Audit artefacts the revised manuscript declares released: the annotated token-filter sample
+# (verdict + rationale per row) and the per-domain first-seen validation rows. Paths are
+# (source, exported name); they land in docs/verify/ beside the label-audit instruments.
+INCLUDE_AUDITS = [
+    ("data/reports/token_audit_sample.csv", "token_audit_sample.csv"),
+    ("data/processed/first_seen_validation.csv", "first_seen_validation.csv"),
+    ("data/processed/first_seen_validation_summary.json", "first_seen_validation_summary.json"),
+    # the unified-feed snapshot the token audit sampled from (836 -> 1,115 claim), archived so
+    # the audited numbers are reproducible against a fixed input rather than a moving feed
+    ("data/interim/vn_phishing_candidates_20260812.csv", "feed_snapshot_20260812.csv"),
+]
 
 # The mirror describes the deposit a reader can actually download, which is not necessarily the cut
 # this tree builds. CITATION.cff tracks the local corpus: it had already moved to version 3.0.0,
@@ -54,7 +65,7 @@ VERIFY_FROM = "data/docs/verify"
 # contradicting the README two paragraphs later. So the citation is version-bound: it is exported
 # only once this constant names the version it describes, and the mirror keeps its published
 # citation until then. Bump this when the next version actually goes live on Mendeley.
-PUBLISHED_DOI = "10.17632/b97hxbxtpd.2"
+PUBLISHED_DOI = "10.17632/b97hxbxtpd.3"
 
 # PROSE GATE. The whitelist and the closure assertion read code; nothing read the comments and
 # docstrings, and those are what leaked. Four exported modules had been documented for a private
@@ -99,6 +110,11 @@ INCLUDE_SCRIPTS = [
     "vn_filter.py",                # is-this-VN-targeting test used across collection
     "build_brand_tokens.py",       # registry-derived brand tokens the filter matches on
     "make_p1a_assets.py",          # regenerate the paper's figure + tables from data
+    "fetch_chongluadao.py",        # import the ChongLuaDao mirror snapshot (named in the paper)
+    "chongluadao_first_seen.py",   # reconstruct per-domain first-seen dates (named in the paper)
+    "validate_first_seen.py",      # accuracy estimate for the reconstructed dates (rev. #1)
+    "audit_token_filter.py",       # sampled audit of the VN-targeting token filter (rev. #1)
+    "export_p1a_results.py",       # the deposited benchmark-evidence bundle's generator
     "derive_abuse_type.py",        # types the positive class; its output ships in the open tier
     "collect_audit_evidence.py",   # gathers the lookup evidence the released audit sheets need
     "machine_pass_composition.py", # the archive-content pass, and the control showing it fails
@@ -280,6 +296,9 @@ def main():
         src = os.path.join(VERIFY_FROM, fn)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(args.out, "docs", "verify", fn))
+    for src, name in INCLUDE_AUDITS:
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(args.out, "docs", "verify", name))
 
     os.makedirs(os.path.join(args.out, "docs"), exist_ok=True)
     for fn in INCLUDE_DOCS:

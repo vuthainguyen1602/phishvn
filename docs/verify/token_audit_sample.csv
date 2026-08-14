@@ -1,0 +1,101 @@
+domain,sources,matched_token,verdict,notes
+acclarted-vyfnonig-scb.ml,phishdb,scb,unsure,"SCB = Saigon or Siam Commercial Bank, undecidable"
+accounts.maxweb.black,phishdb,maxweb,not-vn,"unrelated MaxWeb service, not maxweb.vn"
+accounts.maxweb.ninja,phishdb,maxweb,not-vn,"unrelated MaxWeb service, not maxweb.vn"
+admin.uob.applerewardsstore.com,phishdb,uob,not-vn,UOB Singapore rewards phishing
+aeon-8uyti.stkfl.net,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-9yuet.chinaok.net,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-bytare.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-cardm.tokyo,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-co.jpv45nweiuuo.net,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-co.jpv4uiiyuuo.shop,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-denowatech.top,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-l.xyz,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-nfo.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-udkxnhan.shop,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-update.anqi88.cn,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon-vatauiop.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co-jp.authorizo.jp,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co-jp.axcno.top,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co-jp.oojhfcd.top,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.04doc.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.antique-edutainment.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.doc28.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.doc43.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.miky.top,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.mstvuuo.cn,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.registration.xo176.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jp.xo176.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jpa37nvci7vj.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jpjtyryj79jnk.club,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jpoj35nvzap.shop,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.jpvnrytwevn4.shop,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.ksucosuie.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.ncusmeua.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.co.ukvops421dmj.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.com.jp.nrqsou.top,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.jp.07wenku.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.jp.co.doc67.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.jp.cwblock.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.jp.doc89.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+aeon.yzvjkoq.shop,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+agustins-van.webflow.io,phishdb,van,not-vn,English word 'van'
+aivethaibinhchs-jp8t.vercel.app,phishdb,thaibinh,unsure,"possibly 'ai ve Thai Binh', likely student demo"
+amoldesign.com,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+app.visualdesign.biz,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+appnetser.com,phishdb,appnet,not-vn,generic app/net or dapp-network
+atacadoparis.sobraldesign.com.br,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+atasteofsaigon.com,phishdb,saigon,unsure,"Saigon-themed restaurant, targets non-VN diners"
+auth--app-crypto-dso-web-cdn.webflow.io,phishdb,dso,not-vn,random fragment in crypto phish
+backaniang.com,phishdb,backan,not-vn,"no VN semantics, accidental substring"
+bao-nguyentien.pages.net.br,phishdb,bao,unsure,"Vietnamese personal name, targeting unclear"
+booming-vast-country.glitch.me,phishdb,vast,not-vn,random glitch.me words
+brt-eng.lt.emlnk.com,phishdb,brt,not-vn,"BRT Italian courier phishing, not the VN broadcaster"
+brt-it.store,phishdb,brt,not-vn,"BRT Italian courier phishing, not the VN broadcaster"
+brt-oyy-italy.top,phishdb,brt,not-vn,"BRT Italian courier phishing, not the VN broadcaster"
+brt-pacco.20-19-37-230.cprapid.com,phishdb,brt,not-vn,"BRT Italian courier phishing, not the VN broadcaster"
+bt-connecthome.jomalsac.com,phishdb,cthome,not-vn,'connecthome' substring collision
+candientu.bkns.biz,phishdb,dientu,vn-target,"Vietnamese: can dien tu (electronic scales), on VN host BKNS"
+dalyfloraldesigns.com.usrfiles.com,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+dear-prong-van.glitch.me,phishdb,van,not-vn,English word 'van'
+ectc.lin.uob.info,phishdb,uob,not-vn,UOB Singapore rewards phishing
+eminent-tin-tarn.glitch.me,phishdb,tin,not-vn,English word tin
+ethereum.org.giveaway.claim-youre-eth.21235-3848.s3.webspace.re,phishdb,youre,not-vn,English 'you're' in eth scam
+fixmainappnet.top,phishdb,appnet,not-vn,generic app/net or dapp-network
+fldesignz.com,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+ganesh15-gani.github.io,phishdb,gani,not-vn,Indian username fragment
+gso.gso.tahtakaletoptanmerkezi.com,phishdb,gso,not-vn,Turkish wholesale site
+hjldesigns.com,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+hoantrungdanang.com,phishdb,danang,vn-target,Vietnamese name: Hoan Trung Da Nang
+hockemdanang.com,phishdb,danang,vn-target,Vietnamese name: hoc kem Da Nang (tutoring)
+ilp.9e.cz,phishdb,ilp,not-vn,random fragment
+imagensderoupasdemeninasdojogoroblox.blogspot.com,phishdb,menina,not-vn,Portuguese word (girl)
+inphuongdong.com,phishdb,phuongdong,vn-target,Vietnamese: In Phuong Dong (printing)
+instagram-clone-topaz-two.vercel.app,phishdb,topaz,not-vn,project/color word
+jp-aeon.merrissawilliams.com,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+jp-aeon.oruistmn.info,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+kinhtetv.com,phishdb,kinhte,vn-target,Vietnamese: kinh te TV (economy TV)
+kosmen-nada136.com,phishdb,kosmen,unsure,kosmen.vn is a VN brand but nada136 suffix undecidable
+latam-pi-topaz.vercel.app,phishdb,topaz,not-vn,project/color word
+ledsaigon.com,phishdb,saigon,vn-target,Vietnamese business name: LED Saigon
+lingoldesign.com,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+mail-mof-gov-np.netlify.app,phishdb,mof,not-vn,Ministry of Finance Nepal (gov-np)
+meta-vista-edd.pages.dev,phishdb,vista,not-vn,Meta 'vista' phishing / project name
+meta-vista.pages.dev,phishdb,vista,not-vn,Meta 'vista' phishing / project name
+metta-massk-lggoinng.godaddysites.com,phishdb,metta,not-vn,MetaMask crypto phishing
+metta-mixk-log.godaddysites.com,phishdb,metta,not-vn,MetaMask crypto phishing
+metta-vault.pages.dev,phishdb,metta,not-vn,MetaMask crypto phishing
+metttter-musk-wall-iet.netlify.app,phishdb,musk,not-vn,Elon Musk giveaway scam
+misa-12a.pages.dev,phishdb,misa,unsure,"MISA JSC imitation or a class-12A page, undecidable"
+msb-11118574.maxicode7765.click,phishdb,msb,vn-target,"MSB (msb.com.vn) imitation, VN banking-kit pattern brand-digits.random.click"
+msb-11174752.maxicode7765.click,phishdb,msb,vn-target,"MSB imitation, same kit"
+myphamso1saigon.com,phishdb,saigon,vn-target,Vietnamese: my pham so 1 Sai Gon (cosmetics)
+occipital-vast-megaraptor.glitch.me,phishdb,vast,not-vn,random glitch.me words
+peemesaan-lpgg-gass-tabungg-subsusidii.wixzey.com,phishdb,gass,not-vn,Indonesian LPG subsidy scam
+publicdappnetwork.com,phishdb,appnet,not-vn,generic app/net or dapp-network
+redpearldesigncompany.com,phishdb,ldesign,not-vn,"generic '...l design' site, substring collision"
+rulesfb-9oxm0y2q3bet.topaz.gr,phishdb,topaz,not-vn,project/color word
+s.aeon-corasiuwqa.xyz,phishdb,aeon,not-vn,"AEON Japan card phishing (aeon.co.jp kit family), not AEON Viet Nam"
+sankini.vesinhanbinh.com,phishdb,anbinh,unsure,plausibly VN business (ve sinh An Binh) but no imitation evidence
+st.dva.gg,phishdb,dva,not-vn,Overwatch D.Va fan/gaming
+swattechrmaillrr.weebly.com,phishdb,attech,not-vn,random string collision
