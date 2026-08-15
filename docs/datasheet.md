@@ -95,8 +95,11 @@
 - **License:** CC BY 4.0 (data); MIT (code). **Attribution:** NCSC "Tin Nhiem Mang"; the Tranco list.
 
 ## 6. Maintenance
-- **Versioning:** semantic version + date (this is **v3.0.0**, DOI `10.17632/b97hxbxtpd.3`).
-  **Changes since v2.0.0** (DOI `.2`, 51,362 records): three `normalize_merge` ingestion fixes
+- **Versioning:** semantic version + date (this is **v3.1.0**, DOI `10.17632/b97hxbxtpd.4`).
+  **Changes since v3.0.0** (DOI `.3`): documentation-only — this datasheet now records the
+  **completed** label audit of Section 4 (the v3.0.0 copy predated completion and said "in
+  progress"); every data file is byte-identical to v3.0.0.
+  **Changes in v3.0.0 since v2.0.0** (DOI `.2`, 51,362 records): three `normalize_merge` ingestion fixes
   (the `first_seen.csv` date file is no longer mis-read as a blocklist; canonical dedup strips
   scheme and trailing slash; no literal `nan` dates survive); site-level label-conflict resolution
   excludes 5 ambiguous loan/shop `.vn` sites; 21 reviewed `tinnhiem_org` misattributions removed
