@@ -1,9 +1,10 @@
 # PhishVN — Vietnamese URL Phishing Dataset & Baselines
 
 Code and documentation for **PhishVN**, an open, time-stamped Vietnamese URL phishing dataset
-(51,362 URLs: a 17,079-record verified core of 2,588 phishing / 14,491 legitimate, plus a
-34,283-record community/feed expansion) with a CompPhish-aligned 21-feature lexical schema,
-impersonation-scenario labels, gold/silver confidence tiers, and a group-aware temporal split.
+(53,116 URLs: an 18,997-record verified core of 2,587 phishing / 16,410 legitimate, plus a
+34,119-record community/feed bronze expansion) with a CompPhish-aligned 21-feature lexical
+schema, impersonation-scenario labels, gold/silver/bronze confidence tiers, and a group-aware
+temporal split.
 
 > **Dataset (with DOI):** Mendeley Data [`10.17632/b97hxbxtpd.3`](https://doi.org/10.17632/b97hxbxtpd.3) — CC BY 4.0.
 > This repository holds the **code** (MIT); the **data** is archived separately at the DOI above.
@@ -11,7 +12,20 @@ impersonation-scenario labels, gold/silver confidence tiers, and a group-aware t
 ## What's here
 - `scripts/` — URL data collection, normalisation, CompPhish features, baselines, audit, release tools.
 - `docs/` — datasheet, column schema, data-source notes.
+- `docs/verify/` — the completed human label audit: pre-registered codebook (with its amendment
+  log), both annotators' independent sheets, the machine pass, and the arbitration record.
 - `tests/`, `configs/`, `Makefile`, `dvc.yaml` — reproducibility.
+
+## Label audit (completed 2026-08-15)
+Two annotators independently re-checked a blinded, stratified 200-row sample against a four-way
+codebook (credential *phishing* / other *scam* / *legitimate* / *unsure*) that forbids consulting
+any blocklist and treats plausibility as non-evidence. Independent-round agreement: 0.710
+(Cohen's κ 0.609) four-way; 0.820 (κ 0.725) collapsed to the abuse-vs-legitimate distinction the
+released binary label makes. After documented arbitration of the 58 disagreements, 149/200 rows
+resolve; against the source labels the positive arm shows **12.1% label noise** (95% CI
+7.1–20.0%, concentrated in the explicitly-tagged bronze stratum) and the benign arm 4.0%.
+Every number is recomputable from `docs/verify/` via `make_verification_sample.py score`; the
+full record is in `docs/datasheet.md`.
 
 ## Quickstart
 ```bash
