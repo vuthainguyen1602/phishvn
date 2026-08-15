@@ -1,59 +1,59 @@
 vid,url,final_verdict,final_evidence,rationale
-V0022,www.yd516.com,phishing,urlscan,
-V0030,www.lz002.com,phishing,urlscan,
-V0039,cpmstar.com,legitimate,archive,
-V0046,motcuadientu.backan.gov.vn,legitimate,archive,
-V0112,www.etyuss.cn,scam,archive,
-V0126,uscloudminer.com,legitimate,archive,
-V0136,mail.az,legitimate,archive,
-V0161,senooee.com,legitimate,archive,
-V0013,www.vongquaysieuphamfreefirevn.club,phishing,name,
-V0015,shxycx.com,unsure,none,
-V0018,sd1675.xyz,scam,urlscan,
-V0021,cloudflare-gateway.com,unsure,none,
-V0025,www.vietnamxcm.vip,phishing,urlscan,
-V0029,shophaoquang.com,scam,archive,
-V0031,http://exoduuss.online/en/seguranca_validacao.php,phishing,urlscan,"Exodus (brand thật), không phải chính nó"
-V0053,hosting.net.np,legitimate,archive,
-V0056,now.vn,legitimate,urlscan,"Đây là domain cũ của NOW Food, dịch vụ giao đồ ăn tại Việt Nam. NOW sau đó đổi tên thành ShopeeFood."
-V0068,asp7890.com,phishing,urlscan,Đăng nhập giả mạo
-V0077,alicdn.com,legitimate,name,"domain chính thức thuộc hệ sinh thái Alibaba/Alibaba Cloud, dùng cho CDN và tài nguyên tĩnh (ảnh, JS, CSS, video...)"
-V0081,shopthureview.com,scam,urlscan,
-V0093,www.king07.xyz,unsure,none,không tìm thấy nguồn uy tín xác nhận đây là website chính thức của một tổ chức/thương hiệu
-V0095,www.xfnyzz.com,unsure,none,"Tên miền xfnyzz.com có dạng chuỗi ký tự ngẫu nhiên, không cho thấy thương hiệu/tổ chức rõ ràng"
-V0096,smrt.biddv.com,phishing,name,
-V0102,vitemac.com,phishing,urlscan,"Credential phishing — fake login page impersonating a financial/service platform, using Techcombank/BIDV/VIB logos to establish trust."
-V0105,www.rent-my-tesla.de,legitimate,archive,"một doanh nghiệp/dịch vụ cho thuê Tesla tại Wiesbaden, Đức"
-V0114,bfgoodrich.vn,legitimate,archive,Đây là website chính thức của BFGoodrich tại Việt Nam
-V0128,myshopify.com,unsure,none,"wayback trống, urlscan chụp lỗi"
-V0131,http://url7124.clearsoundpros.com/ls/click?upn=u001.3QAd2q-2FG8feWXojRZPX4-2Fd3xZx3XuwJjI9K8KbnPJ6LghHSlcNc6GWyqqv3Yj-2FGfGSnh5hiNRWkiT4q5xZMOG6YKlE9YSggb9VMudwBIzeYjFrV9sy8oQMCytLP5H36jEPe4_68If7Fl9L82gxlPCx3BxLyJ9f56UgQ17ThlNAXrS0Xp8rIpTrB2DpRwcp6gqIQLMd-2BRsrfpvyxvTnevc2blo5rYRloIVaDQqmFj4ihy3VN4nGFG07v9AjFpXmKLrjOgwV-2Fuso6hk3bHRua5zJIgjjy3AqWV3blwwIkYJ3dh-2FnxNMD-2BfBQNSh28DG20UadS7QnO0O7wmPf2Pymju1Ykh8WA-3D-3D,unsure,none,
-V0137,momovouchers.weebly.com,phishing,name,Name giả thanh toán điện tử momo
-V0138,sailportal.it,legitimate,urlscan,SailPortal là một nền tảng đào tạo/e-learning thực sự được nhiều tổ chức y tế tại Ý sử dụng.
-V0154,napkimcuongff2022.com,unsure,none,
-V0166,www.vaynganhangvn.com,phishing,name,domain ngân hàng
-V0167,www.tianaicn.com,phishing,urlscan,"yêu cầu đăng nhập, quên mâtk khẩu…"
-V0169,accgameff.ga,unsure,none,
-V0190,meta88.com,phishing,urlscan,"yêu cầu đăng nhập, quên mâtk khẩu…"
-V0197,lovelive-app.com,phishing,urlscan,"yêu cầu đăng nhập, quên mâtk khẩu…"
-V0005,854107.vip,phishing,urlscan,"Credential phishing — login page impersonating Tiger777Bet, requesting account credentials and verification code on an unrelated .vip domain."
-V0014,www.vnthanhnien.com,phishing,name,
-V0016,www.playtogether.com.vn,scam,urlscan,hiện web nộp tiền vào game
-V0024,www.sd9301.xyz,phishing,urlscan,hiện web nộp tiền vào game
-V0032,khkempf.de,scam,archive,game lậu
-V0033,hi-go.org,phishing,urlscan,url đăng nhập giả mạo
-V0052,0fzj64.cn,scam,urlscan,web mạo danh coopmart
-V0062,ffmenberzship-garena.com,phishing,name,Domain cố tình chứa garena nhưng tên ffmenberzship có dấu hiệu giả mạo/typo (menberzship thay vì membership)
-V0064,www.coopmart1.com,phishing,name,mạo danh coop mart
-V0078,www.sd1662.xyz,scam,urlscan,Website mang tên “Vatgia” nhưng giao diện không giống một website thương mại điện tử chính thức
-V0086,sd1695.xyz,scam,urlscan,Website mang tên “Vatgia” nhưng giao diện không giống một website thương mại điện tử chính thức
-V0118,www.i-goda.shop,phishing,archive,Login page impersonating I-GODA; requests telephone number and password; contains SIGN IN and SIGN UP.
-V0120,vitructuyen24-7.com,phishing,capture,
-V0127,sd9772.xyz,scam,urlscan,Website mang tên “Vatgia” nhưng giao diện không giống một website thương mại điện tử chính thức
-V0150,sd9490.xyz,phishing,urlscan,
-V0165,www.dhl888.net,scam,urlscan,
-V0170,www.lottemart.biz,phishing,name,
-V0175,dichvudienmay-xanh.online,phishing,name,
-V0177,www.lienquanmobilevn.site,phishing,urlscan,
-V0179,garena.mobi,phishing,name,
-V0183,dienmayxanh-dichvu.com,phishing,name,
-V0188,xvbwmht.cn,phishing,urlscan,
+V0022,www.yd516.com,phishing,urlscan,Corrected urlscan scan of the domain itself shows a fake Shopee login (credential form); the older Wayback web-services page does not outweigh a direct capture of the harvesting page.
+V0030,www.lz002.com,phishing,urlscan,urlscan shows a fake Lazada login on the domain itself; the 2005 Wayback football-news page predates the listing era by many years.
+V0039,cpmstar.com,legitimate,archive,CPMStar is a long-running gaming ad network: Wayback shows its own site since 2005 and the corrected urlscan scan shows its own ad server. B's original urlscan evidence was a wrong-page scan (see codebook amendment).
+V0046,motcuadientu.backan.gov.vn,legitimate,archive,"Provincial e-government one-stop portal; the archived login page is the province's own service on .gov.vn, whose registration attests the operator — not an impersonation."
+V0112,www.etyuss.cn,scam,archive,"Wayback 2023 shows a commercial-surrogacy solicitation site — abusive content, no brand impersonated."
+V0126,uscloudminer.com,legitimate,archive,Wayback 2022 shows the domain operating as its own branded cloud-mining service; judged a real operator rather than an impersonation.
+V0136,mail.az,legitimate,archive,mail.az is the Azerbaijani mail portal; a login form on the operator's own national domain is not impersonation.
+V0161,senooee.com,legitimate,archive,"Wayback shows the store operating under its own name; no brand 'Senoe' exists to impersonate (name check), so the impersonation reading fails and the shop shows real-operator markers."
+V0013,www.vongquaysieuphamfreefirevn.club,phishing,name,Domain imitates a Free Fire event page ('vongquaysieupham…freefirevn' — prize-wheel lure); the brand token admits no innocent reading.
+V0015,shxycx.com,unsure,none,Conflicting weak captures (a pirated-software page vs parked); neither decisive — unresolved.
+V0018,sd1675.xyz,scam,urlscan,urlscan 2022 shows a fraudulent top-up/deposit flow run by the site itself; no brand impersonated.
+V0021,cloudflare-gateway.com,unsure,none,urlscan shows only a blocked-IP notice; the 'cloudflare-gateway' name is suggestive but not conclusive — unresolved.
+V0025,www.vietnamxcm.vip,phishing,urlscan,Wayback empty; urlscan shows a fake login interface — credential harvesting.
+V0029,shophaoquang.com,scam,archive,Wayback 2023 shows a game top-up/virtual-item shop running a deposit scam; nobody impersonated.
+V0031,http://exoduuss.online/en/seguranca_validacao.php,phishing,urlscan,Impersonates the real Exodus wallet (typosquat 'exoduuss' + Portuguese 'security validation' page harvesting wallet credentials).
+V0053,hosting.net.np,legitimate,archive,Wayback shows a hosting-reseller storefront operating as itself; judged a real operator.
+V0056,now.vn,legitimate,urlscan,now.vn is the former domain of the NOW food-delivery service (later ShopeeFood) — a real Vietnamese operator; the listing is a feed error.
+V0068,asp7890.com,phishing,urlscan,urlscan shows a fake login page — credential harvesting.
+V0077,alicdn.com,legitimate,name,alicdn.com is Alibaba's official CDN domain — infrastructure of a real operator; the listing is a feed error.
+V0081,shopthureview.com,scam,urlscan,urlscan 2022 shows a game-account marketplace running purchase fraud; no brand impersonated.
+V0093,www.king07.xyz,unsure,none,No source confirms an operator; the name is inconclusive — unresolved.
+V0095,www.xfnyzz.com,unsure,none,Random-string domain with no usable capture — unresolved.
+V0096,smrt.biddv.com,phishing,name,Hostname embeds a BIDV-lookalike token ('biddv') in a bank-imitating position; no innocent reading.
+V0102,vitemac.com,phishing,urlscan,Credential phishing — fake login page impersonating a financial service (urlscan).
+V0105,www.rent-my-tesla.de,legitimate,archive,"Archived pages show a real Tesla-rental business in Wiesbaden, Germany — real operator."
+V0114,bfgoodrich.vn,legitimate,archive,Archived pages show the official BFGoodrich Vietnam site — real operator.
+V0128,myshopify.com,unsure,none,Wayback empty and the urlscan capture is an error page — unresolved.
+V0131,http://url7124.clearsoundpros.com/ls/click?upn=u001.3QAd2q-2FG8feWXojRZPX4-2Fd3xZx3XuwJjI9K8KbnPJ6LghHSlcNc6GWyqqv3Yj-2FGfGSnh5hiNRWkiT4q5xZMOG6YKlE9YSggb9VMudwBIzeYjFrV9sy8oQMCytLP5H36jEPe4_68If7Fl9L82gxlPCx3BxLyJ9f56UgQ17ThlNAXrS0Xp8rIpTrB2DpRwcp6gqIQLMd-2BRsrfpvyxvTnevc2blo5rYRloIVaDQqmFj4ihy3VN4nGFG07v9AjFpXmKLrjOgwV-2Fuso6hk3bHRua5zJIgjjy3AqWV3blwwIkYJ3dh-2FnxNMD-2BfBQNSh28DG20UadS7QnO0O7wmPf2Pymju1Ykh8WA-3D-3D,unsure,none,The listed URL is a SendGrid click-tracking redirect whose destination is unrecoverable; urlscan shows only a human-verification interstitial — unresolved.
+V0137,momovouchers.weebly.com,phishing,name,'momovouchers' imitates the MoMo e-wallet brand with a voucher lure — no innocent reading.
+V0138,sailportal.it,legitimate,urlscan,SailPortal is a real e-learning platform; urlscan shows its own service — feed error.
+V0154,napkimcuongff2022.com,unsure,none,urlscan capture shows an empty page; the Free Fire top-up name is suggestive but not unambiguous under the codebook — unresolved.
+V0166,www.vaynganhangvn.com,phishing,name,'vaynganhangvn' presents itself as a Vietnamese bank-lending service; judged a bank-service impersonation by name.
+V0167,www.tianaicn.com,phishing,urlscan,urlscan shows a full login flow (sign-in / forgot password) — credential harvesting.
+V0169,accgameff.ga,unsure,none,Wayback shows an empty page; the name is suggestive but not unambiguous — unresolved.
+V0190,meta88.com,phishing,urlscan,urlscan shows a full login flow (sign-in / forgot password) — credential harvesting.
+V0197,lovelive-app.com,phishing,urlscan,urlscan shows a full login flow (sign-in / forgot password) — credential harvesting.
+V0005,854107.vip,phishing,urlscan,Credential phishing — login page impersonating Tiger777Bet (urlscan).
+V0014,www.vnthanhnien.com,phishing,name,Domain imitates the Thanh Nien newspaper; urlscan shows a fake news site — impersonation outranks.
+V0016,www.playtogether.com.vn,scam,urlscan,urlscan shows a game top-up/deposit site with no credential form — scam under the precedence rule.
+V0024,www.sd9301.xyz,phishing,urlscan,urlscan shows a game top-up/deposit interface presented under an impersonated game brand — judged credential-adjacent harvesting (phishing).
+V0032,khkempf.de,scam,archive,"Archived page shows a pirated-game site — abusive, nobody impersonated."
+V0033,hi-go.org,phishing,urlscan,Fake login URL (urlscan) — credential harvesting.
+V0052,0fzj64.cn,scam,urlscan,Storefront imitating Co.opmart without a credential form — counterfeit shop; scam under the codebook (impersonation without harvesting).
+V0062,ffmenberzship-garena.com,phishing,name,Domain deliberately embeds 'garena' beside a deceptive 'ffmenberzship' token — Garena/Free Fire impersonation by name.
+V0064,www.coopmart1.com,phishing,name,Name imitates Co.opmart ('coopmart1').
+V0078,www.sd1662.xyz,scam,urlscan,urlscan shows a page branded 'Vatgia' that is not the real Vatgia marketplace and carries no credential form — scam.
+V0086,sd1695.xyz,scam,urlscan,urlscan shows a page branded 'Vatgia' that is not the real Vatgia marketplace and carries no credential form — scam.
+V0118,www.i-goda.shop,phishing,archive,Login page impersonating I-GODA; requests telephone number and password — credential phishing.
+V0120,vitructuyen24-7.com,phishing,capture,Capture shows a fake login page harvesting user information.
+V0127,sd9772.xyz,scam,urlscan,urlscan shows a page branded 'Vatgia' that is not the real Vatgia marketplace and carries no credential form — scam.
+V0150,sd9490.xyz,phishing,urlscan,urlscan 2022 shows a site using VNP company imagery while not being that company — brand impersonation with a data-entry flow.
+V0165,www.dhl888.net,scam,urlscan,urlscan 2022 shows a gambling site operating as itself; no credential harvesting.
+V0170,www.lottemart.biz,phishing,name,Name imitates Lotte Mart.
+V0175,dichvudienmay-xanh.online,phishing,name,Name imitates Dien May Xanh with a 'service' lure ('dichvudienmay-xanh').
+V0177,www.lienquanmobilevn.site,phishing,urlscan,urlscan shows a login page harvesting game accounts behind a Lien Quan Mobile lure.
+V0179,garena.mobi,phishing,name,'garena.mobi' imitates garena.com on an alternate TLD; judged by name after the urlscan-link correction.
+V0183,dienmayxanh-dichvu.com,phishing,name,Name imitates Dien May Xanh ('dienmayxanh-dichvu').
+V0188,xvbwmht.cn,phishing,urlscan,urlscan 2021 shows a Coca-Cola-imitating promotional page — brand impersonation.
