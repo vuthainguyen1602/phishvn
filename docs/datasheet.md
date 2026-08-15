@@ -72,9 +72,21 @@
 - **Group-aware temporal split** (70/15/15) grouped by registrable domain, so campaign subdomains
   never span train/test.
 - **PII redaction** (phone/email/account numbers → tokens); no id↔PII mapping is released.
-- Label-quality audit: two annotators independently re-check a blinded 200-row stratified sample
-  (annotation in progress); Cohen's `κ` and the consensus-vs-source label-noise estimate will be
-  reported here on completion (`make_verification_sample.py score`).
+- Label-quality audit (**completed 2026-08-15**): two annotators independently re-checked a
+  blinded 200-row stratified sample against the four-way codebook (`docs/verify/CODEBOOK.md`).
+  **Independent round** (both sheets released; recompute with `make_verification_sample.py
+  score`): four-way agreement 0.710, Cohen's `κ` 0.609; collapsed to the
+  abuse-vs-legitimate-vs-unsure distinction the binary label makes, agreement 0.820, `κ` 0.725.
+  Disagreement decomposition (58 rows): 22 phishing-vs-scam subtype, 28 evidence threshold vs
+  `unsure`, 8 contested across the abuse–legitimate line. 130/200 rows resolvable by both.
+  **Arbitration** (`docs/verify/adjudication.xlsx`, source labels withheld from the arbiter):
+  58/58 resolved — 24 toward annotator A, 31 toward B, 3 toward neither; one instrument
+  amendment (urlscan lookup-link correction) recorded in the codebook's Amendments section.
+  Final labels resolve 149/200 rows (51 `unsure`).
+  **Label noise vs source labels**: positive arm 12/99 resolvable rows judged `legitimate`
+  → **12.1%** (Wilson 95% CI 7.1–20.0%; 11 bronze, 1 silver); benign arm 2/50 judged abusive
+  → **4.0%** (both silver/Tranco). Credential phishing is **43.7%** of defensible positives —
+  the rest is the anti-fraud (gambling/investment/counterfeit) scope of the dominant feed.
 
 ## 5. Distribution
 - **Open tier (CC BY 4.0):** URL table, CompPhish-aligned features, labels, splits, documentation.

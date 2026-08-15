@@ -74,3 +74,18 @@ Both annotators read this file, agree the four categories mean the same thing to
 five practice rows drawn outside the sample, and only then open the sheets. Any rule added or
 clarified after annotation begins is recorded here with its date, and the rows judged before the
 change are re-judged under it.
+
+## Amendments
+
+**2026-08-15 — corrected the prefilled urlscan lookup links.** The sheet's `urlscan`
+column was prefilled from the search query `domain:<host>`, which matches every scan
+that *contacted* the host — including scans of unrelated pages that merely loaded its
+resources (ads, CDN assets). For dedicated phishing domains the two queries coincide,
+but for shared-infrastructure domains the prefilled link could point at a scan of a
+different site. Fixed to `page.domain:<host>` (scans of the host's own pages only) and
+all 200 rows re-queried; the corrected labels carry the scanned page's domain in
+brackets. Impact audit: 18/200 rows' links changed; 3 verdicts (all annotator B, all
+already in the disagreement set: V0039, V0131, V0179) cited `urlscan` evidence on a
+changed link and are re-judged by the arbiter against the corrected scan; no consensus
+row was affected. Recorded here per the pre-registered amendment rule; the
+independent-round kappa is unaffected (verdicts are frozen as annotated).
