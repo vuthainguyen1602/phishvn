@@ -85,7 +85,7 @@
   Final labels resolve 149/200 rows (51 `unsure`).
   **Label noise vs source labels**: positive arm 12/99 resolvable rows judged `legitimate`
   → **12.1%** (Wilson 95% CI 7.1–20.0%; 11 bronze, 1 silver); benign arm 2/50 judged abusive
-  → **4.0%** (both silver/Tranco). Credential phishing is **43.7%** of defensible positives —
+  → **4.0%** (both silver/Tranco). Credential phishing is **42.5%** of defensible positives —
   the rest is the anti-fraud (gambling/investment/counterfeit) scope of the dominant feed.
 
 ## 5. Distribution

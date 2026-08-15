@@ -38,7 +38,7 @@ V0197,lovelive-app.com,phishing,urlscan,urlscan shows a full login flow (sign-in
 V0005,854107.vip,phishing,urlscan,Credential phishing — login page impersonating Tiger777Bet (urlscan).
 V0014,www.vnthanhnien.com,phishing,name,Domain imitates the Thanh Nien newspaper; urlscan shows a fake news site — impersonation outranks.
 V0016,www.playtogether.com.vn,scam,urlscan,urlscan shows a game top-up/deposit site with no credential form — scam under the precedence rule.
-V0024,www.sd9301.xyz,phishing,urlscan,urlscan shows a game top-up/deposit interface presented under an impersonated game brand — judged credential-adjacent harvesting (phishing).
+V0024,www.sd9301.xyz,scam,urlscan,urlscan shows a game top-up/deposit site with no credential form — scam under the precedence rule.
 V0032,khkempf.de,scam,archive,"Archived page shows a pirated-game site — abusive, nobody impersonated."
 V0033,hi-go.org,phishing,urlscan,Fake login URL (urlscan) — credential harvesting.
 V0052,0fzj64.cn,scam,urlscan,Storefront imitating Co.opmart without a credential form — counterfeit shop; scam under the codebook (impersonation without harvesting).
