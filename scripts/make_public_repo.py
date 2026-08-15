@@ -44,7 +44,7 @@ INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
 # the rule-based verdicts whose failure against the sample's benign control is the reason the
 # datasheet says this corpus cannot be adjudicated from archives. It carries no source labels, so it
 # un-blinds nothing; the codebook forbids annotators opening it before their own sheet is done.
-INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv", "MACHINE_PASS.csv"]
+INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv", "MACHINE_PASS.csv", "adjudicated.csv"]
 VERIFY_FROM = "data/docs/verify"
 # Audit artefacts the revised manuscript declares released: the annotated token-filter sample
 # (verdict + rationale per row) and the per-domain first-seen validation rows. Paths are

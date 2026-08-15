@@ -1,0 +1,59 @@
+vid,url,final_verdict,final_evidence,rationale
+V0022,www.yd516.com,phishing,urlscan,
+V0030,www.lz002.com,phishing,urlscan,
+V0039,cpmstar.com,legitimate,archive,
+V0046,motcuadientu.backan.gov.vn,legitimate,archive,
+V0112,www.etyuss.cn,scam,archive,
+V0126,uscloudminer.com,legitimate,archive,
+V0136,mail.az,legitimate,archive,
+V0161,senooee.com,legitimate,archive,
+V0013,www.vongquaysieuphamfreefirevn.club,phishing,name,
+V0015,shxycx.com,unsure,none,
+V0018,sd1675.xyz,scam,urlscan,
+V0021,cloudflare-gateway.com,unsure,none,
+V0025,www.vietnamxcm.vip,phishing,urlscan,
+V0029,shophaoquang.com,scam,archive,
+V0031,http://exoduuss.online/en/seguranca_validacao.php,phishing,urlscan,"Exodus (brand thật), không phải chính nó"
+V0053,hosting.net.np,legitimate,archive,
+V0056,now.vn,legitimate,urlscan,"Đây là domain cũ của NOW Food, dịch vụ giao đồ ăn tại Việt Nam. NOW sau đó đổi tên thành ShopeeFood."
+V0068,asp7890.com,phishing,urlscan,Đăng nhập giả mạo
+V0077,alicdn.com,legitimate,name,"domain chính thức thuộc hệ sinh thái Alibaba/Alibaba Cloud, dùng cho CDN và tài nguyên tĩnh (ảnh, JS, CSS, video...)"
+V0081,shopthureview.com,scam,urlscan,
+V0093,www.king07.xyz,unsure,none,không tìm thấy nguồn uy tín xác nhận đây là website chính thức của một tổ chức/thương hiệu
+V0095,www.xfnyzz.com,unsure,none,"Tên miền xfnyzz.com có dạng chuỗi ký tự ngẫu nhiên, không cho thấy thương hiệu/tổ chức rõ ràng"
+V0096,smrt.biddv.com,phishing,name,
+V0102,vitemac.com,phishing,urlscan,"Credential phishing — fake login page impersonating a financial/service platform, using Techcombank/BIDV/VIB logos to establish trust."
+V0105,www.rent-my-tesla.de,legitimate,archive,"một doanh nghiệp/dịch vụ cho thuê Tesla tại Wiesbaden, Đức"
+V0114,bfgoodrich.vn,legitimate,archive,Đây là website chính thức của BFGoodrich tại Việt Nam
+V0128,myshopify.com,unsure,none,"wayback trống, urlscan chụp lỗi"
+V0131,http://url7124.clearsoundpros.com/ls/click?upn=u001.3QAd2q-2FG8feWXojRZPX4-2Fd3xZx3XuwJjI9K8KbnPJ6LghHSlcNc6GWyqqv3Yj-2FGfGSnh5hiNRWkiT4q5xZMOG6YKlE9YSggb9VMudwBIzeYjFrV9sy8oQMCytLP5H36jEPe4_68If7Fl9L82gxlPCx3BxLyJ9f56UgQ17ThlNAXrS0Xp8rIpTrB2DpRwcp6gqIQLMd-2BRsrfpvyxvTnevc2blo5rYRloIVaDQqmFj4ihy3VN4nGFG07v9AjFpXmKLrjOgwV-2Fuso6hk3bHRua5zJIgjjy3AqWV3blwwIkYJ3dh-2FnxNMD-2BfBQNSh28DG20UadS7QnO0O7wmPf2Pymju1Ykh8WA-3D-3D,unsure,none,
+V0137,momovouchers.weebly.com,phishing,name,Name giả thanh toán điện tử momo
+V0138,sailportal.it,legitimate,urlscan,SailPortal là một nền tảng đào tạo/e-learning thực sự được nhiều tổ chức y tế tại Ý sử dụng.
+V0154,napkimcuongff2022.com,unsure,none,
+V0166,www.vaynganhangvn.com,phishing,name,domain ngân hàng
+V0167,www.tianaicn.com,phishing,urlscan,"yêu cầu đăng nhập, quên mâtk khẩu…"
+V0169,accgameff.ga,unsure,none,
+V0190,meta88.com,phishing,urlscan,"yêu cầu đăng nhập, quên mâtk khẩu…"
+V0197,lovelive-app.com,phishing,urlscan,"yêu cầu đăng nhập, quên mâtk khẩu…"
+V0005,854107.vip,phishing,urlscan,"Credential phishing — login page impersonating Tiger777Bet, requesting account credentials and verification code on an unrelated .vip domain."
+V0014,www.vnthanhnien.com,phishing,name,
+V0016,www.playtogether.com.vn,scam,urlscan,hiện web nộp tiền vào game
+V0024,www.sd9301.xyz,phishing,urlscan,hiện web nộp tiền vào game
+V0032,khkempf.de,scam,archive,game lậu
+V0033,hi-go.org,phishing,urlscan,url đăng nhập giả mạo
+V0052,0fzj64.cn,scam,urlscan,web mạo danh coopmart
+V0062,ffmenberzship-garena.com,phishing,name,Domain cố tình chứa garena nhưng tên ffmenberzship có dấu hiệu giả mạo/typo (menberzship thay vì membership)
+V0064,www.coopmart1.com,phishing,name,mạo danh coop mart
+V0078,www.sd1662.xyz,scam,urlscan,Website mang tên “Vatgia” nhưng giao diện không giống một website thương mại điện tử chính thức
+V0086,sd1695.xyz,scam,urlscan,Website mang tên “Vatgia” nhưng giao diện không giống một website thương mại điện tử chính thức
+V0118,www.i-goda.shop,phishing,archive,Login page impersonating I-GODA; requests telephone number and password; contains SIGN IN and SIGN UP.
+V0120,vitructuyen24-7.com,phishing,capture,
+V0127,sd9772.xyz,scam,urlscan,Website mang tên “Vatgia” nhưng giao diện không giống một website thương mại điện tử chính thức
+V0150,sd9490.xyz,phishing,urlscan,
+V0165,www.dhl888.net,scam,urlscan,
+V0170,www.lottemart.biz,phishing,name,
+V0175,dichvudienmay-xanh.online,phishing,name,
+V0177,www.lienquanmobilevn.site,phishing,urlscan,
+V0179,garena.mobi,phishing,name,
+V0183,dienmayxanh-dichvu.com,phishing,name,
+V0188,xvbwmht.cn,phishing,urlscan,
