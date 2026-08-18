@@ -14,6 +14,16 @@ spelled out in figures/decomposition.tex: make claims verifies .tex, not compile
 literal in a figure is the one place a stale number could survive a data change unseen.
 """
 from __future__ import annotations
+import os
+import sys
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 
 # Role-based palette. Assign by the job the mark does, never cycle hues.
 ORANGE = "#eb6834"   # phishing / booster / the highlighted extreme / the blind spot

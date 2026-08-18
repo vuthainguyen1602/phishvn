@@ -23,8 +23,8 @@ for reference but TCC blocks launchd from a repo under ~/Desktop). Each run is c
 with frequency because the denylist sample rotates.
 
 ENV:   URLSCAN_API_KEY=...    (required for the fresh-scan submission)
-RUN:   python scripts/watch_chongluadao.py                 # one polling cycle
-       python scripts/watch_chongluadao.py --no-scan       # just record new VN domains, don't scan
+RUN:   python scripts/collect/watch_chongluadao.py                 # one polling cycle
+       python scripts/collect/watch_chongluadao.py --no-scan       # just record new VN domains, don't scan
 """
 from __future__ import annotations
 import argparse
@@ -36,7 +36,13 @@ import sys
 
 import requests
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 from vn_filter import host_of, is_vn_target  # noqa: E402
 
 DENYLIST_URL = "https://chongluadao.vn/database/denylist"
@@ -59,7 +65,11 @@ MAX_JS_BYTES = 600_000  # skip a single JS body larger than this
 # changes on rebuilds, so match the prefix). This scopes extraction to the TABLE, excluding the
 # page's footer/nav <a href> links (e.g. the anti-scam orgs' own .vn sites), which were otherwise
 # false-positives when filtering for .vn.
-ENTRY_RE = re.compile(r'class="_urlText_[^"]*">\s*(https?://[^<\s]+)', re.I)
+# The class value is followed by other attributes (the page gained title="<url>" in a late-July
+# 2026 redeploy), so anything up to the closing > must be tolerated. Pinning '">' here matched
+# nothing from 2026-07-29 to 2026-08-18 while still returning 200 -- a silent zero, see
+# fetch_denylist_webpage.
+ENTRY_RE = re.compile(r'class="_urlText_[^"]*"[^>]*>\s*(https?://[^<\s]+)', re.I)
 SKIP_HOST = ("chongluadao.vn", "google", "gstatic", "cloudflare", "recaptcha", "w3.org")
 
 
@@ -77,7 +87,13 @@ def fetch_denylist_webpage() -> list[str]:
     """The freshest slice: a small rotating sample the denylist page server-renders into its HTML."""
     r = requests.get(DENYLIST_URL, headers=H, timeout=30)
     r.raise_for_status()
-    return [host_of(m) for m in ENTRY_RE.findall(r.text)]   # only URLs inside denylist table cells
+    hosts = [host_of(m) for m in ENTRY_RE.findall(r.text)]  # only URLs inside denylist table cells
+    if not hosts:
+        # A served page that parses to nothing means the markup moved, not that the denylist
+        # emptied. Returning [] here reads as success and hides the breakage for weeks; raise so
+        # fetch_denylist reports it degraded and the mirror visibly carries the run alone.
+        raise RuntimeError(f"denylist page returned {len(r.text)} bytes but ENTRY_RE matched none")
+    return hosts
 
 
 def fetch_denylist_mirror() -> list[str]:

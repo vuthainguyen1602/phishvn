@@ -23,8 +23,8 @@ Three guards keep global noise out (each drop is reported for audit):
     substring like "shost" otherwise fires inside unrelated words: "...themeshosting...").
 
 RUN:
-  python scripts/build_brand_tokens.py                       # default in/out paths
-  python scripts/build_brand_tokens.py --in data/raw/tinnhiem_org/orgs.csv \
+  python scripts/dataset/build_brand_tokens.py                       # default in/out paths
+  python scripts/dataset/build_brand_tokens.py --in data/raw/tinnhiem_org/orgs.csv \
       --out data/processed/brand_tokens.json --min-len 3 \
       --tranco data/raw/tranco/benign.csv --tranco-max 2
 """
@@ -33,7 +33,13 @@ import argparse, csv, json, re, sys, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE.parent))
+try:
+    from _path import add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    pass
 from vn_filter import VN_TOKENS  # noqa: E402
 
 # Multi-label public suffixes seen on VN org sites; single-label TLDs are stripped generically.

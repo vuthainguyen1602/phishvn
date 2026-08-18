@@ -9,8 +9,8 @@ id<->PII mapping cannot leak. The dataset itself lives on Mendeley/Zenodo (DOI);
 only points at it.
 
 RUN:
-  python scripts/make_public_repo.py            # build ./public/
-  python scripts/make_public_repo.py --out /tmp/phishvn-public
+  python scripts/release/make_public_repo.py            # build ./public/
+  python scripts/release/make_public_repo.py --out /tmp/phishvn-public
 """
 from __future__ import annotations
 import argparse
@@ -18,8 +18,15 @@ import ast
 import os
 import re
 import shutil
+import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 
 COPY_DIRS = ["configs"]                                # safe: config only
 # dvc.yaml ships because the README lists it and both its stages (normalize, train_url) are exported.
@@ -27,28 +34,20 @@ COPY_DIRS = ["configs"]                                # safe: config only
 COPY_FILES = ["requirements.txt", "LICENSE", "LICENSE-CODE", "dvc.yaml"]
 DOCS_FROM = "data/docs"
 
-# WHITELIST EVERYTHING THAT GROWS. tests/ and data/docs/ were copied wholesale until 2026-08-11,
-# on the assumption that anything landing there is public-safe. Both grew: tests/ gained suites for
-# the private papers (the claims verifier, P2's paired eval, P3's Jaccard band) and data/docs/
-# gained scenario_grounding.md, which documents an unpublished paper's lure generator. A re-export
-# would have published all four -- and the three test files import scripts that are deliberately
-# NOT exported, so `pytest -q` on the mirror did not even collect. Name what ships, like scripts do.
+# WHITELIST EVERYTHING THAT GROWS. tests/ and data/docs/ were copied wholesale until 2026-08-11;
+# both grew private material (claims verifier, P2 paired eval, P3 Jaccard band, scenario_grounding.md)
+# that a re-export would have published — and the private-suite imports broke `pytest -q` on the mirror.
 INCLUDE_TESTS = ["test_pipeline.py"]                   # the only suite whose imports are exported
 INCLUDE_DOCS = ["datasheet.md", "schema.md", "data_sources.md"]
 
-# The label-audit instruments, which P1 states are released with the code. The blinded sheets and
-# the codebook ship; key.csv NEVER does -- it maps each blinded id to the source label, so
-# publishing it would hand a future annotator the answers and destroy the blinding the whole
-# instrument depends on.
-# MACHINE_PASS.csv ships because a negative result nobody can inspect is just an assertion: it holds
-# the rule-based verdicts whose failure against the sample's benign control is the reason the
-# datasheet says this corpus cannot be adjudicated from archives. It carries no source labels, so it
-# un-blinds nothing; the codebook forbids annotators opening it before their own sheet is done.
+# The label-audit instruments P1 states are released with the code. key.csv NEVER ships: it maps
+# blinded id -> source label and would destroy the blinding. MACHINE_PASS.csv ships (its failure vs
+# the benign control backs the datasheet's "not adjudicable from archives" claim); it carries no
+# source labels, and the codebook forbids annotators opening it before their own sheet is done.
 INCLUDE_VERIFY = ["CODEBOOK.md", "annotator_A.csv", "annotator_B.csv", "MACHINE_PASS.csv", "adjudicated.csv"]
 VERIFY_FROM = "data/docs/verify"
-# Audit artefacts the revised manuscript declares released: the annotated token-filter sample
-# (verdict + rationale per row) and the per-domain first-seen validation rows. Paths are
-# (source, exported name); they land in docs/verify/ beside the label-audit instruments.
+# Audit artefacts the revised manuscript declares released, as (source, exported name);
+# they land in docs/verify/ beside the label-audit instruments.
 INCLUDE_AUDITS = [
     ("data/reports/token_audit_sample.csv", "token_audit_sample.csv"),
     ("data/processed/first_seen_validation.csv", "first_seen_validation.csv"),
@@ -58,30 +57,16 @@ INCLUDE_AUDITS = [
     ("data/interim/vn_phishing_candidates_20260812.csv", "feed_snapshot_20260812.csv"),
 ]
 
-# The mirror describes the deposit a reader can actually download, which is not necessarily the cut
-# this tree builds. CITATION.cff tracks the local corpus: it had already moved to version 3.0.0,
-# 53,116 records and the reserved `.3` DOI while the deposit serving readers was still v2. Exporting
-# it verbatim would ship a citation resolving nowhere, describing a corpus nobody can fetch, and
-# contradicting the README two paragraphs later. So the citation is version-bound: it is exported
-# only once this constant names the version it describes, and the mirror keeps its published
-# citation until then. Bump this when the next version actually goes live on Mendeley.
-PUBLISHED_DOI = "10.17632/b97hxbxtpd.3"
+# CITATION.cff tracks the LOCAL corpus (it hit 3.0.0 / 53,116 records / the reserved `.3` DOI while
+# readers could still only fetch v2), so it is exported only when its DOI equals this constant; the
+# mirror keeps its published citation until then. Bump when the next version goes live on Mendeley.
+PUBLISHED_DOI = "10.17632/b97hxbxtpd.4"
 
-# PROSE GATE. The whitelist and the closure assertion read code; nothing read the comments and
-# docstrings, and those are what leaked. Four exported modules had been documented for a private
-# audience -- they named the papers a defect was found in and quoted the numbers involved, from
-# manuscripts that are not out. It surfaced only because a diff happened to be read before the
-# push, which is not a control.
-#
-# A label is the tell, because attributing a finding is what turns an engineering note into a
-# disclosure. "A floor pinned above a series minimum" says how the bug works and is safe;
-# naming the paper and quoting the two numbers involved publishes its result. Tested against that
-# incident, this catches all four files. It is a floor and not a ceiling: an unattributed leak
-# reads as ordinary prose and passes, so this raises the cost of leaking carelessly rather than
-# making it impossible.
-#
-# P1 is deliberately absent: it is the paper this mirror accompanies, so prose matching it is the
-# code describing itself. Including it took the flag rate from 4/19 to 12/19, all noise.
+# PROSE GATE. Comments/docstrings are what leaked: four exported modules named unreleased papers and
+# quoted their numbers, caught only by a pre-push diff read. The paper LABEL is the tell (attribution
+# turns an engineering note into a disclosure), and matching it catches all four incident files.
+# Floor, not ceiling: an unattributed leak still passes. P1 is deliberately absent — it is the paper
+# this mirror accompanies; including it took the flag rate from 4/19 to 12/19, all noise.
 PAPER_LABEL = re.compile(r"\bP[2-8][ab]?\b(?!\w)|papers/P[2-8]|P[2-8]_[a-z]+")
 
 # file -> why its labels are legitimate. A reason is required, and waived labels are still printed
@@ -89,40 +74,65 @@ PAPER_LABEL = re.compile(r"\bP[2-8][ab]?\b(?!\w)|papers/P[2-8]|P[2-8]_[a-z]+")
 PROSE_WAIVERS = {
     "make_public_repo.py": "the export policy has to name which papers are held back",
     "normalize_merge.py": "\"P2 corpus\" is the external benchmark corpus, not the manuscript",
+    # Seven scripts ARE the URL-benchmark study's own code, exported because its conclusion
+    # promises the code behind every table (see INCLUDE_SCRIPTS). Stripping the label from a
+    # docstring that opens "the P2 benchmark" would leave the file describing an experiment it
+    # cannot name, which is worse for a cloner than the label costs. Decided 2026-08-18.
+    "run_p2_benchmark.py": "this IS that study's benchmark driver; the label names what it runs",
+    "run_p2_temporal_strict.py": "this IS that study's strict-temporal protocol",
+    "run_p2_stacking_baseline.py": "this IS that study's stacking arm",
+    "make_p2_bench_assets.py": "generates that study's tables; the paths it writes name them",
+    "audit_label_noise.py": "the label-noise audit that study's decomposition rests on",
+    "hpo_gwo.py": "the HPO method that study benchmarks against random search",
+    "run_gwo_temporal.py": "the HPO arm on the temporal window, named by its output path",
 }
 
-# Only the scripts that build/reproduce the RELEASED P1a URL dataset and its baselines are exported,
-# so the public repo matches the published data. Scripts for unreleased channels/papers (SMS, email,
-# images, PhoBERT, fusion, LLM red-team, drift, edge — P1b/P2/P6/P7) stay in the private repo and
-# are added when those papers and their data are released.
+# Only scripts that build/reproduce the RELEASED P1a URL dataset and baselines. Scripts for
+# unreleased channels/papers (SMS, email, images, PhoBERT, fusion, LLM red-team, drift, edge —
+# P1b/P2/P6/P7) stay private until those papers and their data are released.
+# Entries are role-subfolder paths in THIS repo; the mirror stays FLAT (basename only) — the
+# exported files' uniform bootstrap headers fall back via ImportError in the flat layout.
 INCLUDE_SCRIPTS = [
-    "scrape_vn_phishing.py",       # collect phishing URLs (NCSC blacklist + feeds)
-    "scrape_trusted_orgs.py",      # collect benign trusted-org URLs
-    "fetch_tranco.py",             # hard benign negatives (Tranco)
-    "fetch_urlscan.py",            # preliminary HTML/screenshot subset
-    "whois_dns_enrich.py",         # optional URL/host enrichment
-    "normalize_merge.py",          # build the unified URL dataset + group-aware temporal split
-    "compphish_features.py",       # CompPhish-aligned URL feature schema
-    "align_compphish.py",          # re-featurise URLs into the CompPhish schema
-    "train_url_baseline.py",       # URL baselines (multi-seed + bootstrap CI)
-    "make_verification_sample.py", # label-quality audit (Cohen's kappa)
-    "watch_chongluadao.py",        # the live ChongLuaDao watcher feeding the corpus
-    "vn_filter.py",                # is-this-VN-targeting test used across collection
-    "build_brand_tokens.py",       # registry-derived brand tokens the filter matches on
-    "make_p1a_assets.py",          # regenerate the paper's figure + tables from data
-    "fetch_chongluadao.py",        # import the ChongLuaDao mirror snapshot (named in the paper)
-    "chongluadao_first_seen.py",   # reconstruct per-domain first-seen dates (named in the paper)
-    "validate_first_seen.py",      # accuracy estimate for the reconstructed dates (rev. #1)
-    "audit_token_filter.py",       # sampled audit of the VN-targeting token filter (rev. #1)
-    "export_p1a_results.py",       # the deposited benchmark-evidence bundle's generator
-    "derive_abuse_type.py",        # types the positive class; its output ships in the open tier
-    "collect_audit_evidence.py",   # gathers the lookup evidence the released audit sheets need
-    "machine_pass_composition.py", # the archive-content pass, and the control showing it fails
-    "make_release.py",             # package the citable open/gated release
-    "make_public_repo.py",         # this exporter
-    "genfile.py",                  # atomic writer every asset generator goes through
-    "figstyle.py",                 # house palette + rcParams (and it installs the axis guard)
-    "axguard.py",                  # refuses to write a figure that clips its own data
+    "collect/scrape_vn_phishing.py",     # collect phishing URLs (NCSC blacklist + feeds)
+    "collect/scrape_trusted_orgs.py",    # collect benign trusted-org URLs
+    "collect/fetch_tranco.py",           # hard benign negatives (Tranco)
+    "collect/fetch_urlscan.py",          # preliminary HTML/screenshot subset
+    "collect/whois_dns_enrich.py",       # optional URL/host enrichment
+    "dataset/normalize_merge.py",        # build the unified URL dataset + group-aware temporal split
+    "lib/compphish_features.py",         # CompPhish-aligned URL feature schema
+    "dataset/align_compphish.py",        # re-featurise URLs into the CompPhish schema
+    "train/train_url_baseline.py",       # URL baselines (multi-seed + bootstrap CI)
+    "audit/make_verification_sample.py", # label-quality audit (Cohen's kappa)
+    "collect/watch_chongluadao.py",      # the live ChongLuaDao watcher feeding the corpus
+    "collect/fetch_phishing_feeds.py",   # the feed importer test_pipeline.py exercises
+    "lib/psl.py",                        # PSL domain folding shared by collection and evaluation
+    "lib/vn_filter.py",                  # is-this-VN-targeting test used across collection
+    "dataset/build_brand_tokens.py",     # registry-derived brand tokens the filter matches on
+    "assets/make_p1_assets.py",         # regenerate the paper's figure + tables from data
+    "collect/fetch_chongluadao.py",      # import the ChongLuaDao mirror snapshot (named in the paper)
+    "dataset/chongluadao_first_seen.py", # reconstruct per-domain first-seen dates (named in the paper)
+    "audit/validate_first_seen.py",      # accuracy estimate for the reconstructed dates (rev. #1)
+    "audit/audit_token_filter.py",       # sampled audit of the VN-targeting token filter (rev. #1)
+    "assets/export_p1_results.py",      # the deposited benchmark-evidence bundle's generator
+    "dataset/derive_abuse_type.py",      # types the positive class; its output ships in the open tier
+    "audit/collect_audit_evidence.py",   # gathers the lookup evidence the released audit sheets need
+    "audit/machine_pass_composition.py", # the archive-content pass, and the control showing it fails
+    "release/make_release.py",           # package the citable open/gated release
+    "release/make_public_repo.py",       # this exporter
+    "lib/genfile.py",                    # atomic writer every asset generator goes through
+    "lib/figstyle.py",                   # house palette + rcParams (and it installs the axis guard)
+    "lib/axguard.py",                    # refuses to write a figure that clips its own data
+    # P2 (URL benchmark) — the conclusion promises the code behind every table
+    "train/run_p2_benchmark.py",         # 7-family benchmark under the bundled protocols
+    "train/run_p2_temporal_strict.py",   # the strict-temporal protocol (+ rolling origins)
+    "train/run_p2_stacking_baseline.py", # stacked ensembles / base-learner combos
+    "train/run_p2_drift_forecastability.py",  # the three forecastability diagnostics
+    "train/run_cross_dataset.py",        # 4-corpus transfer matrix
+    "train/hpo_gwo.py",                  # GWO vs equal-budget random search
+    "train/run_gwo_temporal.py",         # the HPO arm on the temporal window
+    "audit/audit_label_noise.py",        # confident-learning label-noise audit
+    "lib/paired_eval.py",                # NB-corrected paired t-test + BH (all significance)
+    "assets/make_p2_bench_assets.py",    # regenerates every P2 table/figure/verdict macro
 ]
 
 PUBLIC_GITIGNORE = """# never commit data or private material to the public repo
@@ -222,7 +232,7 @@ data:         ## build the URL dataset from data/raw
 url:          ## train URL baselines (multi-seed + bootstrap CI)
 \tpython scripts/train_url_baseline.py --in data/processed/dataset_url.csv --out models/url_rf.joblib
 assets:       ## regenerate the paper figure + tables from data
-\tpython scripts/make_p1a_assets.py
+\tpython scripts/make_p1_assets.py
 release:      ## package the citable open-tier release (PAGES=1 for the gated bundle)
 \tpython scripts/make_release.py --version $(or $(VERSION),1.0.0) $(if $(PAGES),--include-pages,)
 verify:       ## run unit tests
@@ -289,12 +299,13 @@ def main():
         print(f"[!] CITATION.cff describes {cited.group(1) if cited else 'an unknown DOI'}, not the "
               f"published {PUBLISHED_DOI} — kept the mirror's published citation instead.")
 
-    # copy ONLY the whitelisted, P1a-relevant scripts (not the whole scripts/ dir)
+    # copy ONLY the whitelisted, P1a-relevant scripts (not the whole scripts/ dir).
+    # Source paths carry the role subfolder; the mirror flattens to scripts/<basename>.
     os.makedirs(os.path.join(args.out, "scripts"), exist_ok=True)
     for s in INCLUDE_SCRIPTS:
         src = os.path.join("scripts", s)
         if os.path.exists(src):
-            shutil.copy2(src, os.path.join(args.out, "scripts", s))
+            shutil.copy2(src, os.path.join(args.out, "scripts", os.path.basename(s)))
     # a trimmed Makefile whose targets only reference the exported scripts
     with open(os.path.join(args.out, "Makefile"), "w", encoding="utf-8") as f:
         f.write(MAKEFILE)
@@ -346,20 +357,22 @@ def main():
                              + os.path.relpath(os.path.join(dp, "key.csv"), args.out)
                              + " — it un-blinds the annotation sheets and must never ship.")
 
-    # CLOSURE ASSERTION: an exported file may not import a script we deliberately kept back. This
-    # is how a whitelist rots -- the export still succeeds, but the mirror cannot run, and the
-    # failure only shows up for whoever clones it (which is a reviewer). Nested imports count:
-    # test_pipeline.py reaches for its collection modules inside test bodies.
-    private = {f[:-3] for f in os.listdir("scripts")
-               if f.endswith(".py") and f not in INCLUDE_SCRIPTS}
-    # Two deliberate exemptions, both imports on paths this mirror cannot reach:
-    #   hpo_gwo backs `--tune --tune-method gwo`, an unreleased paper's study;
-    #   p3_jaccard_check defines the guardrail make_release applies to the paraphrase attack set,
-    #     which belongs to an unreleased paper and whose CSVs are absent here -- make_release
-    #     aborts on the missing input before it can reach the import.
-    private -= {"hpo_gwo", "p3_jaccard_check"}
+    # CLOSURE ASSERTION: an exported file may not import a non-exported script — otherwise the
+    # export succeeds but the mirror cannot run, and only a cloner (a reviewer) finds out.
+    # Nested imports count: test_pipeline.py imports its collection modules inside test bodies.
+    exported = {os.path.basename(s) for s in INCLUDE_SCRIPTS}
+    private = set()
+    for dp, dns, fns in os.walk("scripts"):
+        dns[:] = [d for d in dns if d not in ("__pycache__", "hooks")]
+        private |= {f[:-3] for f in fns if f.endswith(".py") and f not in exported}
+    # Three exemptions, all on paths the mirror cannot reach: hpo_gwo backs `--tune --tune-method
+    # gwo` (unreleased study); p3_jaccard_check is only reached by make_release after inputs that
+    # are absent here, so it aborts before the import; _path is the layout bootstrap every
+    # exported header imports inside try/except ImportError — falling back IS the flat-mirror
+    # design, so the import is dangling on purpose.
+    private -= {"hpo_gwo", "p3_jaccard_check", "_path"}
     dangling = []
-    for sub, names in (("scripts", INCLUDE_SCRIPTS), ("tests", INCLUDE_TESTS)):
+    for sub, names in (("scripts", sorted(exported)), ("tests", INCLUDE_TESTS)):
         for fn in names:
             p = os.path.join(args.out, sub, fn)
             if not os.path.exists(p):
@@ -375,7 +388,7 @@ def main():
     # PROSE ASSERTION: no exported comment or docstring may attribute anything to an unreleased
     # paper. See PAPER_LABEL above for what this does and does not buy.
     leaks = []
-    for sub, names in (("scripts", INCLUDE_SCRIPTS), ("tests", INCLUDE_TESTS)):
+    for sub, names in (("scripts", sorted(exported)), ("tests", INCLUDE_TESTS)):
         for fn in names:
             p = os.path.join(args.out, sub, fn)
             if not os.path.exists(p):
@@ -395,9 +408,8 @@ def main():
             + "\n  Describe the mechanism without the attribution, or add a PROSE_WAIVERS entry"
               " saying why the mention is legitimate.")
 
-    # Skip .git: os.walk counted the mirror's own object database, so the "files" figure moved with
-    # every commit made there (272 -> 282 across one commit) and read as if the export had grown.
-    # A number printed by the safety script has to mean what it says.
+    # Skip .git: counting the mirror's object database made the "files" figure move with every
+    # commit there (272 -> 282 across one commit) as if the export had grown.
     n = 0
     for dp, dns, fs in os.walk(args.out):
         dns[:] = [d for d in dns if d != ".git"]

@@ -42,7 +42,7 @@ adjudicated from web archives, and the human audit's `unsure` share will be larg
 reason. That is a finding for the datasheet's limitations, and it is the only thing here worth
 quoting. Do not quote the verdict percentages.
 
-RUN:  python scripts/machine_pass_composition.py [--limit N]
+RUN:  python scripts/audit/machine_pass_composition.py [--limit N]
 """
 from __future__ import annotations
 
@@ -57,10 +57,14 @@ import urllib.error
 import urllib.request
 import zlib
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 import vn_filter
-
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EVID = os.path.join(ROOT, "data", "docs", "verify", "EVIDENCE.csv")
 OUT = os.path.join(ROOT, "data", "docs", "verify", "MACHINE_PASS.csv")
 UA = "Mozilla/5.0 (research; contact nvthai@utc2.edu.vn)"

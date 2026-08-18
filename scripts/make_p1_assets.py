@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-make_p1a_assets.py — Regenerate P1a's data-driven figures and tables FROM the dataset, so they
+make_p1_assets.py — Regenerate P1a's data-driven figures and tables FROM the dataset, so they
 never drift from the numbers. Produces:
 
   papers/P1_dataset/figures/distribution.pdf   — scenario distribution (phishing), from data
@@ -15,7 +15,7 @@ The manuscript \input{}s the two .tex tables and \includegraphics the PDF, so a 
 everything in sync. Hand-drawn conceptual diagrams (pipeline.pdf, examples.pdf) are intentionally
 NOT regenerated here.
 
-RUN:  python scripts/make_p1a_assets.py
+RUN:  python scripts/assets/make_p1_assets.py
 """
 from __future__ import annotations
 import math
@@ -25,8 +25,13 @@ import sys
 import numpy as np
 import pandas as pd
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "scripts"))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 from genfile import write_generated  # noqa: E402
 from train_url_baseline import (load, make_model, _metrics, bootstrap_ci,  # noqa: E402
                                 COMPPHISH, DETERMINISTIC)
@@ -137,11 +142,9 @@ Gated content companion: {f(n_pairs)} paired HTML$+$screenshot captures ({f(n_pa
 
 # ---------- split breakdown per tier x source x assignment rule (reviewer #1) ----------
 def make_split_breakdown(raw):
-    """The official split files blend two assignment rules — temporal for registrable-domain
-    groups that carry a source-attested first-seen date, per-group hash for the rest — so a
-    reader cannot reconstruct a sub-benchmark from the split counts alone. This table gives the
-    full accounting: rows per tier x source x split, plus the share of each source's rows that
-    the TEMPORAL rule (not the hash) actually placed."""
+    """Full split accounting (rows per tier x source x split + share placed by the TEMPORAL rule
+    vs the per-group hash), since the official split files blend the two assignment rules and a
+    reader cannot reconstruct a sub-benchmark from counts alone."""
     df = raw.copy()
     dt = parse_event_dates(df["collected_at"])
     grp = df["domain"].fillna("").astype(str).map(reg_domain)
@@ -402,12 +405,9 @@ def _f1_at(y, score, thr=0.5):
 def paired_boot_f1(y, sa, sb, B=2000, seed=0):
     """95% CI for the F1 DIFFERENCE between two models, resampling the SAME test rows for both.
 
-    Why this and not the two per-model CIs already in the table: overlapping marginal intervals do
-    not mean two models are indistinguishable, and disjoint ones are not required for them to be
-    distinguishable — the question is about the difference, which has its own (much narrower)
-    distribution because both models are scored on identical rows and their errors are correlated.
-    Comparing the marginal intervals by eye is the same mistake, in a different costume, as reading
-    a ranking off two overlapping mean+/-std columns."""
+    Marginal per-model CIs cannot answer this: errors are correlated on shared test rows, so the
+    difference has its own (much narrower) distribution — overlap of the two marginal intervals
+    neither implies nor denies a real difference."""
     rng = np.random.default_rng(seed)
     n = len(y)
     d = []
@@ -485,10 +485,8 @@ def make_benchmark(df, feats):
     def cell(r, k):  # one metric cell: value (det) or mean +- std
         me, sd = r["mean"][k], r["std"][k]
         v = f"{me:.3f}" if r["det"] else f"{me:.3f}\\,$\\pm$\\,{sd:.3f}"
-        # Bold the leading F1 ONLY if the paired bootstrap separates it from the runner-up. Bold is
-        # a claim ("this model is best"), and on this test set the top two differ by less than the
-        # bootstrap interval of their difference — so an unconditional bold asserts a ranking the
-        # data does not support.
+        # Bold = a "best model" claim; assert it only if the paired bootstrap separates the top
+        # two (here they differ by less than the bootstrap interval of their difference).
         if k == "F1" and abs(me - best_f1) < 1e-9 and f1_separated:
             v = "\\textbf{" + v + "}"
         return v
@@ -542,11 +540,9 @@ Model & F1 & PR-AUC & ROC-AUC & FPR@90\\%rec. \\\\
     out = os.path.join(SEC, "tab_benchmark.tex")
     write_generated(out, tex)
     # the significance verdict is a finding for the body text, but must stay derived (see the
-    # matching note in make_p1b_assets.py) — so it ships as its own generated \input
-    open(os.path.join(SEC, "gen_benchmark_verdict.tex"), "w", encoding="utf-8").write(
-        bold_note + "\n")
+    # matching note in make_p3_assets.py) — so it ships as its own generated \input
+    write_generated(os.path.join(SEC, "gen_benchmark_verdict.tex"), bold_note + "\n")
     print(f"[+] {out}")
-    print(f"[+] {os.path.join(SEC, 'gen_benchmark_verdict.tex')}")
     print(f"    benchmark best-F1={best_f1:.3f}  best-PR-AUC model={best_key}")
     for key, disp in SUITE:
         r = res[key]
@@ -646,12 +642,12 @@ Stratum & Description & $n$ & Value & 95\\% CI \\\\
 """
     out = os.path.join(SEC, "tab_difficulty.tex")
     write_generated(out, tex)
-    open(os.path.join(SEC, "gen_difficulty_verdict.tex"), "w", encoding="utf-8").write(
+    write_generated(
+        os.path.join(SEC, "gen_difficulty_verdict.tex"),
         f"The global hard-negative (Tranco) stratum drives almost all false positives, while the "
         f"curated \\texttt{{.vn}} negatives are near-trivial. Community-sourced \\texttt{{bronze}} "
         f"phishing --- never seen at training time --- is recovered {bronze_claim}, {gold_claim}.\n")
     print(f"[+] {out}")
-    print(f"[+] {os.path.join(SEC, 'gen_difficulty_verdict.tex')}")
     print(f"    difficulty model={disp_name} (seed {seed})")
     for t, n, r in tiers:
         print(f"    phishing recall  {t:7s} n={n:5d}  recall={r:.3f}")
@@ -674,9 +670,7 @@ def make_goldonly(df, feats, best_key, seed=0):
            f"reported as a robustness check: the same model refitted on \\texttt{{gold}} alone "
            f"reaches ROC-AUC ${met['ROC-AUC']:.2f}$ with F1 ${met['F1']:.2f}$ under the "
            f"imbalance.")
-    open(os.path.join(SEC, "gen_goldonly_verdict.tex"), "w", encoding="utf-8").write(
-        tex + "\n")
-    print(f"[+] {os.path.join(SEC, 'gen_goldonly_verdict.tex')}")
+    write_generated(os.path.join(SEC, "gen_goldonly_verdict.tex"), tex + "\n")
     print(f"    gold-only n_test={len(te)} rate={rate:.4f} "
           + "  ".join(f"{k}={met[k]:.3f}" for k in METRICS))
 
@@ -756,10 +750,8 @@ Feature set & recall \\texttt{{gold}} & recall \\texttt{{silver}} & recall \\tex
                f"model places no split on either feature --- both are zero on over $99.6\\%$ of "
                f"rows --- so the ablation is confirmatory, and the released per-row predictions "
                f"for the two fits are score-identical on the test split.")
-    open(os.path.join(SEC, "gen_ablation_verdict.tex"), "w", encoding="utf-8").write(
-        verdict + "\n")
+    write_generated(os.path.join(SEC, "gen_ablation_verdict.tex"), verdict + "\n")
     print(f"[+] {out}")
-    print(f"[+] {os.path.join(SEC, 'gen_ablation_verdict.tex')}")
     for tag in (21, 19):
         print(f"    {tag}f  " + "  ".join(f"{k}={res[tag][k]:.3f}" for k in METRICS)
               + "  recall g/s/b=" + "/".join(f"{rec[tag][t][1]:.3f}" for t in ("gold", "silver", "bronze")))

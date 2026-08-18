@@ -17,8 +17,8 @@ Sources, matching the order the codebook fixes (docs/verify/CODEBOOK.md):
   3. a web archive near first-seen   (Wayback CDX, nearest snapshot to the detection date)
   4. the trusted-organisation registry (data/raw/tinnhiem_org)
 
-RUN:  python scripts/collect_audit_evidence.py
-      python scripts/collect_audit_evidence.py --limit 20     # smoke test
+RUN:  python scripts/audit/collect_audit_evidence.py
+      python scripts/audit/collect_audit_evidence.py --limit 20     # smoke test
 """
 from __future__ import annotations
 
@@ -32,7 +32,13 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 SHEET = os.path.join(ROOT, "data", "docs", "verify", "annotator_A.csv")
 OUT = os.path.join(ROOT, "data", "docs", "verify", "EVIDENCE.csv")
 UA = "Mozilla/5.0 (research; contact nvthai@utc2.edu.vn)"

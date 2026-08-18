@@ -19,9 +19,9 @@ Output: data/raw/chongluadao/blacklist.csv  (domain, snapshot_date, scraped_at)
         -> picked up by normalize_merge.load_chongluadao(), label=phishing, tier=bronze.
 
 RUN:
-  python scripts/fetch_chongluadao.py
+  python scripts/collect/fetch_chongluadao.py
   # or from a local copy of urls.txt:
-  python scripts/fetch_chongluadao.py --from-file urls.txt --snapshot-date 2024-05-16
+  python scripts/collect/fetch_chongluadao.py --from-file urls.txt --snapshot-date 2024-05-16
 """
 from __future__ import annotations
 import argparse

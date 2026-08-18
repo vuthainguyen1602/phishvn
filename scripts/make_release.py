@@ -11,8 +11,8 @@ Produces two clearly separated bundles under release/:
                                  captures. Do NOT upload to the open tier.
 
 RUN:
-  python scripts/make_release.py --version 1.0.0
-  python scripts/make_release.py --version 1.0.0 --include-pages
+  python scripts/release/make_release.py --version 1.0.0
+  python scripts/release/make_release.py --version 1.0.0 --include-pages
 """
 from __future__ import annotations
 import argparse
@@ -25,7 +25,13 @@ import sys
 import zipfile
 from collections import Counter
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 
 OPEN_FILES = [
     ("data/processed/dataset_url.csv", "data/dataset_url.csv"),
@@ -119,8 +125,7 @@ def _check_attack_guardrails():
     bundle leaves the machine, so it re-checks rather than trusting the build that wrote the CSVs:
     the rules (simulated link only, no real brand token, no diacritics) are what make publishing an
     evasion corpus defensible, and the README about to be written asserts them."""
-    sys.path.insert(0, os.path.join(ROOT, "scripts"))
-    from p3_jaccard_check import guardrail_problems
+    from p3_jaccard_check import guardrail_problems  # scripts/audit/, via the header bootstrap
 
     for src, _ in OPEN_FILES:
         if "p3_paraphrase" not in src:

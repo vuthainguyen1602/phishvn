@@ -30,7 +30,7 @@ OUTPUT: data/processed/abuse_type.csv (url, abuse_type, rule) — joinable on `u
 side file rather than a new column in dataset_url.csv, so the released schema and every check
 pinned to it stay unchanged.
 
-RUN:  python scripts/derive_abuse_type.py
+RUN:  python scripts/dataset/derive_abuse_type.py
 """
 from __future__ import annotations
 
@@ -40,7 +40,13 @@ import re
 import sys
 from collections import Counter
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 SRC = os.path.join(ROOT, "data", "processed", "dataset_url.csv")
 OUT = os.path.join(ROOT, "data", "processed", "abuse_type.csv")
 

@@ -27,7 +27,13 @@ RUN:
 """
 from __future__ import annotations
 import argparse, csv, os, sys
-sys.path.insert(0, os.path.dirname(__file__))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs  # noqa: E402
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 from compphish_features import extract, COLUMNS
 
 

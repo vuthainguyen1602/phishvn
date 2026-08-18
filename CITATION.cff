@@ -8,10 +8,10 @@ abstract: >-
   gold/silver label-confidence tiers, and a group-aware temporal split. Includes a preliminary
   paired HTML/screenshot subset.
 type: dataset
-version: 3.0.0
+version: 3.1.0
 date-released: "2026-08-08"
 license: CC-BY-4.0
-doi: 10.17632/b97hxbxtpd.3
+doi: 10.17632/b97hxbxtpd.4
 url: "https://github.com/vuthainguyen1602/phishvn"
 repository-code: "https://github.com/vuthainguyen1602/phishvn"
 keywords:

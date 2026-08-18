@@ -6,7 +6,7 @@ data:         ## build the URL dataset from data/raw
 url:          ## train URL baselines (multi-seed + bootstrap CI)
 	python scripts/train_url_baseline.py --in data/processed/dataset_url.csv --out models/url_rf.joblib
 assets:       ## regenerate the paper figure + tables from data
-	python scripts/make_p1a_assets.py
+	python scripts/make_p1_assets.py
 release:      ## package the citable open-tier release (PAGES=1 for the gated bundle)
 	python scripts/make_release.py --version $(or $(VERSION),1.0.0) $(if $(PAGES),--include-pages,)
 verify:       ## run unit tests
