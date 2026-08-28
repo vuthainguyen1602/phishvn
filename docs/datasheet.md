@@ -7,8 +7,8 @@
 ## 1. Motivation
 - **Purpose:** train and evaluate Vietnamese-targeted phishing **URL** detection, and provide a
   time-stamped, leakage-controlled benchmark aligned with the CompPhish feature schema.
-- **Creators:** Thai Nguyen Vu, University of Transport and Communications — Ho Chi Minh City Campus
-  (UTC2), nvthai@utc2.edu.vn. **Funding:** [if any].
+- **Creators:** Thai Nguyen Vu, Campus in Ho Chi Minh City, University of Transport and
+  Communications, thaivn_ph@utc.edu.vn. **Funding:** [if any].
 
 ## 2. Composition
 - **Unit:** URLs (not people, not messages).
@@ -109,7 +109,7 @@
   shortcut the companion benchmark/XAI papers measure, so the artefact under study is ~2 pp larger
   in v3. An audit (2026-08-04) confirms the 2,026 new rows carry no label defect (0 appear on any
   phishing blocklist; 88% are `.gov.vn`/`.edu.vn`/`.org.vn`). **Updates:** planned to counter
-  concept drift and to add channels/coverage. **Contact:** nvthai@utc2.edu.vn.
+  concept drift and to add channels/coverage. **Contact:** thaivn_ph@utc.edu.vn.
 
 ## 7. Limitations & bias
 - **URL-only:** the released data is the URL modality; the "Vietnamese" signal is strongest in page

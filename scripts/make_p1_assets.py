@@ -273,7 +273,7 @@ def make_models_table():
                           for k in KEYS[key])
         if key == "MLP":
             pairs = "z-score input scaling (\\texttt{StandardScaler}), then " + pairs
-        seeds = "--- (deterministic)" if key in DETERMINISTIC else "0--4"
+        seeds = "none (deterministic)" if key in DETERMINISTIC else "0--4"
         rows.append(f"{disp} & {pairs} & {seeds} \\\\")
     # the Basic-schema ablation row of the benchmark table uses the same LogReg configuration on
     # a different feature set; reviewer #4 asked for details "for all the models", so the table
@@ -281,7 +281,7 @@ def make_models_table():
     from train_url_baseline import BASIC
     basic_feats = ", ".join(f"\\texttt{{{esc(f)}}}" for f in BASIC)
     rows.append(f"Logistic Regression (Basic schema) & configuration as above, on the "
-                f"{len(BASIC)}-feature Basic schema: {basic_feats} & --- (deterministic) \\\\")
+                f"{len(BASIC)}-feature Basic schema: {basic_feats} & none (deterministic) \\\\")
     body = "\n\\addlinespace\n".join(rows)
     tex = f"""\\begin{{table}}[t]
 \\centering
@@ -508,7 +508,7 @@ def make_benchmark(df, feats):
         bold_note = (f"No F1 is marked best. Scoring the two leading models ({top_disp}, "
                      f"{run_disp}; seed-0 fits) on identical test rows puts them ${f1_d:.3f}$ apart "
                      f"with a paired bootstrap 95\\% CI of $[{f1_lo:.3f},\\,{f1_hi:.3f}]$, which "
-                     f"spans zero --- the sign does not even survive the choice of seed, and this "
+                     f"spans zero: the sign does not even survive the choice of seed, and this "
                      f"table therefore establishes no F1 ranking between them. Note that the "
                      f"per-model columns cannot answer this: overlapping marginal intervals neither "
                      f"imply nor deny a difference; only the interval of the \\emph{{difference}} "
@@ -565,7 +565,7 @@ def wilson(p, n, z=1.96):
 
 def ci_str(p, n):
     lo, hi = wilson(p, n)
-    return "---" if lo != lo else f"[{lo:.3f},\\,{hi:.3f}]"
+    return "n/a" if lo != lo else f"[{lo:.3f},\\,{hi:.3f}]"
 
 
 # ---------- per-tier / per-stratum difficulty breakdown ----------
@@ -646,7 +646,7 @@ Stratum & Description & $n$ & Value & 95\\% CI \\\\
         os.path.join(SEC, "gen_difficulty_verdict.tex"),
         f"The global hard-negative (Tranco) stratum drives almost all false positives, while the "
         f"curated \\texttt{{.vn}} negatives are near-trivial. Community-sourced \\texttt{{bronze}} "
-        f"phishing --- never seen at training time --- is recovered {bronze_claim}, {gold_claim}.\n")
+        f"phishing (never seen at training time) is recovered {bronze_claim}, {gold_claim}.\n")
     print(f"[+] {out}")
     print(f"    difficulty model={disp_name} (seed {seed})")
     for t, n, r in tiers:
@@ -747,8 +747,8 @@ Feature set & recall \\texttt{{gold}} & recall \\texttt{{silver}} & recall \\tex
     verdict = (f"Dropping \\texttt{{path\\_len}} and \\texttt{{query\\_len}} moves the "
                f"bronze$-$gold recall gap from ${gap21:+.3f}$ (21 features) to ${gap19:+.3f}$ "
                f"(19 features): {claim}. The two rows agree to every digit because the fitted "
-               f"model places no split on either feature --- both are zero on over $99.6\\%$ of "
-               f"rows --- so the ablation is confirmatory, and the released per-row predictions "
+               f"model places no split on either feature (both are zero on over $99.6\\%$ of "
+               f"rows), so the ablation is confirmatory, and the released per-row predictions "
                f"for the two fits are score-identical on the test split.")
     write_generated(os.path.join(SEC, "gen_ablation_verdict.tex"), verdict + "\n")
     print(f"[+] {out}")

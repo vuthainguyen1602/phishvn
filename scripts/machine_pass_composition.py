@@ -67,7 +67,7 @@ except ImportError:  # flat public-mirror layout
 import vn_filter
 EVID = os.path.join(ROOT, "data", "docs", "verify", "EVIDENCE.csv")
 OUT = os.path.join(ROOT, "data", "docs", "verify", "MACHINE_PASS.csv")
-UA = "Mozilla/5.0 (research; contact nvthai@utc2.edu.vn)"
+UA = "Mozilla/5.0 (research; contact thaivn_ph@utc.edu.vn)"
 
 CRED_FIELD = re.compile(r'<input[^>]*type\s*=\s*["\']?password', re.I)
 CRED_NAME = re.compile(r'(?:name|id)\s*=\s*["\'][^"\']*(?:pass|matkhau|mat_khau|otp|pin|cvv|'

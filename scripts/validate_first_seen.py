@@ -162,7 +162,7 @@ def main():
                 f"satisfy the ordering, and the {100 * mc['violation_rate']:.0f}\\% that do not "
                 f"miss it by a median of {mc['violation_median_days']:.0f} days "
                 f"({100 * mc['violation_share_within_30d']:.1f}\\% within 30, maximum "
-                f"{mc['violation_max_days']:.0f}) --- day-level feed and commit jitter rather "
+                f"{mc['violation_max_days']:.0f}), reflecting day-level feed and commit jitter rather "
                 f"than misdating.")
     write_generated(OUT_TEX, tex)
     print(f"[+] {OUT_CSV}")

@@ -39,7 +39,7 @@ import sys
 import tempfile
 import time
 
-HEADERS = {"User-Agent": "research (contact: nvthai@utc2.edu.vn)"}
+HEADERS = {"User-Agent": "research (contact: thaivn_ph@utc.edu.vn)"}
 WAYBACK_CDX = "https://web.archive.org/cdx/search/cdx"
 API_URL = "api.chongluadao.vn/v1/blacklist"
 MIRROR_MAIN = "https://github.com/elliotwutingfeng/ChongLuaDao-Phishing-Blocklist.git"

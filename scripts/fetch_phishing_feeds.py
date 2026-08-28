@@ -37,7 +37,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from vn_filter import host_of, is_vn_target  # noqa: E402
 
-H = {"User-Agent": "research (contact: nvthai@utc2.edu.vn)"}
+H = {"User-Agent": "research (contact: thaivn_ph@utc.edu.vn)"}
 OUT = os.path.join("data", "interim", "vn_phishing_candidates.csv")
 DENYLIST_URL = "https://chongluadao.vn/database/denylist"
 # Attributes may sit between the class value and the closing > -- see watch_chongluadao.py.

@@ -17,7 +17,7 @@ RUN:
                 CompPhish=compphish_compphish.csv \
                 PhiUSIIL=phiusiil_compphish.csv \
                 Grambeddings=grambeddings_compphish.csv \
-      --metric F1 --seeds 5 --out data/processed/cross_dataset_F1.csv
+      --metric F1 --seeds 5 --out data/processed/p2/cross_dataset_F1.csv
 """
 from __future__ import annotations
 import argparse
@@ -26,7 +26,7 @@ import sys
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
@@ -51,14 +51,39 @@ def load_corpus(path):
     return df
 
 
+LEGACY_SPLIT = False  # set by --legacy-split, to reproduce the pre-2026-08-19 matrices
+
+
 def in_dataset_split(df, seed):
-    """Prefer the corpus's own group-aware split column; else a stratified 70/30 split."""
+    """Split a corpus for its own DIAGONAL cell, group-aware by registrable domain.
+
+    WHY GROUP-AWARE, AND WHY THIS WAS A BUG. align_compphish reduces every corpus to
+    registrable-domain granularity, and the 21 features are computed from the domain string, so
+    two rows sharing a domain are an IDENTICAL feature vector with an IDENTICAL label. The old
+    fallback here was a plain row-level stratified split, applied to every corpus except PhishVN
+    -- the only one shipping its own group-aware `split` column. Measured (scripts/audit/
+    audit_xdata_leakage.py): 82.0% of ISCXURL2016's rows share a domain and 92.0% of a random
+    test fold was already present in training; PhishStorm 48.1%/81.0%; PhiUSIIL 23.6%/66.5%.
+    ISCXURL2016's in-distribution F1 falls 0.965 -> 0.758 once domains cannot span the split.
+
+    The leak is DIAGONAL-ONLY -- off-diagonal cells train and test on different corpora and cannot
+    leak this way -- so it inflated the diagonal, and therefore the generalisation gap, and only in
+    the corpora the study did not own. P2's own temporal protocol already carries a
+    "registrable-domain leakage guard"; this brings the cross-dataset diagonal to the same
+    standard rather than inventing a new one.
+    """
     if "split" in df and df["split"].astype(str).isin(["train", "test"]).any():
         tr = df[df["split"] == "train"]
         te = df[df["split"] == "test"]
         if len(te) and te["y"].nunique() > 1:
             return tr, te
-    tr, te = train_test_split(df, test_size=0.3, stratify=df["y"], random_state=seed)
+    if LEGACY_SPLIT or "dom" not in df:
+        return train_test_split(df, test_size=0.3, stratify=df["y"], random_state=seed)
+    gi, gj = next(GroupShuffleSplit(n_splits=1, test_size=0.3,
+                                    random_state=seed).split(df, groups=df["dom"]))
+    tr, te = df.iloc[gi], df.iloc[gj]
+    if te["y"].nunique() < 2:  # degenerate draw: fall back rather than crash the cell
+        return train_test_split(df, test_size=0.3, stratify=df["y"], random_state=seed)
     return tr, te
 
 
@@ -140,8 +165,12 @@ def main():
     ap.add_argument("--adapt", default="none", choices=["none", "coral"],
                     help="Unsupervised domain adaptation for off-diagonal cells (coral = align "
                          "source second-order statistics to the unlabeled target).")
+    ap.add_argument("--legacy-split", action="store_true",
+                    help="Reproduce the pre-2026-08-19 leaky row-level diagonal split.")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
+    global LEGACY_SPLIT
+    LEGACY_SPLIT = args.legacy_split
 
     drop = {f.strip() for f in args.drop.split(",") if f.strip()}
     unknown = drop - set(COMPPHISH)

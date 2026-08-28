@@ -50,9 +50,9 @@ from train_url_baseline import COMPPHISH  # noqa: E402
 from run_p2_benchmark import FAMILIES, make_any_model  # noqa: E402
 from run_p2_temporal_strict import load  # noqa: E402
 
-OUT_DECAY = "data/processed/p2_forecastability_decay.csv"
-OUT_MATRIX = "data/processed/p2_forecastability_shiftmatrix.csv"
-OUT_NOVELTY = "data/processed/p2_forecastability_novelty.csv"
+OUT_DECAY = "data/processed/p2/p2_forecastability_decay.csv"
+OUT_MATRIX = "data/processed/p2/p2_forecastability_shiftmatrix.csv"
+OUT_NOVELTY = "data/processed/p2/p2_forecastability_novelty.csv"
 N_WIN = 4
 
 
@@ -113,7 +113,7 @@ def e1_decay(feats, ph_tr, be, seeds):
 
     # verdict: internal decay ranking vs the canonical gap ranking, per origin x metric
     from scipy.stats import spearmanr
-    canon = pd.read_csv("data/processed/p2_temporal_strict.csv")
+    canon = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
     g = canon.groupby(["family", "protocol"])["PR-AUC"].mean().unstack()
     gap = (g["random_same_rows"] - g["temporal_strict"])
     for origin in (0.50, 0.60):

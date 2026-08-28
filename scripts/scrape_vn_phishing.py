@@ -48,7 +48,7 @@ from bs4 import BeautifulSoup
 
 BASE = "https://tinnhiemmang.vn/website-lua-dao"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (research-crawler; contact: nvthai@utc2.edu.vn)",
+    "User-Agent": "Mozilla/5.0 (research-crawler; contact: thaivn_ph@utc.edu.vn)",
     "Accept-Language": "vi,en;q=0.8",
 }
 

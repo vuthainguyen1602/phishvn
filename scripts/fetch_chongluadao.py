@@ -34,7 +34,7 @@ RAW_URL = ("https://raw.githubusercontent.com/elliotwutingfeng/"
            "ChongLuaDao-Phishing-Blocklist/main/urls.txt")
 COMMITS_API = ("https://api.github.com/repos/elliotwutingfeng/"
                "ChongLuaDao-Phishing-Blocklist/commits?path=urls.txt&per_page=1")
-HEADERS = {"User-Agent": "research (contact: nvthai@utc2.edu.vn)"}
+HEADERS = {"User-Agent": "research (contact: thaivn_ph@utc.edu.vn)"}
 HOST_RE = re.compile(r"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$", re.I)
 
 

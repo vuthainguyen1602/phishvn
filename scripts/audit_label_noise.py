@@ -24,7 +24,7 @@ therefore the CONTRAST between tiers: gold is human-verified, so its flag rate i
 floor (lexical ambiguity + method error) on labels known to be right, and the EXCESS of bronze
 over gold is the share of bronze attributable to provenance, not to lexical ambiguity.
 
-OUTPUT: data/processed/label_noise_audit.csv (per-tier, per-seed rates)
+OUTPUT: data/processed/p2/label_noise_audit.csv (per-tier, per-seed rates)
         papers/P2_url_benchmark/sections/tab_label_noise.tex (auto-generated table)
 
 RUN:  python scripts/audit/audit_label_noise.py            # 5 seeds, ~minutes
@@ -50,7 +50,7 @@ from train_url_baseline import COMPPHISH, add_label  # noqa: E402
 from paired_eval import wilson  # noqa: E402
 
 CORPUS = os.path.join(ROOT, "data", "processed", "vn_compphish.csv")
-OUT_CSV = os.path.join(ROOT, "data", "processed", "label_noise_audit.csv")
+OUT_CSV = os.path.join(ROOT, "data", "processed", "p2", "label_noise_audit.csv")
 OUT_TEX = os.path.join(ROOT, "papers", "P2_url_benchmark", "sections", "tab_label_noise.tex")
 
 

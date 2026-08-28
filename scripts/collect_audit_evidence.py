@@ -41,7 +41,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 SHEET = os.path.join(ROOT, "data", "docs", "verify", "annotator_A.csv")
 OUT = os.path.join(ROOT, "data", "docs", "verify", "EVIDENCE.csv")
-UA = "Mozilla/5.0 (research; contact nvthai@utc2.edu.vn)"
+UA = "Mozilla/5.0 (research; contact thaivn_ph@utc.edu.vn)"
 
 
 def _read(path, key=None):

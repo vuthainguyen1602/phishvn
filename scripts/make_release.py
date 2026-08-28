@@ -20,6 +20,7 @@ import csv
 import datetime as _dt
 import hashlib
 import os
+import re
 import shutil
 import sys
 import zipfile
@@ -42,8 +43,8 @@ OPEN_FILES = [
     # An ethics statement that argues release is the safe direction -- because a defender can
     # re-run our detector against our own attack set -- is only as good as the artefact actually
     # shipping. Both files are guardrail-checked before they are packed.
-    ("data/processed/p3_paraphrase.csv", "data/attacks/p3_paraphrase.csv"),
-    ("data/processed/p3_paraphrase_band.csv", "data/attacks/p3_paraphrase_band.csv"),
+    ("data/processed/p3/p3_paraphrase.csv", "data/attacks/p3_paraphrase.csv"),
+    ("data/processed/p3/p3_paraphrase_band.csv", "data/attacks/p3_paraphrase_band.csv"),
     # Typed where a conservative rule can type it; the datasheet explains why 89% is `unknown`.
     ("data/processed/abuse_type.csv", "data/abuse_type.csv"),
     ("data/docs/datasheet.md", "docs/datasheet.md"),
@@ -52,6 +53,33 @@ OPEN_FILES = [
     ("LICENSE", "LICENSE"),
     ("CITATION.cff", "CITATION.cff"),
 ]
+
+
+# ---- P4b: the infrastructure data article's deposit ---------------------------------------
+# The article's "Repository structure" table IS the contract for this list: build_p4b refuses to
+# run when the two disagree on a row count, because a deposit and the article describing it are
+# supposed to be the same object. v1.0.0 freezes at P4's trigger; until then the version carries
+# a -draft suffix so nothing built here can be mistaken for the deposit.
+INFRA_FILES = [
+    ("data/raw/host_infra/host_infra.csv", "data/host_infra.csv"),
+    ("data/processed/p4/p4_infra_dataset.csv", "data/p4_infra_dataset.csv"),
+    ("data/processed/p4/p4_funnel.csv", "data/funnel.csv"),
+    ("data/processed/p4/p4_accrual.csv", "data/accrual.csv"),
+    ("data/processed/p4/p4_label_audit.csv", "data/label_audit.csv"),
+    ("data/processed/p4/p4_wildcard_probe.csv", "data/wildcard_probe.csv"),
+    ("data/raw/ct_benign/seen_domains.txt", "data/ct_benign_seen.txt"),
+    ("data/raw/ct_benign_vn/seen_domains.txt", "data/ct_benign_vn_seen.txt"),
+    ("data/docs/infra/README_infra.md", "README.md"),
+    ("data/docs/infra/CITATION_infra.cff", "CITATION.cff"),
+    ("data/docs/infra/schema_infra.md", "docs/schema.md"),
+    ("data/docs/infra/collection_protocol.md", "docs/collection_protocol.md"),
+    ("LICENSE", "LICENSE"),
+]
+# Written when the deposit freezes, per the article; absent from a draft build on purpose.
+INFRA_AT_FREEZE = ["docs/datasheet.md", "docs/CHANGELOG.md"]
+# The ethics statement promises records ABOUT pages, never page content. Anything that could
+# carry markup or a rendered capture is a build-stopper, checked by column name and by content.
+INFRA_FORBIDDEN_COLS = ("html", "body", "screenshot", "dom", "content", "raw", "text")
 
 
 def _sha256(path):
@@ -139,15 +167,110 @@ def _check_attack_guardrails():
         print(f"[ok] {src}: every lure passes the attack-set guardrail")
 
 
+def _infra_rows(path):
+    """Rows as the article counts them: data rows for a CSV, lines for a seen-set."""
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        n = sum(1 for _ in fh)
+    return n - 1 if path.endswith(".csv") else n
+
+
+def _infra_table_counts():
+    """The row counts the P4b article prints, keyed by the deposit path it prints them for."""
+    tex = os.path.join(ROOT, "papers", "P4b_infra_data", "sections", "tab_files.tex")
+    want = {}
+    for line in open(tex, encoding="utf-8"):
+        m = re.match(r"\s*\\quad\\texttt\{([^}]+)\}\s*&\s*([\d{,}]+)\s+(?:rows|lines)", line)
+        if m:
+            want[m.group(1).replace("\\", "")] = int(m.group(2).replace("{,}", ""))
+    return want
+
+
+def _check_infra_guardrails(files):
+    """No page content, ever: the deposit is records ABOUT pages (ethics statement, P4b)."""
+    for src, arc in files:
+        if not arc.endswith(".csv"):
+            continue
+        with open(src, encoding="utf-8", errors="replace") as fh:
+            header = fh.readline().strip().lower().split(",")
+            sample = [fh.readline() for _ in range(200)]
+        bad = [c for c in header
+               if any(w in c for w in INFRA_FORBIDDEN_COLS) and c not in
+               ("registered_domain", "domain", "cname_present", "content_confirmed")]
+        if bad:
+            raise SystemExit(f"{arc}: column(s) {bad} could carry page content — "
+                             "the ethics statement says the deposit carries none")
+        if any("<html" in ln.lower() or "<!doctype" in ln.lower() for ln in sample if ln):
+            raise SystemExit(f"{arc}: markup found in the first rows — page content must not ship")
+
+
+def build_p4b(version, out):
+    """Stage the P4b deposit as a directory (and a zip beside it), from the files the article
+    names. Draft until P4's trigger freezes v1.0.0."""
+    missing = [s for s, _ in INFRA_FILES if not os.path.exists(s)]
+    if missing:
+        raise SystemExit("Missing (run `make p4 p4b` first?): " + ", ".join(missing))
+    _check_infra_guardrails(INFRA_FILES)
+
+    want, seen = _infra_table_counts(), {}
+    for src, arc in INFRA_FILES:
+        if arc.startswith("data/"):
+            seen[arc] = _infra_rows(src)
+    drift = {k: (want[k], seen[k]) for k in want if k in seen and want[k] != seen[k]}
+    if drift:
+        raise SystemExit("the article and the deposit disagree on row counts "
+                         f"(article, deposit): {drift} — run `make p4b` and rebuild the PDF")
+    if set(want) - set(seen):
+        raise SystemExit(f"the article lists files this build does not stage: {set(want) - set(seen)}")
+
+    root = os.path.join(out, f"PhishVN-Infra_v{version}_open")
+    if os.path.isdir(root):
+        shutil.rmtree(root)
+    for src, arc in INFRA_FILES:
+        dst = os.path.join(root, arc)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(src, dst)
+
+    manifest = [f"PhishVN-Infra v{version} — MANIFEST (SHA-256)", ""]
+    for _, arc in sorted(INFRA_FILES, key=lambda t: t[1]):
+        f = os.path.join(root, arc)
+        manifest.append(f"{_sha256(f)}  {arc}  ({os.path.getsize(f)} bytes)")
+    if "draft" in version:
+        manifest += ["", "DRAFT: v1.0.0 freezes at the pre-registered trigger of the companion",
+                     "study; these files are the build snapshot, not the deposit.",
+                     "Written at freeze: " + ", ".join(INFRA_AT_FREEZE)]
+    open(os.path.join(root, "MANIFEST.txt"), "w", encoding="utf-8").write(
+        "\n".join(manifest) + "\n")
+
+    zip_path = root + ".zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for dirpath, _, names in os.walk(root):
+            for n in sorted(names):
+                f = os.path.join(dirpath, n)
+                z.write(f, os.path.relpath(f, root))
+    print(f"[+] {root}/")
+    for arc, n in sorted(seen.items()):
+        print(f"    {arc:<32} {n:>7,} rows")
+    print(f"    {'MANIFEST.txt + docs + LICENSE':<32} {len(INFRA_FILES) - len(seen):>7} files")
+    print(f"[+] {zip_path}  ({os.path.getsize(zip_path):,} bytes)")
+    if "draft" in version:
+        print("[i] DRAFT build; pending at freeze: " + ", ".join(INFRA_AT_FREEZE))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", default="1.0.0")
     ap.add_argument("--out", default=os.path.join(ROOT, "release"))
     ap.add_argument("--include-pages", action="store_true",
                     help="Also build the GATED HTML/screenshot bundle (research-only).")
+    ap.add_argument("--p4b", action="store_true",
+                    help="Build the infrastructure data article's deposit instead "
+                         "(PhishVN-Infra: directory + zip under release/).")
     args = ap.parse_args()
 
     os.chdir(ROOT)
+    if args.p4b:
+        build_p4b("0.1.0-draft" if args.version == "1.0.0" else args.version, args.out)
+        return
     missing = [s for s, _ in OPEN_FILES if not os.path.exists(s)]
     if missing:
         raise SystemExit("Missing (run `make data` first?): " + ", ".join(missing))

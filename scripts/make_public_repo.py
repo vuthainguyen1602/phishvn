@@ -9,8 +9,14 @@ id<->PII mapping cannot leak. The dataset itself lives on Mendeley/Zenodo (DOI);
 only points at it.
 
 RUN:
-  python scripts/release/make_public_repo.py            # build ./public/
+  python scripts/release/make_public_repo.py            # build ./public/  (profile: default)
   python scripts/release/make_public_repo.py --out /tmp/phishvn-public
+  python scripts/release/make_public_repo.py --profile infra   # build ./public_infra/ (see INFRA_*)
+
+PROFILES. `default` is the URL-corpus mirror (github.com/vuthainguyen1602/phishvn). `infra` is a
+second, independent mirror for the detection-time infrastructure corpus (phishvn-infra): its own
+whitelist, docs and README, the same flat layout and the same two gates. The profiles share the
+gate code below so neither can drift to a weaker check than the other.
 """
 from __future__ import annotations
 import argparse
@@ -74,10 +80,19 @@ PAPER_LABEL = re.compile(r"\bP[2-8][ab]?\b(?!\w)|papers/P[2-8]|P[2-8]_[a-z]+")
 PROSE_WAIVERS = {
     "make_public_repo.py": "the export policy has to name which papers are held back",
     "normalize_merge.py": "\"P2 corpus\" is the external benchmark corpus, not the manuscript",
-    # Seven scripts ARE the URL-benchmark study's own code, exported because its conclusion
+    # make_release.py builds two deposits: this dataset's open/gated bundles, and since
+    # 2026-08-22 the infrastructure article's. Only the second half carries labels, and it has to:
+    # the article's file table IS the deposit's contract, so build_p4b refuses to run when the two
+    # disagree on a row count. That half cannot run in the mirror anyway -- it reads papers/, which
+    # is never exported -- and aborts on the missing input, exactly as the closure assertion below
+    # already records for p3_jaccard_check on this same script.
+    "make_release.py": "the P4b deposit guard names the article whose file table it checks against",
+    # EIGHT scripts ARE the URL-benchmark study's own code, exported because its conclusion
     # promises the code behind every table (see INCLUDE_SCRIPTS). Stripping the label from a
     # docstring that opens "the P2 benchmark" would leave the file describing an experiment it
-    # cannot name, which is worse for a cloner than the label costs. Decided 2026-08-18.
+    # cannot name, which is worse for a cloner than the label costs. Decided 2026-08-18;
+    # run_cross_dataset.py joined them 2026-08-25, its label having arrived with the 2026-08-19
+    # diagonal-leakage fix without a waiver following it.
     "run_p2_benchmark.py": "this IS that study's benchmark driver; the label names what it runs",
     "run_p2_temporal_strict.py": "this IS that study's strict-temporal protocol",
     "run_p2_stacking_baseline.py": "this IS that study's stacking arm",
@@ -85,6 +100,8 @@ PROSE_WAIVERS = {
     "audit_label_noise.py": "the label-noise audit that study's decomposition rests on",
     "hpo_gwo.py": "the HPO method that study benchmarks against random search",
     "run_gwo_temporal.py": "the HPO arm on the temporal window, named by its output path",
+    "run_cross_dataset.py": "the transfer matrix of that study; the leakage note points at its "
+                            "sibling temporal protocol, which carries the same domain guard",
 }
 
 # Only scripts that build/reproduce the RELEASED P1a URL dataset and baselines. Scripts for
@@ -134,6 +151,126 @@ INCLUDE_SCRIPTS = [
     "lib/paired_eval.py",                # NB-corrected paired t-test + BH (all significance)
     "assets/make_p2_bench_assets.py",    # regenerates every P2 table/figure/verdict macro
 ]
+
+# ----------------------------------------------------------------------------------------------
+# PROFILE `infra`: the detection-time infrastructure corpus (phishvn-infra). Whitelist-only, flat,
+# same gates. Everything below is read ONLY when --profile infra is given; the default profile's
+# constants above are untouched.
+INFRA_OUT = "public_infra"
+INFRA_COPY_FILES = ["requirements.txt", "LICENSE", "LICENSE-CODE"]
+INFRA_DOCS_FROM = "data/docs/infra"
+# (source name, exported path). README and CITATION take the repo-root names on export.
+INFRA_DOCS = [
+    ("README_infra.md", "README.md"),
+    ("CITATION_infra.cff", "CITATION.cff"),
+    ("collection_protocol.md", os.path.join("docs", "collection_protocol.md")),
+    ("schema_infra.md", os.path.join("docs", "schema.md")),
+]
+# Rationale that used to sit inline in the collectors. Moving it to docs/decisions/ left the
+# exported wrappers pointing at files the mirror did not carry: a cloner following
+# "docs/decisions/ct-benign-age-rotation.md" out of ct_benign_run.sh found nothing, and the
+# published mirror silently traded a self-contained explanation for a dead link. Sourced from the
+# repo root rather than INFRA_DOCS_FROM, and held to the same no-waiver rule as the hand-written
+# docs -- which is why neither of these two names a paper any more.
+INFRA_DECISION_DOCS = [
+    os.path.join("docs", "decisions", "ct-benign-age-rotation.md"),
+    os.path.join("docs", "decisions", "vn-filter-aligned-min-token.md"),
+]
+
+# The scripts the data article names, plus their import closure (the closure gate is the
+# arbiter: add here only what it reports dangling). Flat on export, like the default profile.
+INFRA_SCRIPTS = [
+    "collect/watch_host_infra.py",      # the infrastructure watcher (DNS/WHOIS/TLS at detection time)
+    "collect/watch_ct_benign.py",       # CT-sampled, age-matched benign arm (+ --stratum vn)
+    "collect/watch_urlscan_brands.py",  # brand-token urlscan feed (the live phishing channel)
+    "collect/watch_chongluadao.py",     # capture helpers watch_urlscan_brands imports
+    "audit/audit_p4_labels.py",         # the label gate + registry-wildcard probe
+    "assets/make_p4_assets.py",         # build_population (funnel stages); refuses to fit below trigger
+    "assets/make_p4_funnel.py",         # funnel + accrual tables/figure
+    "assets/make_p4b_assets.py",        # the data article's generated tables/figures
+    "lib/psl.py",                       # vendored from the URL-corpus repo (source of truth there)
+    "lib/vn_filter.py",                 # vendored: VN-targeting test + brand tokens
+    "lib/genfile.py",                   # atomic writer
+    "lib/figstyle.py",                  # house palette (installs the axis guard)
+    "lib/axguard.py",                   # refuses to write a figure that clips its data
+    "lib/paired_eval.py",               # wilson() used by build_population's tables
+    "lib/compphish_features.py",        # lexical channel make_p4_assets imports at module load
+    "assets/make_p4_perishability.py", # capture perishability (live vs backfill resolvability)
+    "audit/audit_infra_capture.py",     # its helper: the WHOIS-by-policy artefact, measured
+    "release/make_public_repo.py",      # this exporter
+]
+# The cron wrappers ship under scripts/ops/ with their `scripts/<role>/x.py` calls rewritten to
+# the flat `scripts/x.py` (the only edit made to any exported file; see _flatten_sh).
+INFRA_OPS = ["host_infra_run.sh", "ct_benign_run.sh", "ct_benign_vn_run.sh",
+             "urlscan_brands_run.sh", "rowcount_snapshot.sh",
+             # Ships with the wrappers because it is what tells a silent collector from a quiet
+             # day, and it checks that every module the wrappers import exists on the device --
+             # the failure that cost this collection 28 hours on 2026-08-21.
+             "jetson_health.sh"]
+# No test suite ships: the only candidates either import a non-exported module
+# (test_p4_cascade -> run_p4_cascade_eval) or hard-code the role-folder path scripts/assets/
+# that the flat mirror does not have (test_p4_funnel, test_p4_perishability).
+INFRA_TESTS: list[str] = []
+# The collector's own code and wrappers name the detection study they were built for, exactly as
+# the URL-benchmark scripts name theirs (see PROSE_WAIVERS). Same rule: a reason per file, printed
+# on every export. The hand-written docs under data/docs/infra/ get NO waiver: they must not name
+# any paper (and not "companion" either) -- phrase as "the data article" / "the detection study".
+INFRA_PROSE_WAIVERS = {
+    "watch_host_infra.py": "one comment names the study whose benign arm the source map serves",
+    "watch_ct_benign.py": "this IS that study's matched benign arm; its docstring names the design",
+    "audit_p4_labels.py": "this IS that study's label gate; the label names what it audits",
+    "make_p4_assets.py": "this IS that study's population builder; paths it writes name it",
+    "make_p4_funnel.py": "names the paper folder its figure is written into",
+    "make_p4b_assets.py": "names the data article's own paper folder (its output path)",
+    "make_public_repo.py": "the export policy has to name which papers are held back",
+    # Named P4 until 2026-08-25, when the rotation's evidence moved to docs/decisions/ and
+    # the clause that stayed behind -- the one the claims suite parses -- named P4b instead.
+    "ct_benign_run.sh": "the cadence clause names the data article whose 'four-hourly' the claims suite matches this comment against",
+    "audit_infra_capture.py": "this IS that study's capture audit; it names the design it constrains",
+    "make_p4_perishability.py": "names the paper folder its table is written into",
+    "urlscan_brands_run.sh": "the wrapper comment names the study its feed serves",
+    "rowcount_snapshot.sh": "the comment names the arm whose back-dated stamps it exists for",
+    "ct_benign_vn_run.sh": "names the pre-registration amendment that created the stratum",
+}
+INFRA_DOC_FORBIDDEN = re.compile(r"\bcompanion\b", re.I)
+
+# Exported code that names a docs/ path belonging to a DIFFERENT artefact. These are not pointers
+# this mirror's reader is meant to follow, so the dead-link gate below waives them by file rather
+# than by path -- a new dead link in the same file still has to be argued for here.
+INFRA_DOC_LINK_WAIVERS = {
+    "make_p4b_assets.py": "its file table is the deposit's manifest, listing files that ship there",
+    "make_public_repo.py": "the strings are the OTHER profile's README, describing that mirror",
+}
+
+INFRA_MAKEFILE = """.PHONY: install infra benign benign-vn audit population assets clean
+install:      ## install python deps
+\tpip install -r requirements.txt
+infra:        ## one tick of the infrastructure watcher (tails data/raw/*/detections.csv)
+\tpython scripts/watch_host_infra.py
+benign:       ## one tick of the CT-sampled benign arm (3-day target age)
+\tpython scripts/watch_ct_benign.py --age-days 3 --batches 4
+benign-vn:    ## one tick of the .vn supplement
+\tpython scripts/watch_ct_benign.py --stratum vn --age-days 3 --target 10 --max-entries 20000
+audit:        ## label gate over the live-stratum phishing arm
+\tpython scripts/audit_p4_labels.py --live
+population:   ## funnel + conditioned population (refuses to fit models below the registered trigger)
+\tpython scripts/make_p4_assets.py
+assets:       ## the data article's tables and figures
+\tpython scripts/make_p4_funnel.py && python scripts/make_p4b_assets.py
+clean:
+\trm -rf data/processed/p4/p4_*.csv
+"""
+
+INFRA_DATA_README = """# Data
+
+The corpus is **not stored in this Git repository**. Version 1.0.0 will be archived on Mendeley
+Data under CC BY 4.0 (DOI pending; see `README.md`, "Deposit").
+
+The collectors write to `data/raw/<source>/` relative to the repository root; the population
+build reads `data/raw/host_infra/host_infra.csv` and writes `data/processed/`. To reproduce the
+deposit's derived tables, place the deposited `host_infra.csv` at `data/raw/host_infra/` and run
+`make population`.
+"""
 
 PUBLIC_GITIGNORE = """# never commit data or private material to the public repo
 data/raw/
@@ -259,25 +396,237 @@ def _prose(path: str) -> str:
     return "\n".join(out)
 
 
+def _flatten_sh(src: str) -> str:
+    """The wrappers call `scripts/<role>/x.py`; the mirror is flat. Nothing else is rewritten."""
+    return re.sub(r"scripts/(collect|audit|assets|lib|dataset|train|release)/", "scripts/", src)
+
+
+def _sh_prose(path: str) -> str:
+    src = open(path, encoding="utf-8").read()
+    return "\n".join(m.group(1) for m in re.finditer(r"^\s*#\s?(.*)$", src, re.M))
+
+
+def _closure_gate(out: str, private: set[str], files: list[tuple[str, str]]) -> None:
+    """An exported file may not import a non-exported script -- otherwise the export succeeds
+    but the mirror cannot run, and only a cloner (a reviewer) finds out. Nested imports count."""
+    dangling = []
+    for sub, fn in files:
+        p = os.path.join(out, sub, fn)
+        if not os.path.exists(p):
+            continue
+        src = open(p, encoding="utf-8").read()
+        for m in re.findall(r"^\s*(?:from|import)\s+([a-z_][a-z0-9_]*)", src, re.M):
+            if m in private:
+                dangling.append(f"{sub}/{fn} -> {m}")
+    if dangling:
+        raise SystemExit("SAFETY: exported file imports a non-exported script: "
+                         + ", ".join(sorted(set(dangling))))
+
+
+def _prose_gate(out: str, files: list[tuple[str, str]], waivers: dict[str, str]) -> None:
+    """No exported comment or docstring may attribute anything to an unreleased paper. See
+    PAPER_LABEL for what this does and does not buy. .sh files contribute their comments."""
+    leaks = []
+    for sub, fn in files:
+        p = os.path.join(out, sub, fn)
+        if not os.path.exists(p):
+            continue
+        text = _sh_prose(p) if fn.endswith(".sh") else _prose(p)
+        labels = sorted({m.group(0) for m in PAPER_LABEL.finditer(text)})
+        if not labels:
+            continue
+        why = waivers.get(fn)
+        if why:
+            print(f"[waived] {sub}/{fn} names {', '.join(labels)} — {why}")
+        else:
+            leaks.append(f"{sub}/{fn}: {', '.join(labels)}")
+    if leaks:
+        raise SystemExit(
+            "SAFETY: exported prose attributes something to an unreleased paper:\n  "
+            + "\n  ".join(leaks)
+            + "\n  Describe the mechanism without the attribution, or add a PROSE_WAIVERS entry"
+              " saying why the mention is legitimate.")
+
+
+def _private_scripts(exported: set[str]) -> set[str]:
+    private = set()
+    for dp, dns, fns in os.walk("scripts"):
+        dns[:] = [d for d in dns if d not in ("__pycache__", "hooks")]
+        private |= {f[:-3] for f in fns if f.endswith(".py") and f not in exported}
+    return private
+
+
+def _clean_out(out: str) -> None:
+    """Clean existing contents but PRESERVE .git (so the repo/remote survives a re-export). Then
+    `git add -A` in the export picks up removals, dropping stale files from the tracked repo."""
+    if os.path.exists(out):
+        for entry in os.listdir(out):
+            if entry == ".git":
+                continue
+            p = os.path.join(out, entry)
+            shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
+    else:
+        os.makedirs(out)
+
+
+def _count_files(out: str) -> int:
+    """Skips .git: counting the mirror's object database made the "files" figure move with every
+    commit there (272 -> 282 across one commit) as if the export had grown."""
+    n = 0
+    for dp, dns, fs in os.walk(out):
+        dns[:] = [d for d in dns if d != ".git"]
+        n += len(fs)
+    return n
+
+
+def build_infra(out: str) -> None:
+    """Assemble the phishvn-infra mirror. Same discipline as the default profile: whitelist only,
+    flat scripts/, no data payloads, no papers, no pre-registration, no .env; both gates."""
+    _clean_out(out)
+    for f in INFRA_COPY_FILES:
+        if os.path.exists(f):
+            shutil.copy2(f, os.path.join(out, f))
+
+    os.makedirs(os.path.join(out, "scripts", "ops"), exist_ok=True)
+    for s in INFRA_SCRIPTS:
+        src = os.path.join("scripts", s)
+        if os.path.exists(src):
+            # flattened like the wrappers, and for the same reason: every RUN: line in these
+            # headers reads `python scripts/collect/x.py`, a path this mirror does not have. The
+            # rewrite only touches the role directory. Every occurrence of one in these files is
+            # text a person reads -- a docstring example, a comment, or a message naming the
+            # command to run (make_p4b_assets.py's --export-content hint, the "% generated by"
+            # header make_p4_perishability.py writes) -- and never a path opened at run time, so
+            # the flattened form is the correct one in all of them.
+            dst = os.path.join(out, "scripts", os.path.basename(s))
+            open(dst, "w", encoding="utf-8").write(
+                _flatten_sh(open(src, encoding="utf-8").read()))
+            shutil.copymode(src, dst)
+    for sh in INFRA_OPS:
+        src = os.path.join("scripts", "ops", sh)
+        if os.path.exists(src):
+            txt = _flatten_sh(open(src, encoding="utf-8").read())
+            dst = os.path.join(out, "scripts", "ops", sh)
+            open(dst, "w", encoding="utf-8").write(txt)
+            shutil.copymode(src, dst)
+    with open(os.path.join(out, "Makefile"), "w", encoding="utf-8") as f:
+        f.write(INFRA_MAKEFILE)
+
+    os.makedirs(os.path.join(out, "docs"), exist_ok=True)
+    missing = []
+    for src_name, dst_rel in INFRA_DOCS:
+        src = os.path.join(INFRA_DOCS_FROM, src_name)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(out, dst_rel))
+        else:
+            missing.append(src)
+    if missing:
+        raise SystemExit("SAFETY: infra docs missing (the README/citation are hand-written, not "
+                         "generated): " + ", ".join(missing))
+
+    os.makedirs(os.path.join(out, "docs", "decisions"), exist_ok=True)
+    for rel in INFRA_DECISION_DOCS:
+        if not os.path.exists(rel):
+            raise SystemExit(f"SAFETY: an exported wrapper points at {rel}, which is missing here")
+        # these notes open with "Applies to: scripts/<role>/x.py", and the mirror is flat
+        dst = os.path.join(out, rel)
+        open(dst, "w", encoding="utf-8").write(
+            _flatten_sh(open(rel, encoding="utf-8").read()))
+        shutil.copymode(rel, dst)
+
+    os.makedirs(os.path.join(out, "data"), exist_ok=True)
+    with open(os.path.join(out, "data", "README.md"), "w", encoding="utf-8") as f:
+        f.write(INFRA_DATA_README)
+    with open(os.path.join(out, ".gitignore"), "w", encoding="utf-8") as f:
+        f.write(PUBLIC_GITIGNORE)
+
+    # safety assertion: nothing forbidden slipped in -- the default profile's classes, plus the
+    # secrets file, anything named like a pre-registration, and any payload under data/.
+    leaked = []
+    for dp, dns, fns in os.walk(out):
+        dns[:] = [d for d in dns if d != ".git"]
+        for fn in fns:
+            p = os.path.relpath(os.path.join(dp, fn), out)
+            parts = p.split(os.sep)
+            if any(seg in parts for seg in ("papers", "proposal")) \
+               or fn.startswith(".env") or "PREREG" in fn.upper() or fn == "key.csv" \
+               or (parts[0] == "data" and len(parts) > 2):
+                leaked.append(p)
+    if leaked:
+        raise SystemExit("SAFETY: forbidden files present: " + ", ".join(sorted(set(leaked))))
+
+    exported = {os.path.basename(s) for s in INFRA_SCRIPTS}
+    files = [("scripts", fn) for fn in sorted(exported)] + [("tests", t) for t in INFRA_TESTS]
+    # _path is the layout bootstrap every header imports inside try/except ImportError; the
+    # fallback IS the flat-mirror design, so that import is dangling on purpose.
+    _closure_gate(out, _private_scripts(exported) - {"_path"}, files)
+    _prose_gate(out, files + [(os.path.join("scripts", "ops"), sh) for sh in INFRA_OPS],
+                INFRA_PROSE_WAIVERS)
+
+    # the hand-written docs get no waiver: no paper label, no "companion"
+    bad = []
+    for dst_rel in [d for _, d in INFRA_DOCS] + INFRA_DECISION_DOCS:
+        text = open(os.path.join(out, dst_rel), encoding="utf-8").read()
+        hits = sorted({m.group(0) for m in PAPER_LABEL.finditer(text)}
+                      | {m.group(0) for m in INFRA_DOC_FORBIDDEN.finditer(text)})
+        if hits:
+            bad.append(f"{dst_rel}: {', '.join(hits)}")
+    if bad:
+        raise SystemExit("SAFETY: infra docs name a paper or call it a companion:\n  "
+                         + "\n  ".join(bad))
+
+    # Every in-repo path the export names must resolve inside the mirror -- code pointing at a
+    # document and a document pointing back at code. Nothing caught the last batch of dead links
+    # because a reference in prose is not an import: the closure gate reads imports, the prose gate
+    # reads paper names, and neither reads a path. Both directions matter, and they broke
+    # differently: the code kept pointers to notes that were not exported, while the notes name
+    # scripts/<role>/x.py, which is not where a flat mirror puts them.
+    LINK = re.compile(r"(?:docs|scripts)/[\w./-]+\.(?:md|csv|json|py|sh)")
+    dangling: list[str] = []
+    waived_links: set[str] = set()
+    for top in ("scripts", "docs"):
+        for dp, dns, fns in os.walk(os.path.join(out, top)):
+            for fn in fns:
+                fp = os.path.join(dp, fn)
+                try:
+                    text = open(fp, encoding="utf-8", errors="ignore").read()
+                except OSError:
+                    continue
+                why = INFRA_DOC_LINK_WAIVERS.get(fn)
+                for m in LINK.finditer(text):
+                    if os.path.exists(os.path.join(out, m.group(0))):
+                        continue
+                    if why:
+                        waived_links.add(f"{fn} names {m.group(0)} — {why}")
+                        continue
+                    dangling.append(f"{os.path.relpath(fp, out)} -> {m.group(0)}")
+    if dangling:
+        raise SystemExit("SAFETY: exported code points at docs the mirror does not carry:\n  "
+                         + "\n  ".join(sorted(set(dangling)))
+                         + "\n  Export the file, or stop naming it.")
+    for w in sorted(waived_links):
+        print(f"[waived] {w}")
+
+    print(f"[+] public_infra repo assembled at {out}  ({_count_files(out)} files)")
+    print("    excluded: papers/, PREREG, scripts/.env*, data/ payloads")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(ROOT, "public"))
+    ap.add_argument("--profile", choices=["default", "infra"], default="default")
+    ap.add_argument("--out", default=None,
+                    help="build dir (default: ./public for the default profile, ./public_infra for infra)")
     args = ap.parse_args()
     os.chdir(ROOT)
+    if args.profile == "infra":
+        build_infra(os.path.abspath(args.out or os.path.join(ROOT, INFRA_OUT)))
+        return
+    args.out = args.out or os.path.join(ROOT, "public")
 
-    # Clean existing contents but PRESERVE .git (so the repo/remote survives a re-export). Then
-    # `git add -A` in the export picks up removals, dropping stale files from the tracked repo.
     prev_cff = ""                                  # survives the clean; see PUBLISHED_DOI
     if os.path.exists(p := os.path.join(args.out, "CITATION.cff")):
         prev_cff = open(p, encoding="utf-8").read()
-    if os.path.exists(args.out):
-        for entry in os.listdir(args.out):
-            if entry == ".git":
-                continue
-            p = os.path.join(args.out, entry)
-            shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
-    else:
-        os.makedirs(args.out)
+    _clean_out(args.out)                           # keeps .git
 
     def ignore(_dir, names):                       # keep dirs clean of caches
         return [n for n in names if n in ("__pycache__", ".pytest_cache") or n.endswith(".pyc")]
@@ -357,63 +706,22 @@ def main():
                              + os.path.relpath(os.path.join(dp, "key.csv"), args.out)
                              + " — it un-blinds the annotation sheets and must never ship.")
 
-    # CLOSURE ASSERTION: an exported file may not import a non-exported script — otherwise the
-    # export succeeds but the mirror cannot run, and only a cloner (a reviewer) finds out.
-    # Nested imports count: test_pipeline.py imports its collection modules inside test bodies.
+    # CLOSURE ASSERTION (see _closure_gate). Nested imports count: test_pipeline.py imports its
+    # collection modules inside test bodies.
     exported = {os.path.basename(s) for s in INCLUDE_SCRIPTS}
-    private = set()
-    for dp, dns, fns in os.walk("scripts"):
-        dns[:] = [d for d in dns if d not in ("__pycache__", "hooks")]
-        private |= {f[:-3] for f in fns if f.endswith(".py") and f not in exported}
     # Three exemptions, all on paths the mirror cannot reach: hpo_gwo backs `--tune --tune-method
     # gwo` (unreleased study); p3_jaccard_check is only reached by make_release after inputs that
     # are absent here, so it aborts before the import; _path is the layout bootstrap every
     # exported header imports inside try/except ImportError — falling back IS the flat-mirror
     # design, so the import is dangling on purpose.
-    private -= {"hpo_gwo", "p3_jaccard_check", "_path"}
-    dangling = []
-    for sub, names in (("scripts", sorted(exported)), ("tests", INCLUDE_TESTS)):
-        for fn in names:
-            p = os.path.join(args.out, sub, fn)
-            if not os.path.exists(p):
-                continue
-            src = open(p, encoding="utf-8").read()
-            for m in re.findall(r"^\s*(?:from|import)\s+([a-z_][a-z0-9_]*)", src, re.M):
-                if m in private:
-                    dangling.append(f"{sub}/{fn} -> {m}")
-    if dangling:
-        raise SystemExit("SAFETY: exported file imports a non-exported script: "
-                         + ", ".join(sorted(set(dangling))))
+    private = _private_scripts(exported) - {"hpo_gwo", "p3_jaccard_check", "_path"}
+    files = [("scripts", fn) for fn in sorted(exported)] + [("tests", t) for t in INCLUDE_TESTS]
+    _closure_gate(args.out, private, files)
 
-    # PROSE ASSERTION: no exported comment or docstring may attribute anything to an unreleased
-    # paper. See PAPER_LABEL above for what this does and does not buy.
-    leaks = []
-    for sub, names in (("scripts", sorted(exported)), ("tests", INCLUDE_TESTS)):
-        for fn in names:
-            p = os.path.join(args.out, sub, fn)
-            if not os.path.exists(p):
-                continue
-            labels = sorted({m.group(0) for m in PAPER_LABEL.finditer(_prose(p))})
-            if not labels:
-                continue
-            why = PROSE_WAIVERS.get(fn)
-            if why:
-                print(f"[waived] {sub}/{fn} names {', '.join(labels)} — {why}")
-            else:
-                leaks.append(f"{sub}/{fn}: {', '.join(labels)}")
-    if leaks:
-        raise SystemExit(
-            "SAFETY: exported prose attributes something to an unreleased paper:\n  "
-            + "\n  ".join(leaks)
-            + "\n  Describe the mechanism without the attribution, or add a PROSE_WAIVERS entry"
-              " saying why the mention is legitimate.")
+    # PROSE ASSERTION (see _prose_gate and PAPER_LABEL).
+    _prose_gate(args.out, files, PROSE_WAIVERS)
 
-    # Skip .git: counting the mirror's object database made the "files" figure move with every
-    # commit there (272 -> 282 across one commit) as if the export had grown.
-    n = 0
-    for dp, dns, fs in os.walk(args.out):
-        dns[:] = [d for d in dns if d != ".git"]
-        n += len(fs)
+    n = _count_files(args.out)
     print(f"[+] public repo assembled at {args.out}  ({n} files)")
     print("    excluded: papers/, proposal/, data/raw, data/interim, data/processed, data/private")
 

@@ -15,7 +15,7 @@ Non-deterministic families are averaged over --seeds under BOTH protocols (under
 split is fixed but the model seed still varies).
 
 Metrics per run: F1, PR-AUC, ROC-AUC, FPR at 0.90 recall (imbalanced data — accuracy is not reported).
-Output: one row per (family, protocol, seed) appended to data/processed/p2_benchmark.csv;
+Output: one row per (family, protocol, seed) appended to data/processed/p2/p2_benchmark.csv;
 downstream tables aggregate mean ± std. Cross-dataset transfer of the winning family reuses
 run_cross_dataset.py; HPO of the winner reuses hpo_gwo.py — neither is duplicated here.
 
@@ -44,8 +44,8 @@ except ImportError:  # flat public-mirror layout
 from train_url_baseline import COMPPHISH, _metrics, add_label, make_model  # noqa: E402
 
 CORPUS = "data/processed/vn_compphish.csv"
-OUT = "data/processed/p2_benchmark.csv"
-CURVES = "data/processed/p2_pr_curves.csv"
+OUT = "data/processed/p2/p2_benchmark.csv"
+CURVES = "data/processed/p2/p2_pr_curves.csv"
 
 FAMILIES = ["LogReg", "RandomForest", "HistGB", "MLP", "XGBoost", "LightGBM", "CatBoost"]
 DETERMINISTIC = {"LogReg"}

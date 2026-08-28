@@ -13,7 +13,7 @@ run_gwo_temporal.py — the two P1b results the methodology promises but Section
    temporal test set. Per the stated protocol, the tuned configuration is only *adopted* when it
    beats the equal-budget baseline in CV.
 
-Outputs: data/processed/temporal_gwo.csv (raw numbers) and
+Outputs: data/processed/p3/temporal_gwo.csv (raw numbers) and
 papers/P3_multimodal/sections/tab_temporal_gwo.tex (the table Section 6 inputs).
 """
 from __future__ import annotations
@@ -35,8 +35,10 @@ from train_url_baseline import COMPPHISH, _metrics, add_label, make_model  # noq
 from hpo_gwo import gwo_budget, gwo_search, random_search  # noqa: E402
 
 INP = os.path.join(ROOT, "data/processed/vn_compphish.csv")
-OUT_CSV = os.path.join(ROOT, "data/processed/temporal_gwo.csv")
-OUT_TEX = os.path.join(ROOT, "papers/P3_multimodal/sections/tab_temporal_gwo.tex")
+OUT_CSV = os.path.join(ROOT, "data/processed/p3/temporal_gwo.csv")
+# The table left P3 on 2026-08-21 (the subsection now cites P2 for the protocol and keeps only
+# the CSV's headline numbers), so the rendered table goes beside the CSV, not into the paper.
+OUT_TEX = os.path.join(ROOT, "data/processed/p3/temporal_gwo_table.tex")
 
 BASELINE_MODELS = ["LogReg", "RandomForest", "HistGB", "MLP"]
 TUNED_MODELS = ["RandomForest", "HistGB"]  # rich-enough spaces for a metaheuristic to matter

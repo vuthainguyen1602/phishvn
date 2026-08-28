@@ -20,7 +20,7 @@ RUN:
   # on transfer. Convert to the string labels first (data/external/phiusiil_urllabel.csv is the
   # converted copy this project actually uses, spot-checked by hand) and pass those:
   python align_compphish.py --in data/external/phiusiil_urllabel.csv --url-col url \
-         --label-col label --out data/processed/phiusiil_compphish.csv
+         --label-col label --out data/processed/external/phiusiil_compphish.csv
   # Grambeddings / PhishTank / Mendeley URL sets work the same way (point --url-col/--label-col),
   # and each needs the same polarity check before it is trusted.
   # then concatenate the *_compphish.csv files (identical columns) and train/test across corpora.

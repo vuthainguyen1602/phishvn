@@ -27,7 +27,7 @@ SEARCH = "https://urlscan.io/api/v1/search/"
 RESULT = "https://urlscan.io/api/v1/result/{uuid}/"
 DOM = "https://urlscan.io/dom/{uuid}/"
 KEY = os.environ.get("URLSCAN_API_KEY", "")
-H = {"User-Agent": "research (contact: nvthai@utc2.edu.vn)"}
+H = {"User-Agent": "research (contact: thaivn_ph@utc.edu.vn)"}
 if KEY:
     H["API-Key"] = KEY
 

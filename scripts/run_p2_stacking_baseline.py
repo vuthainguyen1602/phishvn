@@ -30,8 +30,13 @@ RUN:
   python scripts/train/run_p2_stacking_baseline.py \
       --bases XGBoost+LightGBM CatBoost+HistGB CatBoost+LogReg CatBoost+MLP \
               CatBoost+HistGB+LogReg+MLP \
-      --out data/processed/p2_stacking_combos.csv \
-      --curves data/processed/p2_pr_curves_stacking_combos.csv   # base-learner sweep
+      --out data/processed/p2/p2_stacking_combos.csv \
+      --curves data/processed/p2/p2_pr_curves_stacking_combos.csv   # base-learner sweep
+  python scripts/train/run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg \
+      --test-after 2025-02-18 --out data/processed/p2/p2_refresh_cblr_k20.csv --curves ""
+      # PREREG_refresh_window.md Test 1: the window is run_p2_temporal_strict.split_phishing's
+      # --test-after mode (train = all dated phishing on or before the date, test = strictly
+      # later, same guard); pair with the CatBoost file from run_p2_temporal_strict --test-after
 """
 from __future__ import annotations
 
@@ -52,10 +57,10 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH, _metrics  # noqa: E402
 from run_p2_benchmark import make_any_model, pr_curve_row, write_curves  # noqa: E402
-from run_p2_temporal_strict import load  # noqa: E402
+from run_p2_temporal_strict import load, split_phishing  # noqa: E402
 
-OUT = "data/processed/p2_stacking_baseline.csv"
-CURVES = "data/processed/p2_pr_curves_stacking.csv"
+OUT = "data/processed/p2/p2_stacking_baseline.csv"
+CURVES = "data/processed/p2/p2_pr_curves_stacking.csv"
 
 
 def hybrid_select(Xtr: np.ndarray, ytr: np.ndarray, names: list[str], k: int,
@@ -102,6 +107,10 @@ def main():
     ap.add_argument("--cut", type=float, default=0.70,
                     help="rolling-origin robustness: phishing time-cut fraction and benign "
                          "mask rate (0.70 = canonical, mirrors run_p2_temporal_strict)")
+    ap.add_argument("--test-after", default=None, metavar="YYYY-MM-DD",
+                    help="refresh window (PREREG_refresh_window.md): test = dated phishing "
+                         "strictly after this date, train = all dated phishing on or before it; "
+                         "overrides the fractional --cut for the phishing class only")
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--curves", default=CURVES)
     args = ap.parse_args()
@@ -115,10 +124,13 @@ def main():
     feats = [c for c in COMPPHISH if c in df.columns]
     ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)
     be = df[df.y == 0].reset_index(drop=True)
-    cut = int(len(ph) * args.cut)
-    ph_tr, ph_te = ph.iloc[:cut], ph.iloc[cut:]
-    ph_te = ph_te[~ph_te.rdom.isin(set(ph_tr.rdom))]
-    print(f"phishing dated: {len(ph)}  benign pool: {len(be)}  features: {len(feats)}")
+    ph_tr, ph_te, n_leaked = split_phishing(ph, args.cut, args.test_after)
+    if ph_te.empty:
+        raise SystemExit(f"no dated phishing after {args.test_after}: the refresh window has "
+                         f"not arrived (corpus max date {ph.date.max().date()})")
+    print(f"phishing dated: {len(ph)}  train<= {ph_tr.date.max().date()} ({len(ph_tr)})  "
+          f"test>= {ph_te.date.min().date()} ({len(ph_te)}; {n_leaked} guard-dropped)  "
+          f"benign pool: {len(be)}  features: {len(feats)}")
 
     rows, curves = [], []
     for proto in ("temporal_strict", "random_same_rows"):
