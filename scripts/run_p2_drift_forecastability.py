@@ -3,32 +3,29 @@
 run_p2_drift_forecastability.py — Can the temporal gap be anticipated from inside the training
 window? Three diagnostics, one shared split infrastructure.
 
-WHY THIS EXISTS. The pseudo-future family of drift-aware methods (dynamic expert selection,
-decay-extrapolated weighting, gated backoff, temporally consistent stacking OOF) all assume the
-drift visible INSIDE the train window resembles the drift ACROSS the train->test boundary. The
-gatekeeper run of 2026-08-17 found no such resemblance; this script hardens that into a
-paper-grade result and asks the two follow-up questions the finding raises.
+WHY. The pseudo-future family of drift-aware methods (dynamic expert selection, decay-extrapolated
+weighting, gated backoff, temporally consistent stacking OOF) all assume the drift visible INSIDE
+the train window resembles the drift ACROSS the train->test boundary. The gatekeeper run of
+2026-08-17 found no such resemblance; this hardens that into a paper-grade result.
 
-  E1 — internal decay curves. Fit each family on the oldest fraction of the phishing train
-       window, evaluate on 4 successive forward windows (registrable-domain guard mirrors the
-       outer protocol; fixed benign eval set so only phishing drifts). Two origins (0.50, 0.60
-       of ph_tr) and two metrics (PR-AUC, ROC-AUC) so the conclusion doesn't hang on one
-       windowing or one prevalence-sensitive metric. The question: does the internal decay
-       ranking reproduce the canonical random-minus-temporal gap ranking? (Spearman, per
-       origin x metric.)
-  E2 — shift-localization matrix. A phishing-only discriminator (HistGB, 5-fold OOF AUC) for
-       every pair of time blocks: 4 blocks inside ph_tr (first detection per registrable
-       domain only) plus ph_te. If shift accumulates smoothly, pair AUC grows with time
-       distance; if the boundary is a regime change, internal pairs stay near 0.5 while
-       (W4, test) jumps despite the shortest time distance.
-  E3 — instance-level novelty diagnostic. Does train-only novelty (mean scaled kNN distance,
-       k=10) predict WHERE CatBoost fails on the test window? AUC(u; wrong vs correct), all
-       rows and phishing-only, CatBoost and LogReg. Pre-set decision rule from the review:
-       AUC >= 0.65 keeps the gated-backoff idea alive as future work; below buries it.
+  E1 — internal decay curves. Fit each family on the oldest fraction of the phishing train window,
+       evaluate on 4 successive forward windows (registrable-domain guard mirrors the outer
+       protocol; fixed benign eval set so only phishing drifts). Two origins (0.50, 0.60 of ph_tr)
+       and two metrics (PR-AUC, ROC-AUC) so the conclusion doesn't hang on one windowing or one
+       prevalence-sensitive metric. Does the internal decay ranking reproduce the canonical
+       random-minus-temporal gap ranking? (Spearman, per origin x metric.)
+  E2 — shift-localization matrix. A phishing-only discriminator (HistGB, 5-fold OOF AUC) for every
+       pair of time blocks: 4 inside ph_tr (first detection per registrable domain only) plus
+       ph_te. Smooth accumulation => pair AUC grows with time distance; a regime change at the
+       boundary => internal pairs near 0.5 while (W4, test) jumps despite the shortest distance.
+  E3 — instance-level novelty. Does train-only novelty (mean scaled kNN distance, k=10) predict
+       WHERE CatBoost fails on the test window? AUC(u; wrong vs correct), all rows and
+       phishing-only, CatBoost and LogReg. Pre-set decision rule from the review: AUC >= 0.65
+       keeps the gated-backoff idea alive as future work; below buries it.
 
 RUN:
-  python scripts/train/run_p2_drift_forecastability.py            # all three, 5 seeds
-  python scripts/train/run_p2_drift_forecastability.py --only e2  # one diagnostic
+  python scripts/run_p2_drift_forecastability.py            # all three, 5 seeds
+  python scripts/run_p2_drift_forecastability.py --only e2  # one diagnostic
 """
 from __future__ import annotations
 
@@ -42,13 +39,13 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import COMPPHISH  # noqa: E402
-from run_p2_benchmark import FAMILIES, make_any_model  # noqa: E402
-from run_p2_temporal_strict import load  # noqa: E402
+from train_url_baseline import COMPPHISH
+from run_p2_benchmark import FAMILIES, make_any_model
+from run_p2_temporal_strict import load
 
 OUT_DECAY = "data/processed/p2/p2_forecastability_decay.csv"
 OUT_MATRIX = "data/processed/p2/p2_forecastability_shiftmatrix.csv"

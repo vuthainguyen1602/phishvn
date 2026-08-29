@@ -3,31 +3,27 @@
 audit_label_noise.py — Confident-learning label-noise audit of the corpus provenance tiers (P2).
 
 WHY: P2's decomposition shows the boosters' full-corpus advantage lives almost entirely on the
-undated bronze phishing mass — exactly the tier with the weakest provenance (single-feed,
-unverified, no detection date). The natural next question is ALGORITHMIC, and the 2026 phishing
-literature does not ask it: how much of that mass even looks mislabelled to a calibrated model?
-Every public phishing corpus treats its feeds as ground truth; none ships a label-noise estimate.
+undated bronze phishing mass — the tier with the weakest provenance (single-feed, unverified, no
+detection date). The natural next question is ALGORITHMIC and the 2026 literature does not ask it:
+how much of that mass even looks mislabelled to a calibrated model? Every public phishing corpus
+treats its feeds as ground truth; none ships a label-noise estimate.
 
-METHOD (Confident Learning, Northcutt et al., JAIR 2021 — binary form):
-  1. Out-of-fold predicted probabilities for every row: stratified K folds; the scorer is a
-     HistGB calibrated with isotonic regression (CalibratedClassifierCV) so the probabilities
-     are usable as confidences. Repeated over --seeds fold seeds.
-  2. Per-class confidence thresholds t_c = mean p_c over rows labelled c.
-  3. A row labelled phishing is FLAGGED when p_benign >= t_benign (and vice versa for benign):
-     the model is more confident the row is benign than it typically is on actual benign rows.
-  4. Report the flag rate per provenance tier, with across-seed spread and a Wilson CI.
+METHOD (Confident Learning, Northcutt et al., JAIR 2021 — binary form): out-of-fold predicted
+probabilities for every row (stratified K folds, HistGB calibrated with isotonic regression so the
+probabilities are usable as confidences, repeated over --seeds); per-class thresholds t_c = mean
+p_c over rows labelled c; a row labelled phishing is FLAGGED when p_benign >= t_benign (and vice
+versa); flag rate reported per provenance tier with across-seed spread and a Wilson CI.
 
 READING THE NUMBERS HONESTLY: the scorer sees only URL-lexical features, so a flag means
 "lexically indistinguishable from benign" — an UPPER bound on label error that includes genuine
-phishing hosted on benign-looking domains (e.g. compromised sites). The calibrated quantity is
-therefore the CONTRAST between tiers: gold is human-verified, so its flag rate is the method's
-floor (lexical ambiguity + method error) on labels known to be right, and the EXCESS of bronze
-over gold is the share of bronze attributable to provenance, not to lexical ambiguity.
+phishing on benign-looking domains (e.g. compromised sites). The calibrated quantity is the
+CONTRAST between tiers: gold is human-verified, so its flag rate is the method's floor on labels
+known to be right, and the EXCESS of bronze over gold is the share attributable to provenance.
 
 OUTPUT: data/processed/p2/label_noise_audit.csv (per-tier, per-seed rates)
         papers/P2_url_benchmark/sections/tab_label_noise.tex (auto-generated table)
 
-RUN:  python scripts/audit/audit_label_noise.py            # 5 seeds, ~minutes
+RUN:  python scripts/audit_label_noise.py            # 5 seeds, ~minutes
 """
 from __future__ import annotations
 import argparse
@@ -41,13 +37,13 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated  # noqa: E402
-from train_url_baseline import COMPPHISH, add_label  # noqa: E402
-from paired_eval import wilson  # noqa: E402
+from genfile import write_generated
+from train_url_baseline import COMPPHISH, add_label
+from paired_eval import wilson
 
 CORPUS = os.path.join(ROOT, "data", "processed", "vn_compphish.csv")
 OUT_CSV = os.path.join(ROOT, "data", "processed", "p2", "label_noise_audit.csv")

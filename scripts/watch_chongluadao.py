@@ -23,8 +23,8 @@ for reference but TCC blocks launchd from a repo under ~/Desktop). Each run is c
 with frequency because the denylist sample rotates.
 
 ENV:   URLSCAN_API_KEY=...    (required for the fresh-scan submission)
-RUN:   python scripts/collect/watch_chongluadao.py                 # one polling cycle
-       python scripts/collect/watch_chongluadao.py --no-scan       # just record new VN domains, don't scan
+RUN:   python scripts/watch_chongluadao.py                 # one polling cycle
+       python scripts/watch_chongluadao.py --no-scan       # just record new VN domains, don't scan
 """
 from __future__ import annotations
 import argparse
@@ -39,11 +39,11 @@ import requests
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from vn_filter import host_of, is_vn_target  # noqa: E402
+from vn_filter import host_of, is_vn_target
 
 DENYLIST_URL = "https://chongluadao.vn/database/denylist"
 # Full community denylist (MIT-licensed daily-refreshed mirror of the ChongLuaDao API). The webpage

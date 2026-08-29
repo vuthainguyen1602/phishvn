@@ -3,23 +3,20 @@
 derive_abuse_type.py — say what KIND of abuse each listed domain is, where that can be said.
 
 WHY. The positive class is "listed by a Vietnamese anti-fraud feed", not "phishing". ChongLuaDao
-supplies 92% of it and is a chong-lua-dao (anti-fraud) project, so gambling, betting streams,
-investment fraud and adult sites sit in the class beside credential phishing. The `scenario` field
-cannot express that: it is a BRAND-IMPERSONATION taxonomy (bank, ecommerce, gov, tax, telecom,
-delivery, social, gaming), so everything that impersonates nobody lands in `other` — 91% of
-positives — where it reads as "unclassified phishing" rather than "not impersonation at all".
+supplies 92% of it and is a chong-lua-dao project, so gambling, betting streams, investment fraud
+and adult sites sit in the class beside credential phishing. `scenario` cannot express that: it is
+a BRAND-IMPERSONATION taxonomy, so everything impersonating nobody lands in `other` — 91% of
+positives — reading as "unclassified phishing" rather than "not impersonation at all".
 
-WHAT THIS DOES, AND DELIBERATELY DOES NOT. It assigns a type only where a conservative rule fires,
-and `unknown` everywhere else. It does not guess. Opaque names are the norm here (mc622.com,
-tse6971.com, s567.live) and no lexical rule can read them, so a high `unknown` share is the honest
-outcome, not a failure to tune. Precision over recall throughout: a wrong type is worse than none,
-because a paper that filters on this column would silently train on a different population than it
-says it does.
+WHAT IT DELIBERATELY DOES NOT DO: guess. A type is assigned only where a conservative rule fires,
+`unknown` everywhere else. Opaque names are the norm (mc622.com, tse6971.com, s567.live) and no
+lexical rule can read them, so a high `unknown` share is the honest outcome. Precision over recall
+throughout: a paper filtering on this column would otherwise silently train on a different
+population than it says it does.
 
 Rules, in precedence order:
-  brand_impersonation  the existing registry brand-token machinery already fired (scenario !=
-                       other) — this tier inherits whatever precision that inference has, and the
-                       `rule` column records which scenario fired so it stays traceable
+  brand_impersonation  the registry brand-token machinery already fired (scenario != other) — this
+                       tier inherits that inference's precision, and `rule` records which fired
   gambling             Vietnamese gambling vocabulary or a named betting brand
   betting_stream       match-streaming vocabulary
   investment           crypto/forex/investment vocabulary
@@ -30,7 +27,7 @@ OUTPUT: data/processed/abuse_type.csv (url, abuse_type, rule) — joinable on `u
 side file rather than a new column in dataset_url.csv, so the released schema and every check
 pinned to it stay unchanged.
 
-RUN:  python scripts/dataset/derive_abuse_type.py
+RUN:  python scripts/derive_abuse_type.py
 """
 from __future__ import annotations
 
@@ -43,7 +40,7 @@ from collections import Counter
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)

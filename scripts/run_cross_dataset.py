@@ -31,11 +31,11 @@ from sklearn.model_selection import train_test_split, GroupShuffleSplit
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import (COMPPHISH, MODEL_NAMES, DETERMINISTIC,  # noqa: E402
+from train_url_baseline import (COMPPHISH, MODEL_NAMES, DETERMINISTIC,
                                 add_label, make_model, tune_params, _metrics)
 
 
@@ -61,7 +61,7 @@ def in_dataset_split(df, seed):
     registrable-domain granularity, and the 21 features are computed from the domain string, so
     two rows sharing a domain are an IDENTICAL feature vector with an IDENTICAL label. The old
     fallback here was a plain row-level stratified split, applied to every corpus except PhishVN
-    -- the only one shipping its own group-aware `split` column. Measured (scripts/audit/
+    -- the only one shipping its own group-aware `split` column. Measured (scripts/
     audit_xdata_leakage.py): 82.0% of ISCXURL2016's rows share a domain and 92.0% of a random
     test fold was already present in training; PhishStorm 48.1%/81.0%; PhiUSIIL 23.6%/66.5%.
     ISCXURL2016's in-distribution F1 falls 0.965 -> 0.758 once domains cannot span the split.

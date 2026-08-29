@@ -16,7 +16,7 @@ exact failure check_paper_claims.py exists to catch — see the P8 217:217 story
 Writes papers/P2_url_benchmark/sections/tab_*.tex + gen_*.tex verdict macros, and
 papers/P2_url_benchmark/figures/*.pdf.
 
-RUN:  python scripts/assets/make_p2_bench_assets.py [--shap]
+RUN:  python scripts/make_p2_bench_assets.py [--shap]
 """
 from __future__ import annotations
 
@@ -29,11 +29,11 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated  # noqa: E402
+from genfile import write_generated
 
 SEC = "papers/P2_url_benchmark/sections"
 FIG = "papers/P2_url_benchmark/figures"
@@ -42,10 +42,9 @@ ORDER = ["CatBoost", "MLP", "XGBoost", "LightGBM", "RandomForest", "HistGB", "Lo
 
 def fig_eval_design():
     """The central claim, visual: the F1 span BETWEEN evaluation designs dwarfs the span BETWEEN
-    families (between-family spread collapses 0.053 at full-corpus random -> 0.014 on dated rows).
-    CatBoost and LogReg drawn as the envelope so the booster's early lead visibly evaporates; the
-    other five families recessive grey. Values read from the same CSVs the tab_* tables use.
-    """
+    families (0.053 at full-corpus random -> 0.014 on dated rows). CatBoost and LogReg drawn as the
+    envelope so the booster's early lead visibly evaporates, the other five recessive grey. Values
+    read from the same CSVs the tab_* tables use."""
     from figstyle import apply, ORANGE, BLUE, GRAY, INK
     plt = apply()
 
@@ -87,9 +86,8 @@ def fig_eval_design():
         ax.plot(xs, ys, "-", color=col, lw=1.8, zorder=3)
         ax.plot(xs, ys, "o", ms=7, color=col, mec="white", mew=0.8, zorder=4)
 
-    # Cross-dataset stage. Only CatBoost and Random Forest have a transfer matrix, so the blue
-    # envelope simply ends at stage 3 — which reads as a dropped series unless the grey dot that
-    # DOES continue is named. Label it and give it its own dashed run-in.
+    # Cross-dataset stage: only CatBoost and Random Forest have a transfer matrix, so the blue envelope
+    # ends at stage 3 -- name the grey dot that DOES continue, or it reads as a dropped series
     xc = len(stages)
     for fam, col in [("CatBoost", ORANGE), ("RandomForest", GRAY)]:
         if fam in xdata:
@@ -100,9 +98,8 @@ def fig_eval_design():
                     lw=1.4 if fam == "CatBoost" else 1.0,
                     alpha=0.7 if fam == "CatBoost" else 0.5, zorder=3)
     if "RandomForest" in xdata:
-        # Right of its dot: to the left it read as a third design annotation. In INK, not the
-        # series grey: the house rule is that text never wears the series colour (figstyle), and
-        # at 7.5 pt the grey was too faint to read against white.
+        # Right of its dot (to the left it read as a third design annotation), and in INK not series grey:
+        # text never wears the series colour, and at 7.5 pt the grey was too faint against white
         ax.annotate("RandomForest", (xc, xdata["RandomForest"]), textcoords="offset points",
                     xytext=(7, -3), ha="left", va="center", fontsize=7.5, color=INK)
 
@@ -114,9 +111,8 @@ def fig_eval_design():
                     xytext=(0, -19), ha="center", fontsize=7.5, color=INK, zorder=6,
                     bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.9))
 
-    # Direct labels for the envelope. LogReg is the MINIMUM of the first cluster, so the spread
-    # annotation sits directly under its dot and the label cannot go below; it used to go right,
-    # where its own horizontal line ran straight through the text. Left is the only free side.
+    # LogReg is the MINIMUM of the first cluster, so its spread annotation sits directly under the dot
+    # and the label cannot go below; right puts its own horizontal line through the text
     ax.annotate("CatBoost", (0, stages[0][1]["CatBoost"]), textcoords="offset points",
                 xytext=(8, 5), fontsize=8, color=ORANGE, fontweight="bold")
     ax.annotate("LogReg", (0, stages[0][1]["LogReg"]), textcoords="offset points",
@@ -144,11 +140,10 @@ PR_STRICT = "data/processed/p2/p2_pr_curves_strict.csv"
 
 
 def fig_family_pr():
-    """Seven families, one protocol, seven curves on top of each other: the family result is a
-    NULL (CatBoost/MLP/XGBoost agree to three decimals in F1 and PR-AUC), and curves make a null
-    convincing where a column of 0.977s reads as a formatting accident. Only LogReg and Random
-    Forest separate, low. Curves are persisted by run_p2_benchmark from the SAME fits as
-    tab_families — a fresh run would resample the splits and put figure and table a hair apart."""
+    """Seven families, one protocol, seven curves on top of each other: the family result is a NULL
+    (CatBoost/MLP/XGBoost agree to three decimals), and curves make a null convincing where a column
+    of 0.977s reads as a formatting accident. Curves are persisted by run_p2_benchmark from the SAME
+    fits as tab_families -- a fresh run would put figure and table a hair apart."""
     from figstyle import apply, ORANGE, BLUE, GRAY, INK
     plt = apply()
     if not os.path.exists(PR_STRICT):
@@ -157,9 +152,8 @@ def fig_family_pr():
     cur = pd.read_csv(PR_STRICT)
     bench = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
     fig, ax = plt.subplots(figsize=(5.6, 3.9))
-    # Families that separate get identity; the coinciding five share one colour (naming five
-    # overlapping curves implies a distinction to look for). RandomForest sits below the field,
-    # so INK dashed — at GRAY against the GRAY pack it was invisible as a distinct series.
+    # Families that separate get identity; the coinciding five share one colour. RandomForest sits
+    # below the field, so INK dashed -- at GRAY against the GRAY pack it vanished as a series
     hero = {"CatBoost": (ORANGE, "-", 1.9), "LogReg": (BLUE, "-", 1.9),
             "RandomForest": (INK, "--", 1.5)}
     drawn_pack = False
@@ -246,13 +240,12 @@ def fig_design_pr():
 
 
 def fig_prauc_designs():
-    """The headline claim on a threshold-free metric, answering "is it a thresholding artefact?"
-    Under PR-AUC the seven families span only 0.009 at full-corpus random — the 5.3-point F1
-    booster lead is almost entirely calibration — while the DESIGN steps move the level by 0.076.
-    That is 8.4x the full-corpus-random spread but only 2.9x the strict-stage one (0.027), so
-    "an order of magnitude more than the spread at any stage", which this docstring asserted and
-    which reached the abstract and §6, was true of the widest stage and not of the narrowest.
-    """
+    """The headline claim on a threshold-free metric: is it a thresholding artefact?
+
+    Under PR-AUC the seven families span only 0.009 at full-corpus random -- the 5.3-point F1 lead
+    is almost entirely calibration -- while the DESIGN steps move the level by 0.076. That is 8.4x
+    the full-corpus-random spread but only 2.9x the strict-stage one, so "an order of magnitude more
+    than the spread at any stage" was true of the widest stage and not of the narrowest."""
     from figstyle import apply, ORANGE, BLUE, GRAY, INK
     plt = apply()
     bench = pd.read_csv("data/processed/p2/p2_benchmark.csv")
@@ -282,10 +275,8 @@ def fig_prauc_designs():
     # Above the cluster, not below it: below the last cluster the annotation landed on the
     # x tick label, and the level falls stage to stage so the space overhead is always free.
     for xi, (_, series) in zip(xs, stages):
-        # The first cluster's overhead is taken by the CatBoost series label, so its spread
-        # annotation moves left of centre; the rest stay centred. The middle one sits where the
-        # CatBoost line passes on its way down, so every label is lifted clear and given an
-        # opaque box: at 9 pt of offset the descending line ran straight through "spread 0.027".
+        # The first cluster's overhead is taken by the CatBoost series label, so its spread annotation moves
+        # left; labels are lifted clear with an opaque box where the descending line would cross them
         dx, ha = (-8, "right") if xi == 0 else (0, "center")
         ax.annotate(f"spread {series.max() - series.min():.3f}", (xi, series.max()),
                     textcoords="offset points", xytext=(dx, 13), ha=ha, fontsize=7.5, color=INK,
@@ -322,9 +313,8 @@ def fig_prauc_cost():
     fig, ax = plt.subplots(figsize=(6.0, 3.4))
     ax.set_axisbelow(True)
     ax.grid(True, alpha=0.3, lw=0.6)
-    # Label side decided from the data: fixed right-side labels printed LogReg through LightGBM
-    # (near-identical y is the NORMAL case here — families sit 0.001 PR-AUC apart). A family whose
-    # near-twin sits to its right within 3x in fit time takes its label on the left.
+    # Label side decided from the data: families sit 0.001 PR-AUC apart, so a family whose near-twin is
+    # to its right within 3x in fit time takes its label on the left
     yr = d.prauc.max() - d.prauc.min()
     for fam, r in d.iterrows():
         col = ORANGE if fam == "CatBoost" else BLUE if fam == "LogReg" else GRAY
@@ -385,14 +375,11 @@ def tab_families():
 def tab_strict():
     """All FOUR metrics the experiment records, not the three that suited the headline.
 
-    ROUND-2 REVIEW, M4. p2_temporal_strict.csv has always carried FPR@0.90 -- the metric
-    Section VII names as the deployment one, the metric Table~\\ref{tab:confusion} is built
-    around -- and this table printed F1, PR-AUC and ROC-AUC. The omission mattered because the
-    paper's "statistically tied" verdict is true of threshold-fixed F1 and false, unanimously
-    across seeds, of FPR@0.90. Selecting which of four recorded metrics to print is exactly the
-    practice the paper accuses random-split benchmarks of, so the column is now printed whether
-    or not it flatters the argument.
-    """
+    ROUND-2 REVIEW, M4. p2_temporal_strict.csv has always carried FPR@0.90 -- the metric Section VII
+    names as the deployment one -- and this table printed the other three. The paper's "statistically
+    tied" verdict is true of threshold-fixed F1 and false, unanimously across seeds, of FPR@0.90;
+    selecting which of four recorded metrics to print is what the paper accuses random-split
+    benchmarks of, so the column now prints whether or not it flatters the argument."""
     df = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
     lines = [
         "\\begin{table*}[t]\\centering",
@@ -486,12 +473,12 @@ def tab_shiftmatrix():
 
 
 def tab_confusion():
-    """CatBoost confusion counts at the paper's operating point (recall 0.90), both same-row
-    protocols. Derived, not re-measured: TP/FN follow from the target recall and the guarded
-    phishing test count; FP/TN from the seed-mean FPR@0.90 in p2_temporal_strict.csv and the
-    seed-mean benign test size (the per-seed masks are RandomState(s), so reproduced exactly).
-    A 0.5-threshold matrix is deliberately absent: Section~V argues that operating point is a
-    calibration artefact."""
+    """CatBoost confusion counts at the paper's operating point (recall 0.90), both same-row protocols.
+
+    Derived, not re-measured: TP/FN follow from the target recall and the guarded phishing test
+    count, FP/TN from the seed-mean FPR@0.90 and benign test size (per-seed masks are RandomState(s),
+    so reproduced exactly). A 0.5-threshold matrix is deliberately absent -- Section~V argues that
+    operating point is a calibration artefact."""
     n_ph, n_be = _dated_test_counts()
     n_ph_rand = _random_arm_phish_test_mean()
     strict = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
@@ -584,9 +571,8 @@ def gen_forecastability():
               f"{int(w1te.delta_days)} days) more than the last training block does "
               f"(${w1w4.auc:.3f}$ at {int(w1w4.delta_days)} days).")
 
-    # (c) the novelty probe. Two-sided on purpose: the probe is below chance on every seed, so
-    # novelty is ANTI-predictive and the bar a gate must clear is max(AUC, 1-AUC). Raised in
-    # round-2 review: docs/decisions/p2-novelty-probe-two-sided.md
+    # (c) the novelty probe, two-sided on purpose: it is below chance on every seed, so novelty is
+    # ANTI-predictive and the bar is max(AUC, 1-AUC). docs/decisions/novelty-probe-two-sided.md
     nov = pd.read_csv("data/processed/p2/p2_forecastability_novelty.csv")
     cb = nov[nov.family == "CatBoost"]
     a_all, a_ph = cb.auc_all.mean(), cb.auc_phish.mean()
@@ -616,9 +602,7 @@ def gen_fcts():
 
     The subsection used to assert that forward-chained meta-learning spends its machinery on a
     signal that is not there; this measures it. The shuffled-order control is what makes the
-    comparison mean anything: it shares the blocked folds, the shrunken fold-training sets and
-    the meta-sample size, and differs only in whether the blocks are time.
-    """
+    comparison mean anything: same blocked folds and meta-sample size, differing only in time."""
     from paired_eval import corrected_paired_t
 
     d = pd.read_csv("data/processed/p2/p2_fcts.csv")
@@ -650,18 +634,12 @@ def gen_fcts():
 def gen_polarity_verdict():
     """Emit the sign-stability sentence for P2's below-chance transfer reading.
 
-    WHY THIS EXISTS. The section excluded one alternative explanation for below-chance transfer --
-    an inverted label convention -- and then concluded the inversions are "a property of the
-    models". That is a false dichotomy: it never tested the third possibility, that the inversion
-    belongs to the CORPUS PAIR. It does. Running the same 4x4 design under four learners
-    (RandomForest, LogReg, HistGB, and RandomForest with the artefact features pruned), the
-    below/above-chance verdict is identical for 9 of the 12 transfer cells, and the three that
-    disagree all sit against 0.5. A property invariant to the learner is not a property of the
-    learner.
-
-    No new experiment: all four matrices were already on disk for the pruning and model-family
-    studies. The sentence is generated so a re-run cannot leave it stale.
-    """
+    The section excluded one alternative -- an inverted label convention -- and concluded the
+    inversions are "a property of the models". That is a false dichotomy: it never tested the third
+    possibility, that the inversion belongs to the CORPUS PAIR. It does. Under four learners the
+    below/above-chance verdict is identical for 9 of 12 cells and the three that disagree sit
+    against 0.5; a property invariant to the learner is not a property of the learner. No new
+    experiment -- all four matrices were already on disk -- and generated so it cannot go stale."""
     import numpy as np
     files = {"RandomForest": "cross_dataset_ROC-AUC.csv",
              "LogReg": "cross_dataset_ROC-AUC_LogReg.csv",
@@ -686,9 +664,8 @@ def gen_polarity_verdict():
                 stable += 1
             else:
                 unstable += 1
-                # How CLOSE does the nearest learner come to 0.5? A disagreeing cell that has some
-                # learner sitting on the line is a borderline cell; reporting the FARTHEST learner
-                # instead would overstate how marginal these are, which an earlier draft did.
+                # How CLOSE does the nearest learner come to 0.5 -- reporting the FARTHEST would overstate how
+                # marginal the disagreeing cells are, which an earlier draft did
                 worst_margin = max(worst_margin, min(abs(v - 0.5) for v in vals))
     total = stable + unstable
     verdict = (
@@ -701,10 +678,9 @@ def gen_polarity_verdict():
     write_generated("papers/P2_url_benchmark/sections/gen_polarity_verdict.tex", verdict + ".\n")
 
 def gen_stacking_verdict():
-    """The stacking significance sentences, computed from the CSVs so printed p/q-values can
-    never drift from the runs. Two parts: (a) the K=5 family of ensemble-vs-CatBoost paired
-    tests under strict-temporal, BH-adjusted; (b) the K=20 crossover for Stack[CB+LR].
-    Regenerate the K=20 sources with:
+    """The stacking significance sentences, computed from the CSVs so printed p/q-values cannot drift
+    from the runs: (a) the K=5 family of ensemble-vs-CatBoost paired tests under strict-temporal,
+    BH-adjusted; (b) the K=20 crossover for Stack[CB+LR]. Regenerate the K=20 sources with:
       run_p2_temporal_strict.py --families CatBoost --seeds 20 --out .../p2_temporal_strict_cb_k20.csv
       run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg --out .../p2_stacking_cblr_k20.csv"""
     from paired_eval import bh_adjust, corrected_paired_t, fmt_p
@@ -777,14 +753,13 @@ REFRESH_CBLR = "data/processed/p2/p2_refresh_cblr_k20.csv"
 
 
 def gen_refresh_verdict():
-    """The pre-registered Test 1 verdict (PREREG_refresh_window.md): Stack[CB+LR] vs CatBoost on
-    the refresh window `ph_te2`, K seeds, Nadeau--Bengio corrected paired t on PR-AUC, BH over
+    """The pre-registered Test 1 verdict (PREREG_refresh_window.md): Stack[CB+LR] vs CatBoost on the
+    refresh window `ph_te2`, K seeds, Nadeau--Bengio corrected paired t on PR-AUC, BH over
     m=REFRESH_BH_M. Reads the two --test-after CSVs written by
       run_p2_temporal_strict.py --families CatBoost --seeds 20 --test-after <max current date>
       run_p2_stacking_baseline.py --bases CatBoost+LogReg --seeds 20 --test-after <same date>
-    and returns "" until both exist: a section file the manuscript does not \\input is a file
-    that can rot unnoticed, so nothing ships until there is a verdict to ship. Only Test 1's p
-    enters the family here; the BH adjustment of a single observed p is p*REFRESH_BH_M."""
+    and returns "" until both exist: a section file the manuscript does not \\input can rot
+    unnoticed. Only Test 1's p enters the family here, so its BH adjustment is p*REFRESH_BH_M."""
     from paired_eval import QValue, corrected_paired_t, fmt_p
     if not (os.path.exists(REFRESH_CB) and os.path.exists(REFRESH_CBLR)):
         return ""
@@ -872,10 +847,9 @@ def tab_gwo_cv():
 def gen_decomp_macros():
     """Emit the numbers Figure~\\ref{fig:decomp} prints, as \\newcommand macros.
 
-    The figure is hand-drawn TikZ (figures/decomposition.tex) because its content is structural,
-    but every NUMBER comes from here: a number typed into TikZ would be the one place a stale
-    figure could survive a data change unnoticed (check_paper_claims reads .tex, not compiled
-    PDFs). Macros mean the figure cannot disagree with tab_decomp — both read the same CSVs."""
+    The figure is hand-drawn TikZ because its content is structural, but a number typed into TikZ
+    would be the one place a stale figure could survive a data change unnoticed (check_paper_claims
+    reads .tex, not compiled PDFs). Macros mean it cannot disagree with tab_decomp."""
     full = pd.read_csv("data/processed/p2/p2_benchmark.csv")
     strict = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
 
@@ -893,11 +867,10 @@ def gen_decomp_macros():
     # Row counts come from the experiment's OWN definition of a dated row, not a re-derivation.
     rows_full = rows_dated = None
     try:
-        from run_p2_temporal_strict import load as _load  # noqa: E402
+        from run_p2_temporal_strict import load as _load
         df = _load()
-        # The composition step drops UNDATED PHISHING only, keeping the benign pool whole (what
-        # run_p2_temporal_strict does). Counting dated rows across both classes gave a corpus-wide
-        # total no experiment was ever run on, printed beside an F1 computed on the right one.
+        # The composition step drops UNDATED PHISHING only, keeping the benign pool whole; counting dated
+        # rows across both classes gives a corpus-wide total no experiment was ever run on
         is_ph = df["label"].astype(int).eq(1)      # the loader codes phishing as 1, not a string
         rows_full = len(df)
         rows_dated = int((~is_ph).sum() + (is_ph & df["date"].notna()).sum())
@@ -924,19 +897,13 @@ def gen_decomp_macros():
 
 
 def gen_strict_verdict():
-    """Generated prose: paired-by-seed CatBoost-vs-LogReg under strict-temporal, on ALL FOUR
-    recorded metrics.
+    """Paired-by-seed CatBoost-vs-LogReg under strict-temporal, on ALL FOUR recorded metrics.
 
-    ROUND-2 REVIEW, M4. This sentence used to report the F1 comparison alone and conclude "the
-    two families are statistically tied". That is true of threshold-fixed F1 and false of the
-    other three metrics in the same CSV -- most sharply of FPR@0.90, the metric the discussion
-    section names as the deployment one, where CatBoost wins on every seed. A tie asserted from
-    one of four recorded metrics is the selective reporting this paper spends five pages
-    criticising, so the sentence now states the metric-dependence instead of hiding it. Only the
-    BENIGN complement is redrawn per seed, so charging the full 0.30 test fraction to the
-    Nadeau-Bengio correction is conservative -- it widens every interval here, which is the safe
-    direction both for the reported null and for the effects that survive it.
-    """
+    ROUND-2 REVIEW, M4. This sentence used to report F1 alone and conclude "statistically tied" --
+    true of threshold-fixed F1 and false of the other three, most sharply of FPR@0.90 where CatBoost
+    wins on every seed. A tie asserted from one of four recorded metrics is the selective reporting
+    this paper spends five pages criticising. Only the BENIGN complement is redrawn per seed, so
+    charging the full 0.30 test fraction to the Nadeau-Bengio correction is conservative."""
     from paired_eval import corrected_paired_t, fmt_p
     from scipy import stats
 
@@ -951,9 +918,8 @@ def gen_strict_verdict():
     f1 = pair("F1")
     ci = stats.t.ppf(0.975, f1["k"] - 1) * f1["se"] if f1["se"] else 0.0
     n = f1["k"]
-    # FPR is a loss: a negative difference is CatBoost winning, and the count of seeds on which
-    # it wins is (k - wins), not wins. Getting this backwards would print "0 of 5 seeds" for a
-    # unanimous effect.
+    # FPR is a loss: a negative difference is CatBoost winning, so the seed count is (k - wins).
+    # Backwards, this prints "0 of 5 seeds" for a unanimous effect
     parts = []
     for metric, label, lower_better in (("PR-AUC", "PR-AUC", False),
                                         ("ROC-AUC", "ROC-AUC", False),
@@ -985,12 +951,10 @@ MAXF1_DESIGNS = [("Random (full)", CURVES_FULL, "random"),
 def _max_f1(curves: pd.DataFrame) -> dict:
     """Best F1 reachable anywhere on each family's stored precision--recall curve.
 
-    The curves are the seed-mean precision at a fixed recall grid, persisted at run time by
-    run_p2_benchmark.write_curves from the same fitted models as the table rows -- so this is a
-    descriptive quantity read off the published curve, not a re-run and not a per-seed statistic
-    that could carry a paired test. It answers one question the tables cannot: how much of the
-    between-family F1 spread is separation, and how much is where tau=0.5 happens to fall.
-    """
+    A descriptive quantity read off the published curve (seed-mean precision at a fixed recall grid,
+    persisted by run_p2_benchmark from the same fitted models), not a re-run and not a per-seed
+    statistic that could carry a paired test. It answers what the tables cannot: how much of the
+    between-family spread is separation, and how much is where tau=0.5 happens to fall."""
     out = {}
     for fam, g in curves.groupby("family"):
         r = g["recall"].to_numpy(float)
@@ -1012,15 +976,12 @@ def _maxf1_stages():
 def tab_maxf1():
     """The decomposition again, with the threshold chosen instead of fixed at 0.5.
 
-    WHY THIS TABLE EXISTS (round-2 review, M1). Table~\\ref{tab:decomp} decomposes a
-    THRESHOLDED F1 drop, and the paper read one of its columns as a statement about capability:
-    the composition step costs the boosters 0.060-0.063 F1 and logistic regression only 0.012,
-    therefore "the boosters' margin lives on the undated portion". Along the same stored curves,
-    at each family's own best operating point, the composition step costs EVERY family
-    0.058-0.062 -- the differential is entirely threshold placement. Nothing about the sizes of
-    the two steps changes; what changes is the mechanism the paper is entitled to assert, and
-    which family is ahead at the end of it.
-    """
+    ROUND-2 REVIEW, M1. tab_decomp decomposes a THRESHOLDED F1 drop, and the paper read one column
+    as capability: the composition step costs the boosters 0.060-0.063 and logistic regression only
+    0.012, therefore "the boosters' margin lives on the undated portion". At each family's own best
+    operating point the same step costs EVERY family 0.058-0.062 -- the differential is entirely
+    threshold placement. The step sizes do not change; what changes is the mechanism the paper is
+    entitled to assert, and which family is ahead at the end of it."""
     stages = _maxf1_stages()
     lines = [
         "\\begin{table*}[t]\\centering",
@@ -1045,11 +1006,10 @@ def tab_maxf1():
 def gen_maxf1_verdict():
     """The sentence Section~\\ref{ssec:decomp} has to carry once Table~\\ref{tab:maxf1} exists.
 
-    Generated rather than typed because it states a SIGN -- which of the two families is ahead
-    at a chosen threshold under the deployment protocol -- and a sign that flips on a re-run
-    would otherwise sit in the manuscript indefinitely. The tripwire below refuses to emit a
-    sentence whose arithmetic contradicts its own wording.
-    """
+    Generated rather than typed because it states a SIGN -- which family is ahead at a chosen
+    threshold under the deployment protocol -- and a sign that flips on a re-run would otherwise sit
+    in the manuscript indefinitely. The tripwire below refuses a sentence its own arithmetic
+    contradicts."""
     stages = _maxf1_stages()
     (_, full), (_, dated), (_, temp) = stages
     comp = {f: dated[f] - full[f] for f in full}
@@ -1066,9 +1026,8 @@ def gen_maxf1_verdict():
     fixed_spread = float(fixed_full.max() - fixed_full.min())
     fixed_comp = fixed_dated - fixed_full
 
-    # The claim is that the composition step is UNIFORM across families. If a re-run made it
-    # differential again, the sentence below would be false while every number in it stayed
-    # true of the run that produced it.
+    # The claim is that the composition step is UNIFORM across families: a re-run that made it
+    # differential again would falsify the sentence while every number in it stayed true
     if hi - lo > 0.02:
         raise SystemExit(
             "gen_maxf1_verdict: the composition step is no longer uniform across families "
@@ -1101,31 +1060,19 @@ def gen_maxf1_verdict():
 def tab_trivial_floor():
     """The all-positive classifier, against which every F1 in this paper has to be read.
 
-    ROUND-2 REVIEW, M5. The paper reports F1 levels of 0.922, 0.853 and 0.628 across designs and
-    reads the sequence as degradation. Two of those three numbers are near or below what the
-    classifier that predicts phishing for every row scores on the same test set: 2p/(1+p) at the
-    target's positive rate p. The abstract already had the right instinct about the transfer
-    cells -- "what a fixed threshold earns from the target's class prior" -- but stated it as
-    though the models were AT the prior's value. Ten of the twelve are below it.
-
-    The instinct is not new here; the same table is generated for the companion detection paper
-    (make_p3_assets._tab_trivial_floor) and the rates are read from the corpora rather than
-    typed, so a re-deposit moves them.
-
-    It also disciplines the within-corpus levels, which is why the second block exists: the
-    composition step moves the prior from 0.691 to 0.546, so F1 0.922 -> 0.853 is a drop of
-    0.069 against a floor that drops 0.111. Measured as headroom over the trivial classifier,
-    the honest design does BETTER, and the sequence the discussion section reads as "the level
-    falls" is largely the prior moving underneath it.
-    """
+    ROUND-2 REVIEW, M5. The paper reports F1 of 0.922, 0.853 and 0.628 across designs and reads the
+    sequence as degradation. Two of the three are near or below what predicting phishing for every
+    row scores on the same test set, 2p/(1+p); ten of the twelve transfer cells are below it. It
+    also disciplines the within-corpus levels, which is why the second block exists: the composition
+    step moves the prior 0.691 -> 0.546, so F1 0.922 -> 0.853 is a drop of 0.069 against a floor
+    that drops 0.111 -- measured as headroom, the honest design does BETTER. Rates are read from the
+    corpora, and the same table is generated for the companion detection paper."""
     from train_url_baseline import add_label
     files = {"PhishVN": "vn_compphish.csv", "PhiUSIIL": "external/phiusiil_compphish.csv",
              "ISCXURL2016": "external/iscx_compphish.csv",
              "PhishStorm": "external/phishstorm_compphish.csv"}
-    # The random forest's matrix (Table~\ref{tab:xdatasetrf}) is the headline transfer matrix
-    # since 2026-08-21: it is the learner every intervention and the ROC-AUC view are run on, so
-    # the floor is priced against it. CatBoost's matrix gives the same count (10 of 12) and the
-    # checker recomputes it from that file independently.
+    # The Random Forest matrix is the headline since 2026-08-21 -- the learner every intervention and
+    # the ROC-AUC view run on -- so the floor is priced against it. CatBoost's gives the same count
     mat = pd.read_csv("data/processed/p2/cross_dataset_F1.csv", index_col=0)
     names = [n for n in mat.columns]
     rates, floor = {}, {}
@@ -1136,15 +1083,12 @@ def tab_trivial_floor():
     off = [(i, j) for i in names for j in names if i != j]
     below = [(i, j) for i, j in off if float(mat.loc[i, j]) < floor[j]]
     off_mean = float(np.mean([float(mat.loc[i, j]) for i, j in off]))
-    # The mean of the per-target floors, NOT the floor of the mean prior: the transfer cells are
-    # scored one target at a time, so the quantity the off-diagonal mean has to be read against
-    # is the average of the floors it was measured against. The two differ in the third decimal
-    # and only one of them is the comparison the sentence makes.
+    # The mean of the per-target floors, NOT the floor of the mean prior: cells are scored one target at
+    # a time. The two differ in the third decimal and only one is the comparison the sentence makes
     floor_mean = float(np.mean([floor[j] for _, j in off]))
 
-    # The within-corpus designs: prior of the TEST window each design actually scores on. The
-    # dated-row test window is the one Table~\ref{tab:confusion} counts, so it is derived the
-    # same way rather than re-split here -- two derivations of one row count is how they drift.
+    # The within-corpus designs: prior of the TEST window each design scores on, derived the same way as
+    # tab_confusion's count rather than re-split here -- two derivations of one row count drift
     strict = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
     bench = pd.read_csv("data/processed/p2/p2_benchmark.csv")
     n_ph, n_be = _dated_test_counts()
@@ -1202,11 +1146,10 @@ def _dated_test_counts():
 
 
 def _random_arm_phish_test_mean():
-    """Seed-mean phishing test size of the random-same-rows arm. The temporal arm's phishing
-    window is fixed (5,879 guarded rows); the random arm re-draws a 70/30 mask over the pooled
-    phishing rows per seed, after the benign mask has consumed the same RandomState, so its
-    test count differs from 5,879 and from seed to seed. tab_confusion prints the temporal
-    count and must say so."""
+    """Seed-mean phishing test size of the random-same-rows arm. The temporal arm's window is fixed
+    (5,879 guarded rows); the random arm re-draws a 70/30 mask per seed after the benign mask has
+    consumed the same RandomState, so its count differs from 5,879 and from seed to seed.
+    tab_confusion prints the temporal count and must say so."""
     from run_p2_temporal_strict import load as _load
     df = _load()
     ph = df[(df.y == 1) & df.date.notna()].sort_values("date")
@@ -1226,16 +1169,11 @@ def _random_arm_phish_test_mean():
 def gen_leakage_verdict():
     """What the full-corpus random split's 0.922 is worth (round-2 review, M3).
 
-    The number the paper opens with comes from a plain train_test_split with no domain guard and
-    no de-duplication, over a 21-feature schema on which distinct URLs collapse onto identical
-    points. The census and the memorisation oracle are computed by
-    scripts/audit/p2_dup_leakage.py; this only renders them.
-
-    The sentence deliberately stops where the evidence does. The oracle scores BELOW every
-    fitted family, so the leak does not support "the benchmark only memorises"; it supports the
-    narrower claim that the opening level is not a clean generalisation estimate -- which is the
-    paper's own thesis, applied to its own headline.
-    """
+    The opening number comes from a plain train_test_split with no domain guard and no
+    de-duplication, over a schema on which distinct URLs collapse onto identical points. The census
+    and the memorisation oracle come from scripts/p2_dup_leakage.py; this only renders them.
+    The sentence stops where the evidence does: the oracle scores BELOW every fitted family, so the
+    leak supports only the narrower claim that the opening level is not a clean estimate."""
     d = pd.read_csv("data/processed/p2/p2_dup_leakage.csv")
     r = d.iloc[0]
     bench = pd.read_csv("data/processed/p2/p2_benchmark.csv")
@@ -1273,15 +1211,119 @@ def gen_leakage_verdict():
         f"(Section~\\ref{{ssec:decomp}}).")
 
 
+def gen_charcnn():
+    """The character-CNN arm, and the source swap that says what its margin is made of.
+
+    §II answers three deep-learning citations by scope rather than by measurement, one of them a
+    CNN over URL strings on the same task this benchmark evaluates. run_p2_charcnn.py supplies the
+    number; run_p2_source_probe.py supplies the check that the number is not provenance.
+
+    Every quantity here is a PAIRED difference on identical rows -- the arm imports the split and
+    the per-seed benign mask rather than re-drawing them -- so the corrected resampled t applies
+    directly, with BH across the family of comparisons reported in the sentence."""
+    cp = "data/processed/p2/p2_charcnn.csv"
+    sp = "data/processed/p2/p2_source_probe.csv"
+    if not os.path.exists(cp):
+        return "% the char-CNN arm has not been run; see scripts/run_p2_charcnn.py\n"
+    from paired_eval import corrected_paired_t, bh_adjust
+    cnn = pd.read_csv(cp)
+    base = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
+
+    def paired(metric, proto, fam):
+        c = cnn[cnn.protocol == proto].set_index("seed")[metric]
+        t = base[(base.protocol == proto) & (base.family == fam)].set_index("seed")[metric]
+        seeds = sorted(set(c.index) & set(t.index))
+        d = np.array([c[i] - t[i] for i in seeds], float)
+        return d.mean(), corrected_paired_t(d)["p"]
+
+    fams = sorted(base[base.protocol == "temporal_strict"].family.unique())
+    res, ps = [], []
+    for fam in fams:
+        for m in ("F1", "PR-AUC", "FPR@R0.90"):
+            for proto in ("temporal_strict", "random_same_rows"):
+                delta, p = paired(m, proto, fam)
+                res.append((fam, m, proto, delta))
+                ps.append(p)
+    qs, rej = bh_adjust(ps)
+    n_sig = sum(rej)
+    # a q that rounds to 0.000 reads as a missing number rather than as a small one
+    qfmt = "$q < 0.001$" if max(qs) < 0.001 else f"$q \\leq {max(qs):.3f}$"
+
+    best = max(fams, key=lambda f: base[(base.protocol == "temporal_strict")
+                                        & (base.family == f)]["F1"].mean())
+    d_f1, _ = paired("F1", "temporal_strict", best)
+    d_pr, _ = paired("PR-AUC", "temporal_strict", best)
+    d_fpr, _ = paired("FPR@R0.90", "temporal_strict", best)
+
+    def dproto(fam):
+        r = base[(base.protocol == "random_same_rows") & (base.family == fam)]["F1"].mean() \
+            if fam != "CharCNN" else cnn[cnn.protocol == "random_same_rows"]["F1"].mean()
+        t = base[(base.protocol == "temporal_strict") & (base.family == fam)]["F1"].mean() \
+            if fam != "CharCNN" else cnn[cnn.protocol == "temporal_strict"]["F1"].mean()
+        return r - t
+
+    dp_cnn = dproto("CharCNN")
+    dp_tab = {f: dproto(f) for f in fams}
+    dp_best = max(dp_tab.values())
+    dp_worst = min(dp_tab.values())
+
+    out = [
+        f"Against the strongest tabular family ({best}) on identical rows and seeds, the "
+        f"character-CNN gains ${d_f1:+.3f}$ F1 and ${d_pr:+.3f}$ PR-AUC under the strict-temporal "
+        f"protocol, and reduces FPR at $90\\%$ recall by ${abs(d_fpr):.3f}$; all "
+        f"{n_sig} paired comparisons across the seven families, three metrics and two protocols "
+        f"survive Benjamini--Hochberg ({qfmt}). "
+        f"The gain is largest on the deployment metric, which is the one Section~"
+        f"\\ref{{sec:discussion}} argues a benchmark should be read on.",
+        f"Capacity is not free of the protocol, however: the character-CNN carries the largest "
+        f"$\\Delta_{{\\mathrm{{proto}}}}$ in the study (${dp_cnn:+.3f}$ F1 against "
+        f"${dp_best:+.3f}$ for the most protocol-sensitive tabular family and "
+        f"${dp_worst:+.3f}$ for the least), so the model that gains most from a random split is "
+        f"also the model that loses most when the split is made honest.",
+    ]
+
+    if os.path.exists(sp):
+        pr = pd.read_csv(sp)
+
+        def swap(fam, tb, metric="F1"):
+            return float(pr[(pr.family == fam) & (pr.train_benign == tb)][metric].mean())
+
+        def canon(fam, metric="F1"):
+            src = cnn[cnn.protocol == "temporal_strict"] if fam == "CharCNN" else \
+                base[(base.protocol == "temporal_strict") & (base.family == fam)]
+            return float(src[metric].mean())
+
+        cnn_tr = swap("CharCNN", "tranco") - canon("CharCNN")
+        cb_tr = swap("CatBoost", "tranco") - canon("CatBoost")
+        lr_tr = swap("LogReg", "tranco") - canon("LogReg")
+        cb_pr = swap("CatBoost", "tranco", "PR-AUC")
+        cnn_ti = swap("CharCNN", "tinnhiem") - canon("CharCNN")
+        cb_ti = swap("CatBoost", "tinnhiem") - canon("CatBoost")
+        out.append(
+            f"Because a model reading the raw string could key on the benign feed rather than on "
+            f"phishing, we swapped the benign source: trained against one benign family and tested "
+            f"against the other, with the phishing side held at its strict-temporal split. Trained "
+            f"on the broad list the character-CNN loses ${abs(cnn_tr):.3f}$ F1, inside its own seed "
+            f"spread, while the tabular families lose ${abs(cb_tr):.3f}$ and ${abs(lr_tr):.3f}$ and "
+            f"the gradient booster falls to ${cb_pr:.3f}$ PR-AUC on a test set whose positive rate "
+            f"is higher than that: it does not merely stop discriminating, it inverts. The "
+            f"21~features are aggregate string statistics, and the two benign populations differ in "
+            f"exactly those coordinates. The effect is one-directional, and we report it as such: "
+            f"trained on the narrow registry population every model collapses "
+            f"(${cnn_ti:+.3f}$ and ${cb_ti:+.3f}$ F1 respectively) and the character-CNN holds no "
+            f"advantage. What the swap establishes is therefore not that one model cheats, but that "
+            f"the margin measured above is not an artefact of benign provenance.")
+
+    return "\n\n".join(out) + "\n"
+
+
 def gen_guard_control():
     """The M7 control: strict-temporal against a random control carrying the SAME domain guard.
 
-    WHY. Section~\\ref{sec:method} claimed protocol was the only variable between the
-    strict-temporal arm and its random-same-rows control. It was not: the guard was applied on
-    one side only, so part of Delta_proto was the guard rather than the protocol. The arm is run
-    by `run_p2_temporal_strict.py --guard-control`; the asymmetry it closes is measured by
-    `scripts/audit/p2_dup_leakage.py`. Both are read here, never retyped.
-    """
+    Section~\\ref{sec:method} claimed protocol was the only variable between the two arms. It was
+    not -- the guard was applied on one side only, so part of Delta_proto was the guard. The arm is
+    run by `run_p2_temporal_strict.py --guard-control`, the asymmetry it closes is measured by
+    `scripts/p2_dup_leakage.py`, and both are read here rather than retyped."""
     gp = "data/processed/p2/p2_temporal_strict_guarded.csv"
     lp = "data/processed/p2/p2_dup_leakage_protocols.csv"
     if not (os.path.exists(gp) and os.path.exists(lp)):
@@ -1313,10 +1355,9 @@ def gen_guard_control():
     worst_name = {"RandomForest": "random forest", "LogReg": "logistic regression",
                   "MLP": "the MLP"}.get(worst, worst)
 
-    # The published Delta_proto reads as "protocol plus a constant" only if the guard's offset is
-    # near-constant, i.e. the family ORDERING survives even though the level does not. Rank
-    # CORRELATION, not equality -- a 0.0000 tie breaks either way; the extremes carry the claim
-    # and are pinned exactly. docs/decisions/p2-guard-control-rank-test.md
+    # Delta_proto reads as "protocol plus a constant" only if the family ORDERING survives even though
+    # the level does not. Rank CORRELATION, not equality (a 0.0000 tie breaks either way); the
+    # extremes carry the claim and are pinned exactly. docs/decisions/guard-control-rank-test.md
     from scipy.stats import spearmanr
     rho = float(spearmanr([d_old[f] for f in ORDER], [d_new[f] for f in ORDER]).statistic)
     if rho < 0.9 or min(d_old, key=d_old.get) != worst \
@@ -1386,13 +1427,8 @@ def tab_xdataset():
 
 
 # --------------------------------------------------------------- transfer interventions (ex-P3)
-# Moved here from make_p3_assets.py on 2026-08-19. P2 and P3 both went to IEEE Access -- same
-# board, same reviewer pool -- while printing one four-corpus transfer matrix between them. P2
-# owns the matrix, so the cell-level ROC-AUC view and the four interventions run on it (TreeSHAP
-# attribution, artefact pruning, corpus pooling, CORAL adaptation) came with it. The generators
-# had to move too: Editorial Manager flattens the upload, so \input across paper directories does
-# not survive submission, and a table generated into P3/sections/ can never reach P2's PDF.
-# Not one number changed in the move.
+# Moved here from make_p3_assets.py on 2026-08-19: P2 owns the four-corpus matrix, so the
+# cell-level ROC-AUC view and the four interventions run on it came with it. Not one number changed.
 
 
 def _matrix_stats(path):
@@ -1409,18 +1445,12 @@ def _matrix_stats(path):
 def tab_xdataset_rf():
     """The Random Forest transfer matrix, both metrics, cell by cell.
 
-    WHY BOTH PANELS. The ROC-AUC panel is the one a P3 round-2 reviewer asked for: the paper's
-    strongest empirical claim -- eight of twelve transfer cells below chance, down to 0.200 --
-    reached the reader only as a summary sentence, and whether the below-chance cells cluster on
-    one corpus matters directly, because PhiUSIIL ships an inverted label convention. The F1 panel
-    is the same matrix's thresholded view, and it is here rather than dropped because every
-    intervention below (pruning, pooling, CORAL) is a Random Forest run and quotes its cells;
-    Table~\\ref{tab:xdataset} is the same design fitted with CatBoost and cannot stand in for them.
-
-    HEADLINE SINCE 2026-08-21. The author's pass after the referee round made this the matrix the
-    transfer section opens with, so that the F1 headline, the ROC-AUC view and every intervention
-    share one learner; CatBoost's F1 matrix stays as the second learner showing the same pattern.
-    """
+    The ROC-AUC panel is the one a round-2 reviewer asked for: the strongest empirical claim --
+    eight of twelve cells below chance, down to 0.200 -- reached the reader only as a summary
+    sentence, and whether they cluster on one corpus matters because PhiUSIIL ships an inverted
+    label convention. The F1 panel stays because every intervention below is a Random Forest run and
+    quotes its cells. Since 2026-08-21 this is the matrix the transfer section opens with, so the
+    headline, the threshold-free view and the interventions share one learner."""
     f1p = "data/processed/p2/cross_dataset_F1.csv"
     rocp = "data/processed/p2/cross_dataset_ROC-AUC.csv"
     if not (os.path.exists(f1p) and os.path.exists(rocp)):
@@ -1581,15 +1611,11 @@ Model family & no adapt.\\ & CORAL & no adapt.\\ & CORAL \\\\
 def gen_coral_degeneracy():
     """The sentence that stops CORAL's F1 gain from being read as a repair.
 
-    WHY. The subsection once credited CORAL as the one intervention that improves transfer
-    itself, on a mean off-diagonal F1 rising 0.629 -> 0.673. It does not. On a balanced target
-    the all-positive classifier scores F1 = 2p/(1+p) = 0.667 exactly; on PhishVN, whose positive
-    rate is 0.691, it scores 0.817 exactly. Most of CORAL's off-diagonal cells sit ON those
-    values, several while their ROC-AUC is BELOW chance -- an F1 of 0.817 paired with an AUC of
-    0.392 is a degenerate predictor, not an adapted one. F1 at a fixed threshold cannot tell
-    "learned to transfer" from "gave up and predicted one class", which is exactly the confusion
-    this paper's threshold-free reading exists to prevent. Generated so it cannot go stale.
-    """
+    The subsection once credited CORAL as the one intervention that improves transfer, on a mean
+    off-diagonal F1 rising 0.629 -> 0.673. On a balanced target the all-positive classifier scores
+    exactly 0.667, and on PhishVN exactly 0.817 -- and most of CORAL's off-diagonal cells sit ON
+    those values, several while their ROC-AUC is BELOW chance. F1 at a fixed threshold cannot tell
+    "learned to transfer" from "gave up and predicted one class"."""
     f1p = "data/processed/p2/cross_dataset_F1_coral.csv"
     rocp = "data/processed/p2/cross_dataset_ROC-AUC_coral.csv"
     if not (os.path.exists(f1p) and os.path.exists(rocp)):
@@ -1629,19 +1655,13 @@ def gen_coral_degeneracy():
 
 
 def fig_repair_attempts():
-    """Every attempt this paper makes at the generalisation gap on one axis, because the five of
-    them are the transfer section's negative-result spine and are otherwise legible only by
-    reading four subsections and four tables in sequence.
+    """Every attempt this paper makes at the generalisation gap on one axis -- the transfer section's
+    negative-result spine, otherwise legible only by reading four subsections in sequence.
 
-    WHY A DUMBBELL AND NOT A BAR OF THE GAP. Pruning "closes" the gap, which a gap-only chart
-    would draw as an improvement. It is not one: the in-distribution end fell too, so the gap
-    narrowed by getting worse at the task rather than better at transferring. Drawing both ends
-    makes that visible, and it is exactly the reading an earlier version of this claim got
-    backwards. All five rows are the same quantity -- in-distribution F1 minus cross-corpus F1 on
-    the same four-corpus setup -- so they are comparable. Pooling's cross-corpus end is the
-    union-trained held-out score rather than a mean off-diagonal, which is the transfer number
-    that design produces; its in-distribution end is the same diagonal as everyone else's.
-    """
+    A DUMBBELL AND NOT A BAR OF THE GAP, because pruning "closes" the gap and a gap-only chart would
+    draw that as an improvement: the in-distribution end fell too, so the gap narrowed by getting
+    worse at the task. An earlier version of this claim got exactly that backwards. Pooling's
+    cross-corpus end is the union-trained held-out score, the number that design produces."""
     from figstyle import apply, ORANGE, BLUE, GRAY, INK
     plt = apply()
 
@@ -1706,16 +1726,13 @@ def fig_repair_attempts():
 
 
 def tab_shap(n_sample=2000, top_k=10, seeds=5):
-    """TreeSHAP attribution for the PhishVN in-distribution Random Forest (the diagonal cell of
-    the transfer matrix): which lexical features carry the decision and how concentrated the
-    attribution is. Mean |SHAP| per feature on a stratified subsample of each seed's test split,
-    averaged over `seeds` seeds.
+    """TreeSHAP attribution for the PhishVN in-distribution Random Forest (the transfer matrix's
+    diagonal cell): which lexical features carry the decision and how concentrated it is. Mean
+    |SHAP| per feature on a stratified subsample of each seed's test split.
 
-    NOT called by main(): it refits the forest five times and runs an exact TreeSHAP pass, which
-    is minutes rather than the milliseconds every other generator here costs, and
-    scripts/audit/audit_stale_assets.py runs main() on every commit. Regenerate deliberately with
-    `python scripts/assets/make_p2_bench_assets.py --shap`.
-    """
+    NOT called by main(): it refits the forest five times and runs an exact TreeSHAP pass, minutes
+    rather than milliseconds, and audit_stale_assets.py runs main() on every commit. Regenerate
+    deliberately with `python scripts/make_p2_bench_assets.py --shap`."""
     try:
         import shap
     except ImportError:
@@ -1724,8 +1741,8 @@ def tab_shap(n_sample=2000, top_k=10, seeds=5):
     if not os.path.exists(corpus):
         print("[i] vn_compphish.csv absent — run align_compphish.py first; skipping TreeSHAP.")
         return
-    from run_cross_dataset import load_corpus, in_dataset_split  # noqa: E402
-    from train_url_baseline import COMPPHISH, make_model  # noqa: E402
+    from run_cross_dataset import load_corpus, in_dataset_split
+    from train_url_baseline import COMPPHISH, make_model
 
     df = load_corpus(corpus)
     imps, signs = [], []
@@ -1816,7 +1833,7 @@ def _fig_shap(feats, imp_m, imp_s, sign_m, top):
 def tab_hpo():
     path = "data/processed/p2/p2_hpo.csv"
     if not os.path.exists(path):
-        return "% p2_hpo.csv not generated yet -- run scripts/train/run_p2_hpo.py\n[HPO table to be filled]"
+        return "% p2_hpo.csv not generated yet -- run scripts/run_p2_hpo.py\n[HPO table to be filled]"
     df = pd.read_csv(path)
     lines = [
         "\\begin{table*}[t]\\centering",
@@ -1845,6 +1862,7 @@ def main(shap_too: bool = False):
                      ("tab_trivial_floor", tab_trivial_floor),
                      ("gen_leakage_verdict", gen_leakage_verdict),
                      ("gen_guard_control", gen_guard_control),
+                     ("gen_charcnn", gen_charcnn),
                      ("gen_strict_verdict", gen_strict_verdict),
                      ("tab_stacking", tab_stacking),
                      ("gen_stacking_verdict", gen_stacking_verdict),
@@ -1860,7 +1878,7 @@ def main(shap_too: bool = False):
                      ("tab_adaptation", tab_adaptation),
                      ("gen_coral_degeneracy", gen_coral_degeneracy)]:
         # fn() is evaluated BEFORE the target is opened; the old line truncated first and an
-        # exception in fn left the asset empty. See scripts/lib/genfile.py.
+        # exception in fn left the asset empty. See scripts/genfile.py.
         write_generated(os.path.join(SEC, name + ".tex"), fn())
     # The refresh-window verdict ships only once its CSVs exist (PREREG_refresh_window.md);
     # until then the file is absent rather than a placeholder no section reads.

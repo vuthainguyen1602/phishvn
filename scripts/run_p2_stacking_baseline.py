@@ -3,40 +3,35 @@
 run_p2_stacking_baseline.py — SOTA-style stacking + hybrid feature selection, evaluated under
 P2's honest temporal protocol.
 
-WHY THIS EXISTS. The recent ensemble literature (representative: Connolly & Atlam 2025, JNCA —
-stacking RF + XGBoost under a meta-learner, with hybrid feature selection) reports ~99.5%
-accuracy under random splits on public corpora. P2's claim is that the binding constraint on
-this corpus is temporal shift, not in-distribution fit — so the interesting question is whether
-that recipe closes the temporal gap or merely polishes the random-split number. This script
-reproduces the recipe's two ingredients on the CompPhish-21 schema:
+WHY. The recent ensemble literature (representative: Connolly & Atlam 2025, JNCA — stacking
+RF + XGBoost under a meta-learner, with hybrid feature selection) reports ~99.5% accuracy under
+random splits. P2's claim is that the binding constraint here is temporal shift, not
+in-distribution fit, so the question is whether that recipe closes the temporal gap or merely
+polishes the random-split number. Both ingredients on the CompPhish-21 schema:
 
-  * Stacking   — RandomForest + XGBoost base learners (the same configs the P2 benchmark uses
-                 for the single-family rows, so the comparison isolates the ensemble), 5-fold
-                 out-of-fold probabilities, LogisticRegression meta-learner.
-  * Stacking+HFS — the same ensemble on a hybrid-selected feature subset: mutual-information
-                 ranking (filter 1) with a pairwise-correlation redundancy prune (filter 2,
-                 |Pearson r| > 0.90 drops the lower-MI feature), fitted on TRAIN ONLY, top-k kept.
+  * Stacking     — RandomForest + XGBoost bases (the same configs the P2 benchmark uses for the
+                   single-family rows, so the comparison isolates the ensemble), 5-fold OOF
+                   probabilities, LogisticRegression meta-learner.
+  * Stacking+HFS — the same ensemble on a hybrid-selected subset: mutual-information ranking, then
+                   a pairwise-correlation prune (|r| > 0.90 drops the lower-MI feature), fitted on
+                   TRAIN ONLY, top-k kept.
 
-Split, rows, metrics and output format all mirror run_p2_temporal_strict (same load(), same
-per-seed benign 70/30 mask, same leakage guard), so rows from both scripts can sit in one table;
-`family` is "Stacking" / "Stacking+HFS".
-
-Base learners are configurable (--bases), so the same harness answers the follow-up question
-"does a DIVERSE stack close the gap where the tree-only one didn't?" — e.g. CatBoost+LogReg
-pairs the strongest booster with the family whose random-vs-temporal gap is near zero.
+Split, rows, metrics and output format mirror run_p2_temporal_strict (same load(), same per-seed
+benign 70/30 mask, same leakage guard), so rows from both can sit in one table; `family` is
+"Stacking" / "Stacking+HFS". Bases are configurable (--bases), so the same harness answers "does a
+DIVERSE stack close the gap where the tree-only one didn't?".
 
 RUN:
-  python scripts/train/run_p2_stacking_baseline.py --hfs      # the JNCA recipe: RF+XGB, +HFS ablation
-  python scripts/train/run_p2_stacking_baseline.py \
+  python scripts/run_p2_stacking_baseline.py --hfs      # the JNCA recipe: RF+XGB, +HFS ablation
+  python scripts/run_p2_stacking_baseline.py \
       --bases XGBoost+LightGBM CatBoost+HistGB CatBoost+LogReg CatBoost+MLP \
               CatBoost+HistGB+LogReg+MLP \
       --out data/processed/p2/p2_stacking_combos.csv \
       --curves data/processed/p2/p2_pr_curves_stacking_combos.csv   # base-learner sweep
-  python scripts/train/run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg \
+  python scripts/run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg \
       --test-after 2025-02-18 --out data/processed/p2/p2_refresh_cblr_k20.csv --curves ""
-      # PREREG_refresh_window.md Test 1: the window is run_p2_temporal_strict.split_phishing's
-      # --test-after mode (train = all dated phishing on or before the date, test = strictly
-      # later, same guard); pair with the CatBoost file from run_p2_temporal_strict --test-after
+      # PREREG_refresh_window.md Test 1; pair with the CatBoost file from
+      # run_p2_temporal_strict --test-after
 """
 from __future__ import annotations
 
@@ -51,13 +46,13 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import COMPPHISH, _metrics  # noqa: E402
-from run_p2_benchmark import make_any_model, pr_curve_row, write_curves  # noqa: E402
-from run_p2_temporal_strict import load, split_phishing  # noqa: E402
+from train_url_baseline import COMPPHISH, _metrics
+from run_p2_benchmark import make_any_model, pr_curve_row, write_curves
+from run_p2_temporal_strict import load, split_phishing
 
 OUT = "data/processed/p2/p2_stacking_baseline.csv"
 CURVES = "data/processed/p2/p2_pr_curves_stacking.csv"

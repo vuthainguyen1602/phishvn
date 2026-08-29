@@ -21,11 +21,11 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import make_model  # noqa: E402
+from train_url_baseline import make_model
 
 # Continuous / large search spaces (metaheuristics only matter when the space is big enough that
 # exhaustive grid search is impractical). Each entry: (name, low, high, kind).

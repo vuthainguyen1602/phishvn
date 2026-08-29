@@ -27,12 +27,12 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import COMPPHISH, _metrics, add_label, make_model  # noqa: E402
-from hpo_gwo import gwo_budget, gwo_search, random_search  # noqa: E402
+from train_url_baseline import COMPPHISH, _metrics, add_label, make_model
+from hpo_gwo import gwo_budget, gwo_search, random_search
 
 INP = os.path.join(ROOT, "data/processed/vn_compphish.csv")
 OUT_CSV = os.path.join(ROOT, "data/processed/p3/temporal_gwo.csv")

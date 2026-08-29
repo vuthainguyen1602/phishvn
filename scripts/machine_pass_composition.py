@@ -2,47 +2,40 @@
 """
 machine_pass_composition.py — a first, machine estimate of what the positive class contains.
 
-WHAT THIS IS NOT. It is not the label audit and cannot stand in for it. The audit's product is
-Cohen's kappa between two INDEPENDENT annotators; one pass by one process produces no such thing,
-and a machine that has very likely seen the public ChongLuaDao lists cannot honestly claim to have
-judged a domain without consulting the feed being audited. This writes to its own file and never
-touches annotator_A.csv / annotator_B.csv, so the blinded instrument stays untouched and the human
-result can later be compared against this rather than contaminated by it.
+WHAT THIS IS NOT: the label audit, whose product is Cohen's kappa between two INDEPENDENT
+annotators. One pass by one process produces no such thing, and a machine that has likely seen
+the public ChongLuaDao lists cannot claim to judge a domain without consulting the feed under
+audit. It writes to its own file and never touches annotator_A.csv / annotator_B.csv.
 
-WHAT IT DOES. It judges ARCHIVED PAGE CONTENT, not the domain string. For each sampled row with a
-web-archive snapshot near its first-seen date it fetches the archived HTML and extracts objective
-signals -- a password or OTP input, gambling vocabulary in visible text, a Vietnamese business
-registration marker, adult or investment vocabulary -- then classifies by rule. The classification
-is therefore reproducible and auditable rather than a judgement call, which is the only form of
-machine estimate worth putting next to a human audit.
+WHAT IT DOES: judges ARCHIVED PAGE CONTENT, not the domain string — for each sampled row with a
+web-archive snapshot near its first-seen date it extracts objective signals (password/OTP input,
+gambling vocabulary, a Vietnamese business-registration marker, adult or investment vocabulary)
+and classifies by rule, so the result is reproducible rather than a judgement call.
 
-WHY `unsure` IS LARGE AND SHOULD BE. Most of these pages are JavaScript shells whose archived body
-is a loader, and a clone inherits its victim's address, hotline and registration text verbatim --
-so `legitimate` is reachable only from the trusted-organisation registry, or from a printed
-registration NUMBER on a domain carrying no Vietnamese brand token. Rows with no snapshot, a dead
-snapshot, or no rule firing stay `unsure`. That share is the finding, not a tuning failure: it
-measures how much of this corpus can be adjudicated from archives at all.
+`unsure` IS LARGE AND SHOULD BE. Most pages are JavaScript shells whose archived body is a
+loader, and a clone inherits its victim's address, hotline and registration text verbatim — so
+`legitimate` is reachable only from the trusted-organisation registry or a printed registration
+NUMBER on a domain with no Vietnamese brand token. That share is the finding: it measures how
+much of this corpus can be adjudicated from archives at all.
 
-WHAT THE FIRST FULL RUN ACTUALLY SHOWED (200 rows, 2026-08-11) — READ THIS BEFORE RE-RUNNING.
-The pass does not work, and the sample's benign arm is what proves it. The sample is stratified over
-(label x tier) across the WHOLE dataset, so 56 of the 200 rows are known-legitimate sites: an
-unplanned but decisive control group. The credential tier fired on 20/144 (13.9%) of listed domains
-and 7/56 (12.5%) of known-legitimate ones — Fisher p = 1.000. A password field means "this site has
-a login", not "this site harvests credentials"; motcuadientu.backan.gov.vn, a provincial e-government
-portal, trips it exactly as a bank clone does. Separating the two needs the brand-mismatch judgement
-this pass deliberately refuses to make, so the tier carries no information here.
+WHAT THE FIRST FULL RUN SHOWED (200 rows, 2026-08-11) — READ BEFORE RE-RUNNING. The pass does not
+work, and the sample's benign arm proves it. Stratified over (label x tier) across the whole
+dataset, 56 of 200 rows are known-legitimate: an unplanned control group. The credential tier
+fired on 20/144 (13.9%) listed and 7/56 (12.5%) known-legitimate — Fisher p = 1.000. A password
+field means "this site has a login": motcuadientu.backan.gov.vn trips it exactly as a bank clone
+does, and separating them needs the brand-mismatch judgement this pass refuses to make.
 
-Coverage is the second failure and it bounds the first: only 24/144 listed rows (17%) resolved at
-all, because 72 have no retrievable archived body and 48 are JavaScript shells. Among those 24 the
-pass found 0 legitimate, which puts a 95% Wilson upper bound of 13.8% on the feed-error rate AMONG
-RESOLVABLE ROWS ONLY — a statement about 17% of the arm, not about the arm.
+Coverage is the second failure and bounds the first: only 24/144 listed rows (17%) resolved (72
+have no archived body, 48 are JS shells). Among those 24 the pass found 0 legitimate — a 95%
+Wilson upper bound of 13.8% on the feed-error rate AMONG RESOLVABLE ROWS ONLY, a statement about
+17% of the arm, not about the arm.
 
-The conclusion to carry forward is therefore about method, not composition: this corpus cannot be
-adjudicated from web archives, and the human audit's `unsure` share will be large for the same
-reason. That is a finding for the datasheet's limitations, and it is the only thing here worth
-quoting. Do not quote the verdict percentages.
+The conclusion is about method, not composition: this corpus cannot be adjudicated from web
+archives, and the human audit's `unsure` share will be large for the same reason. That belongs in
+the datasheet's limitations, and it is the only thing here worth quoting. Do not quote the
+verdict percentages.
 
-RUN:  python scripts/audit/machine_pass_composition.py [--limit N]
+RUN:  python scripts/machine_pass_composition.py [--limit N]
 """
 from __future__ import annotations
 
@@ -60,7 +53,7 @@ import zlib
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)

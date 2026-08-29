@@ -1,32 +1,28 @@
 #!/usr/bin/env python3
 """
-audit_token_filter.py — Formal audit of the Vietnamese-targeting token filter (reviewer #1:
-"the token audit is reported as 'spot-checked plausible' with no sample size").
+audit_token_filter.py — Formal audit of the Vietnamese-targeting token filter (reviewer #1: "the
+token audit is reported as 'spot-checked plausible' with no sample size").
 
-The registry-extended filter's marginal contribution is the set of feed domains flagged ONLY by
-the registry-generated brand tokens (data/processed/brand_tokens.json) — not by the .vn TLD and
-not by the hand-curated VN_TOKENS core. Those are exactly the domains whose flagging the paper
-must defend, so the audit samples from them.
+The registry-extended filter's marginal contribution is the set of feed domains flagged ONLY by the
+registry-generated brand tokens (data/processed/brand_tokens.json) — not by the .vn TLD and not by
+the hand-curated VN_TOKENS core. Those are exactly the domains whose flagging the paper must
+defend, so the audit samples from them.
 
-Two modes:
-
-  --sample (default): classify every domain in the unified-feed snapshot
-      (data/interim/vn_phishing_candidates.csv) by match basis (vn_tld / static / registry),
-      print the per-basis counts, and write a blinded, seeded, alphabetically-stable sample of
-      the registry-only domains to data/reports/token_audit_sample.csv for manual annotation.
-      Verdict vocabulary (one per row, fill the `verdict` column):
+  --sample (default): classify every domain in data/interim/vn_phishing_candidates.csv by match
+      basis (vn_tld / static / registry), print per-basis counts, and write a blinded, seeded,
+      alphabetically-stable sample of the registry-only domains to
+      data/reports/token_audit_sample.csv for manual annotation. Verdicts:
         vn-target   — the name credibly imitates a Vietnamese brand/service/authority
-        not-vn      — the match is spurious; the name does not target Vietnamese users
+        not-vn      — the match is spurious
         unsure      — cannot tell from the name and public captures
-      Plausibility is not evidence: a name that merely could belong to a Vietnamese business
-      is `unsure`, not `vn-target` (same rule as the label-audit codebook).
+      Plausibility is not evidence: a name that merely could belong to a Vietnamese business is
+      `unsure`, not `vn-target` (same rule as the label-audit codebook).
+  --summarize: read the annotated sheet, compute precision on audited rows (vn-target /
+      (vn-target + not-vn)) with a Wilson 95% interval, report the unsure share separately, and
+      write papers/P1_dataset/sections/gen_token_audit.tex.
 
-  --summarize: read the annotated sheet, compute the filter's precision on audited rows
-      (vn-target / (vn-target + not-vn)) with a Wilson 95% interval, report the unsure share
-      separately, and write papers/P1_dataset/sections/gen_token_audit.tex.
-
-RUN:  python scripts/audit/audit_token_filter.py [--n 100] [--seed 0]
-      python scripts/audit/audit_token_filter.py --summarize
+RUN:  python scripts/audit_token_filter.py [--n 100] [--seed 0]
+      python scripts/audit_token_filter.py --summarize
 """
 from __future__ import annotations
 import argparse
@@ -39,12 +35,12 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated  # noqa: E402
-from vn_filter import VN_TOKENS, BRAND_TOKENS  # noqa: E402
+from genfile import write_generated
+from vn_filter import VN_TOKENS, BRAND_TOKENS
 
 CANDIDATES = os.path.join(ROOT, "data", "interim", "vn_phishing_candidates.csv")
 SHEET = os.path.join(ROOT, "data", "reports", "token_audit_sample.csv")

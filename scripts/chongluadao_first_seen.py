@@ -24,8 +24,8 @@ Output: data/raw/chongluadao/first_seen.csv  (domain, first_seen, basis, censore
         merged by normalize_merge.load_chongluadao() into collected_at.
 
 RUN:
-  python scripts/dataset/chongluadao_first_seen.py                       # downloads + clones
-  python scripts/dataset/chongluadao_first_seen.py --skip-wayback        # git histories only
+  python scripts/chongluadao_first_seen.py                       # downloads + clones
+  python scripts/chongluadao_first_seen.py --skip-wayback        # git histories only
 """
 from __future__ import annotations
 import argparse

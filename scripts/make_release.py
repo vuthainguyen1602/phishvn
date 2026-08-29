@@ -11,8 +11,8 @@ Produces two clearly separated bundles under release/:
                                  captures. Do NOT upload to the open tier.
 
 RUN:
-  python scripts/release/make_release.py --version 1.0.0
-  python scripts/release/make_release.py --version 1.0.0 --include-pages
+  python scripts/make_release.py --version 1.0.0
+  python scripts/make_release.py --version 1.0.0 --include-pages
 """
 from __future__ import annotations
 import argparse
@@ -29,7 +29,7 @@ from collections import Counter
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
@@ -73,10 +73,16 @@ INFRA_FILES = [
     ("data/docs/infra/CITATION_infra.cff", "CITATION.cff"),
     ("data/docs/infra/schema_infra.md", "docs/schema.md"),
     ("data/docs/infra/collection_protocol.md", "docs/collection_protocol.md"),
+    ("data/docs/infra/datasheet_infra.md", "docs/datasheet.md"),
+    ("data/docs/infra/CHANGELOG_infra.md", "docs/CHANGELOG.md"),
     ("LICENSE", "LICENSE"),
 ]
-# Written when the deposit freezes, per the article; absent from a draft build on purpose.
-INFRA_AT_FREEZE = ["docs/datasheet.md", "docs/CHANGELOG.md"]
+# What a FREEZE build must still do, not what a draft build lacks. The datasheet and changelog
+# were absent until 2026-08-29 and the list named the files; now they ship in the draft too, and
+# what remains at freeze is the work of making them true of the frozen cut. A reader of a draft
+# deposit is better served by a datasheet that is current-but-provisional than by a promise.
+INFRA_AT_FREEZE = ["refresh every count in docs/datasheet.md and docs/CHANGELOG.md",
+                   "restate the capture window", "record collection changes made since"]
 # The ethics statement promises records ABOUT pages, never page content. Anything that could
 # carry markup or a rendered capture is a build-stopper, checked by column name and by content.
 INFRA_FORBIDDEN_COLS = ("html", "body", "screenshot", "dom", "content", "raw", "text")
@@ -153,7 +159,7 @@ def _check_attack_guardrails():
     bundle leaves the machine, so it re-checks rather than trusting the build that wrote the CSVs:
     the rules (simulated link only, no real brand token, no diacritics) are what make publishing an
     evasion corpus defensible, and the README about to be written asserts them."""
-    from p3_jaccard_check import guardrail_problems  # scripts/audit/, via the header bootstrap
+    from p3_jaccard_check import guardrail_problems  # scripts/, via the header bootstrap
 
     for src, _ in OPEN_FILES:
         if "p3_paraphrase" not in src:

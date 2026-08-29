@@ -2,25 +2,20 @@
 """
 make_verification_sample.py — Label-quality audit for PhishVN (P1a).
 
-Two modes:
-  1) DRAW a random stratified verification sample (by label x tier) for two human annotators to
-     independently re-check. Writes one CSV per annotator with an empty `verdict` column plus a
-     blinded id and the URL — the source label is withheld so annotation is not primed.
-  2) SCORE: given the two filled files, compute observed agreement and Cohen's kappa, and (against
-     the dataset's source labels) how the feed's positives break down.
+Two modes: DRAW a random stratified verification sample (by label x tier) for two annotators to
+re-check independently — one CSV each, empty `verdict`, blinded id and URL, source label withheld
+so annotation is not primed; and SCORE the two filled files for observed agreement, Cohen's kappa,
+and how the feed's positives break down against the dataset's source labels.
 
 WHY THE VOCABULARY IS FOUR-WAY, NOT phishing/benign/unsure. The dominant feed is ChongLuaDao, a
-community ANTI-FRAUD list ("chong lua dao"), not an anti-phishing list; the "Phishing-Blocklist"
-name belongs to the GitHub mirror, not to the project's scope. Sampling the positive class shows
-what that implies: gambling, betting-stream, investment/crypto and adult domains sit alongside
-credential-phishing, and 91% of positives carry no recognisable brand token at all. A three-way
-verdict cannot express that. Facing www.taixiu66.club an annotator must call it "phishing" (it
-impersonates nobody), "benign" (an anti-fraud list named it) or "unsure" (information thrown
-away) — so the audit would have hidden the very composition it was drawn to measure.
-
-Separating them answers two different questions with one annotation pass:
-  * is the feed's LISTING defensible?  phishing or scam = yes; legitimate = a real mislabel
-  * what is the positive class MADE OF?  the phishing-versus-scam split among defensible rows
+community ANTI-FRAUD list, not an anti-phishing list (the "Phishing-Blocklist" name belongs to the
+GitHub mirror). Its positive class holds gambling, betting-stream, investment/crypto and adult
+domains beside credential phishing, and 91% of positives carry no recognisable brand token. Facing
+www.taixiu66.club a three-way verdict forces "phishing" (it impersonates nobody), "benign" (an
+anti-fraud list named it) or "unsure" (information thrown away) — hiding the very composition the
+audit was drawn to measure. Four ways answer two questions in one pass: is the feed's LISTING
+defensible (phishing or scam = yes; legitimate = a real mislabel), and what is the positive class
+MADE OF (the phishing-versus-scam split among defensible rows).
 
 RUN:
   # 1) draw a 200-row sample -> two blind sheets

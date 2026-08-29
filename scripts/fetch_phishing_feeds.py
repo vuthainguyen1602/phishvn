@@ -15,8 +15,8 @@ Feed these to a liveness check + urlscan capture (crawl-at-detection), then buil
 Because Phishing.Database is pre-filtered to ACTIVE, its VN slice is far more likely to be live than
 an aged snapshot — mitigating the survivorship bias documented in the P1b limitations.
 
-RUN:  python scripts/collect/fetch_phishing_feeds.py
-      python scripts/collect/fetch_phishing_feeds.py --sources openphish phishdb   # subset
+RUN:  python scripts/fetch_phishing_feeds.py
+      python scripts/fetch_phishing_feeds.py --sources openphish phishdb   # subset
 """
 from __future__ import annotations
 import argparse
@@ -31,11 +31,11 @@ import requests
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from vn_filter import host_of, is_vn_target  # noqa: E402
+from vn_filter import host_of, is_vn_target
 
 H = {"User-Agent": "research (contact: thaivn_ph@utc.edu.vn)"}
 OUT = os.path.join("data", "interim", "vn_phishing_candidates.csv")

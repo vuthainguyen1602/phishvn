@@ -3,19 +3,15 @@
 scrape_vn_phishing.py
 Collect a list of Vietnamese fake/scam websites for research (dataset P1).
 
-Main source: Tin Nhiem Mang (NCSC/NCA) — https://tinnhiemmang.vn/website-lua-dao
-  * Server-rendered page, paginated ?page=1..N (~20 items/page, ~125k items).
-  * Each item: domain, detection date, impersonated organization, status.
-Bonus: OpenPhish + URLhaus (public feeds) to add more phishing URLs.
+Main source: Tin Nhiem Mang (NCSC/NCA) — https://tinnhiemmang.vn/website-lua-dao. Server-rendered,
+paginated ?page=1..N (~20 items/page, ~125k items); each item gives domain, detection date,
+impersonated organization, status. Bonus: OpenPhish + URLhaus public feeds.
 
-ETHICAL/LEGAL NOTE:
-  - The data is a PUBLIC blacklist, used for non-profit RESEARCH.
-  - Be POLITE: keep the delay, do not run many parallel threads, set a real User-Agent.
-  - Check https://tinnhiemmang.vn/robots.txt and respect it; cite the NCSC/NCA source.
-  - Do not redistribute without permission; comply with Decree 13/2023 when processing data.
+ETHICAL/LEGAL NOTE: a PUBLIC blacklist used for non-profit RESEARCH. Be POLITE — keep the delay, no
+parallel threads, real User-Agent. Respect https://tinnhiemmang.vn/robots.txt and cite the
+NCSC/NCA source. Do not redistribute without permission; comply with Decree 13/2023.
 
-INSTALL:
-  pip install requests beautifulsoup4
+INSTALL: pip install requests beautifulsoup4
 
 RUN (examples):
   # 'list' endpoint (website-lua-dao?page): server-rendered but CAPPED at ~1k unique items.

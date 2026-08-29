@@ -6,11 +6,11 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 try:
-    import _path  # noqa: E402
+    import _path
     _path.add_script_dirs()
 except ImportError:  # flat public-mirror layout: scripts/ itself is already on sys.path
     pass
-import normalize_merge as nm  # noqa: E402
+import normalize_merge as nm
 
 
 def test_url_features_suspicious_tld():

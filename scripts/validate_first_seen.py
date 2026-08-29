@@ -4,30 +4,24 @@ validate_first_seen.py — Accuracy estimate for the RECONSTRUCTED ChongLuaDao f
 (reviewer #1: "the reconstructed first-seen dates carry no accuracy estimate even though they
 order the split").
 
-The reconstruction (chongluadao_first_seen.py) is 99.9% ObjectId-based: the entry's MongoDB
-ObjectId encodes its insertion timestamp, so the date is exact FOR INSERTION INTO THE
-CHONGLUADAO DATABASE. What needs validating is whether that insertion date is a faithful
-first-seen date for the domain. Two independent checks, neither consulting the reconstruction's
-own inputs beyond the ObjectId itself:
+The reconstruction (chongluadao_first_seen.py) is 99.9% ObjectId-based, so the date is exact FOR
+INSERTION INTO THE CHONGLUADAO DATABASE; what needs validating is whether that insertion date is a
+faithful first-seen date for the domain. Two independent checks:
 
-1. EXTERNAL AGREEMENT — domains that also appear in the NCSC Tin Nhiem Mang blacklist, whose
-   detection date is attested by the national feed, not reconstructed. The date difference
-   (NCSC minus ChongLuaDao) mixes reconstruction error with genuine inter-source detection lag,
-   so its spread is an UPPER BOUND on the reconstruction error.
-
-2. INTERNAL CONSISTENCY — domains whose ObjectId date can be compared against their first
-   appearance in the AdGuard-generator mirror's git history (a downstream consumer of the same
-   blacklist). The mirror can only lag the database, never precede it, so
-   objectid_date <= mirror_first_appearance must hold; a violation is a definite
-   reconstruction error. Requires network (git clone); skipped gracefully without it.
-   Mirror-first-commit domains are left-censored there and excluded.
+1. EXTERNAL AGREEMENT — domains also in the NCSC Tin Nhiem Mang blacklist, whose detection date is
+   attested rather than reconstructed. The difference mixes reconstruction error with genuine
+   inter-source detection lag, so its spread is an UPPER BOUND on the reconstruction error.
+2. INTERNAL CONSISTENCY — the ObjectId date against first appearance in the AdGuard-generator
+   mirror's git history. The mirror can only lag the database, so objectid_date <=
+   mirror_first_appearance must hold and a violation is a definite error. Requires network (git
+   clone); skipped gracefully without it. Mirror-first-commit domains are left-censored, excluded.
 
 Outputs:
   data/processed/first_seen_validation.csv          — per-domain rows for both checks
   data/processed/first_seen_validation_summary.json — the headline numbers
   papers/P1_dataset/sections/gen_dates_verdict.tex  — one generated sentence for the manuscript
 
-RUN:  python scripts/audit/validate_first_seen.py [--skip-mirror] [--workdir DIR]
+RUN:  python scripts/validate_first_seen.py [--skip-mirror] [--workdir DIR]
 """
 from __future__ import annotations
 import argparse
@@ -42,12 +36,12 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated  # noqa: E402
-from chongluadao_first_seen import from_git_history, MIRROR_ADG  # noqa: E402
+from genfile import write_generated
+from chongluadao_first_seen import from_git_history, MIRROR_ADG
 
 DATASET = os.path.join(ROOT, "data", "processed", "dataset_url.csv")
 FIRST_SEEN = os.path.join(ROOT, "data", "raw", "chongluadao", "first_seen.csv")

@@ -3,47 +3,36 @@
 run_p2_temporal_strict.py — P2's honest temporal protocol, built only from rows whose detection
 date is real.
 
-WHY THIS EXISTS. normalize_merge's `split` column is only PARTLY temporal: sources without a
-date are split randomly, so run_p2_benchmark's "temporal" protocol tracked "random" almost
-exactly — that similarity is a property of the split, not evidence of deployment robustness.
-Here the phishing class is split STRICTLY by `collected_at` (train = the older 70% of dated
-phishing, test = the strictly newer 30%; undated phishing is dropped), which is the class that
-actually drifts — campaigns, brands and hosting churn. The benign class is barely dated in this
-corpus (~2k of 33k rows), so it is split randomly per seed at the same 70/30 rate; that choice
-is stated in the paper, and is the standard protocol in the phishing-drift literature (benign
-web infrastructure is comparatively stationary).
+WHY. normalize_merge's `split` column is only PARTLY temporal — undated sources are split
+randomly, so run_p2_benchmark's "temporal" protocol tracked "random" almost exactly, a property
+of the split rather than evidence of robustness. Here the phishing class is split STRICTLY by
+`collected_at` (train = older 70% of dated phishing, test = strictly newer 30%, undated dropped);
+that is the class that drifts. The benign class is barely dated (~2k of 33k rows) and is split
+randomly per seed at the same rate — stated in the paper, and standard in the drift literature.
 
-LEAKAGE GUARD. A registrable domain seen in the train window is removed from the test window
-(kept in train): re-detections of the same campaign domain would otherwise let the model score
-"memorised domain", not "generalises forward in time".
+LEAKAGE GUARD: a registrable domain seen in train is removed from test (kept in train), else the
+model scores "memorised domain" rather than "generalises forward".
 
-The comparison that matters is strict-temporal vs random ON THE SAME ROW SET — same phishing
-subset, same benign pool — so protocol is the only variable. Output rows carry protocol
-"random_same_rows" and "temporal_strict"; families and metrics mirror run_p2_benchmark.
+The comparison that matters is strict-temporal vs random ON THE SAME ROW SET, so protocol is the
+only variable; rows carry protocol "random_same_rows" and "temporal_strict".
 
-ONE ASYMMETRY, AND THE ARM THAT CLOSES IT (round-2 review, M7). "Protocol is the only variable"
-was not quite true: the temporal arm applies the registrable-domain guard, and the random
-control re-splits the pooled rows without it, so ~7% of the control's phishing test window
-shares a domain with its own training window (measured: scripts/audit/p2_dup_leakage.py). That
-inflates the control and therefore Delta_proto. --guard-control adds a third arm,
-"random_same_rows_guarded", which applies the identical guard after the random re-split — drop
-from TEST any row whose registrable domain occurs in TRAIN, exactly as the temporal arm does —
-so the two arms differ in protocol alone. It writes to its own CSV so the canonical two-arm
-table is not disturbed.
+ONE ASYMMETRY, AND THE ARM THAT CLOSES IT (round-2 review, M7). The temporal arm applies the
+domain guard and the random control does not, so ~7% of the control's phishing test window shares
+a domain with its own training window (scripts/p2_dup_leakage.py), inflating the control
+and Delta_proto. --guard-control adds "random_same_rows_guarded", applying the identical guard
+after the random re-split, into its own CSV so the canonical two-arm table is undisturbed.
 
 REFRESH WINDOW (PREREG_refresh_window.md, Test 1). --test-after YYYY-MM-DD replaces the
-fractional cut with a calendar one: test = dated phishing STRICTLY later than the date, train =
-ALL dated phishing on or before it, the same registrable-domain guard applied against all of
-train. With the date set to the current corpus's maximum, the test window is exactly the rows
-the next refresh brings in; with it set to the canonical cut date (2022-11-15) it reproduces the
-0.70 split up to the tie at the boundary date (smoke test). The benign 70/30 mask per seed and
-every model config are unchanged, so the rows share the schema of the canonical CSVs.
+fractional cut with a calendar one: test = dated phishing strictly later, train = ALL dated
+phishing on or before, same guard. Set to the corpus maximum the test window is exactly what the
+next refresh brings in; set to the canonical cut (2022-11-15) it reproduces the 0.70 split up to
+the boundary tie (smoke test). Benign masks and model configs unchanged.
 
 RUN:
-  python scripts/train/run_p2_temporal_strict.py                 # 7 families x 2 protocols x seeds
-  python scripts/train/run_p2_temporal_strict.py --guard-control \
+  python scripts/run_p2_temporal_strict.py                 # 7 families x 2 protocols x seeds
+  python scripts/run_p2_temporal_strict.py --guard-control \\
       --out data/processed/p2/p2_temporal_strict_guarded.csv --curves ""   # the M7 control arm
-  python scripts/train/run_p2_temporal_strict.py --families CatBoost --seeds 20 \
+  python scripts/run_p2_temporal_strict.py --families CatBoost --seeds 20 \\
       --test-after 2025-02-18 --out data/processed/p2/p2_refresh_cb_k20.csv --curves ""  # Test 1
 """
 from __future__ import annotations
@@ -59,14 +48,14 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import COMPPHISH, add_label  # noqa: E402
-from run_p2_benchmark import (DETERMINISTIC, FAMILIES, pr_curve_row, run_one,  # noqa: E402
+from train_url_baseline import COMPPHISH, add_label
+from run_p2_benchmark import (DETERMINISTIC, FAMILIES, pr_curve_row, run_one,
                               write_curves)
-from psl import registered_domain  # noqa: E402  (same PSL logic the collector folds by)
+from psl import registered_domain
 
 URL_CSV = "data/processed/dataset_url.csv"
 ALIGNED = "data/processed/vn_compphish.csv"

@@ -31,11 +31,10 @@ SUSPICIOUS_TLDS = {"top", "xyz", "cc", "online", "info", "click", "shop", "vip",
 #   pending= awaiting review     (weak label; excluded from train by default)
 STATUS_TIER = {"Đã xử lý": "gold", "Đang xử lý": "silver", "Đang chờ": "pending"}
 
-# Map organization/description/DOMAIN -> impersonation sector. Patterns match both Vietnamese
-# free text (impersonated_org, when present) AND brand tokens that appear inside the domain string
-# itself, because the tinnhiemmang blacklist ships impersonated_org empty — the brand signal lives
-# in the URL (e.g. vietcombank247.com.vn, vtp-vandon.online, chinhphu2025.com). Order matters
-# (first match wins); tax before gov so "thue" is not swallowed by the gov pattern.
+# Map organization/description/DOMAIN -> impersonation sector. Patterns match Vietnamese free text
+# AND brand tokens inside the domain string, because the tinnhiemmang blacklist ships
+# impersonated_org empty -- the brand signal lives in the URL. First match wins; tax before gov
+# so "thue" is not swallowed by the gov pattern.
 SCENARIO_MAP = [
     (r"thu[eế]|\btax\b|tongcucthue|etax", "tax"),
     (r"ngân hàng|\bbank\b|vietcom|\bvcb\b|techcom|\btcb\b|mbbank|\bbidv\b|agribank|\bacb\b|"
@@ -55,6 +54,7 @@ SCENARIO_MAP = [
 
 try:
     import tldextract
+    from psl import apex
     _EXT = tldextract.TLDExtract(suffix_list_urls=())  # offline snapshot
 except Exception:  # pragma: no cover
     _EXT = None
@@ -67,7 +67,7 @@ def reg_domain(host: str) -> str:
     if not host:
         return ""
     if _EXT is not None:
-        rd = _EXT(host).registered_domain
+        rd = apex(_EXT(host))
         if rd:
             return rd
     parts = host.split(".")
@@ -439,14 +439,12 @@ def main():
         if len(df) < n0:
             print(f"[i] dropped {n0 - len(df)} weak-label 'pending' rows (use --include-pending to keep)")
 
-    # ---- site-level label-conflict resolution. Must run BEFORE dedup, which otherwise keeps
-    # whichever source loaded first and hides the conflict. A community blacklist sometimes
-    # carries a BARE domain (no path) that a benign source also lists; two cases:
-    #   * platform sites: the blacklist entry is a truncated page-level report (a scam profile
-    #     on facebook.com does not make facebook.com phishing) -> drop the bare phishing row,
-    #     keep the benign row AND any path-carrying phishing rows (real scam pages).
-    #   * anything else (loan/shop domains reported wholesale vs. Tranco popularity): neither
-    #     label is trustworthy -> drop EVERY row of that site, and say so.
+    # ---- site-level label-conflict resolution. Must run BEFORE dedup, which otherwise keeps whichever
+    # source loaded first and hides the conflict. A blacklist sometimes carries a BARE domain a benign
+    # source also lists: for platform sites the entry is a truncated page-level report (a scam profile
+    # does not make facebook.com phishing), so drop the bare phishing row and keep the benign one plus
+    # any path-carrying rows; for anything else neither label is trustworthy, so drop every row of that
+    # site and say so.
     PLATFORM_SITES = {"facebook.com", "youtube.com", "zalo.me", "linktr.ee", "tiktok.com",
                       "instagram.com", "google.com", "telegram.org"}
 

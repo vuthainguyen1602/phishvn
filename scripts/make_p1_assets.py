@@ -15,7 +15,7 @@ The manuscript \input{}s the two .tex tables and \includegraphics the PDF, so a 
 everything in sync. Hand-drawn conceptual diagrams (pipeline.pdf, examples.pdf) are intentionally
 NOT regenerated here.
 
-RUN:  python scripts/assets/make_p1_assets.py
+RUN:  python scripts/make_p1_assets.py
 """
 from __future__ import annotations
 import math
@@ -28,14 +28,14 @@ import pandas as pd
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated  # noqa: E402
-from train_url_baseline import (load, make_model, _metrics, bootstrap_ci,  # noqa: E402
+from genfile import write_generated
+from train_url_baseline import (load, make_model, _metrics, bootstrap_ci,
                                 COMPPHISH, DETERMINISTIC)
-from normalize_merge import reg_domain, parse_event_dates  # noqa: E402
+from normalize_merge import reg_domain, parse_event_dates
 
 P1A = os.path.join(ROOT, "papers", "P1_dataset")
 FIG = os.path.join(P1A, "figures")

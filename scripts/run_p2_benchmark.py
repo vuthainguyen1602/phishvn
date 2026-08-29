@@ -20,8 +20,8 @@ downstream tables aggregate mean ± std. Cross-dataset transfer of the winning f
 run_cross_dataset.py; HPO of the winner reuses hpo_gwo.py — neither is duplicated here.
 
 RUN:
-  python scripts/train/run_p2_benchmark.py                    # full: 7 families x 2 protocols x seeds
-  python scripts/train/run_p2_benchmark.py --families XGBoost LightGBM --seeds 3
+  python scripts/run_p2_benchmark.py                    # full: 7 families x 2 protocols x seeds
+  python scripts/run_p2_benchmark.py --families XGBoost LightGBM --seeds 3
 """
 from __future__ import annotations
 
@@ -37,11 +37,11 @@ from sklearn.model_selection import train_test_split
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 try:
-    from _path import ROOT, add_script_dirs  # noqa: E402
+    from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import COMPPHISH, _metrics, add_label, make_model  # noqa: E402
+from train_url_baseline import COMPPHISH, _metrics, add_label, make_model
 
 CORPUS = "data/processed/vn_compphish.csv"
 OUT = "data/processed/p2/p2_benchmark.csv"
