@@ -90,6 +90,9 @@ DOC_LINK_WAIVERS = {
                                  " measured it -- provenance a reader should see",
     "make_p2_bench_assets.py": "attributes numbers to the private scripts that produced them --"
                                " provenance a reader should see, not a path to follow",
+    "analyze_qr_dfr.py": "its error message says where the sweep rows come from, naming the"
+                         " collection host's sync wrapper -- provenance for someone holding an"
+                         " empty input, not a path this mirror is expected to carry",
 }
 
 # PROSE GATE. Comments/docstrings are what leaked: four exported modules named unreleased
@@ -203,6 +206,20 @@ INCLUDE_SCRIPTS = [
     "train/run_p6_budget_frontier.py",   # eight-cell reweighting / budget frontier
     "train/run_p6_case_studies.py",      # the worked cases behind the .id finding
     "assets/make_p6_xai_assets.py",      # regenerates every P6 table, figure and verdict macro
+    # QR / quishing benchmark -- its "Data and Code Availability" names this repository. The
+    # RESTORATION scripts are deliberately absent: that study was split out of the submitted
+    # article and travels with its own paper, and the article says so rather than implying the
+    # whole study ships here.
+    "dataset/gen_synthetic_qr.py",       # the controlled render generator the benchmark runs on
+    "audit/analyze_qr_dfr.py",           # the decode-failure-rate analysis and its two registered tests
+    "audit/qr_prevalence.py",            # the landing-page prevalence audit
+    "collect/qr_scan.py",                # the scanner behind the landing-page audit
+    "collect/qr_submit.py",              # the submission side of that audit
+    "audit/backfill_qr_examined.py",     # reconciles the pages-examined denominator
+    "assets/make_qr_visual_assets.py",   # regenerates the paper's QR figures and tables
+    "train/benchmark_qr.py",             # the sweep itself; the generator drives it
+    "lib/qr_decode.py",                  # the three-decoder wrapper every arm reads through
+    "lib/emvco.py",                      # EMVCo payment-QR parsing used by the landing-page audit
 ]
 
 # ----------------------------------------------------------------------------------------
