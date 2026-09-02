@@ -114,7 +114,7 @@ PROSE_WAIVERS = {
     # costs a cloner more than the label does. Decided 2026-08-18; run_cross_dataset.py joined
     # 2026-08-25, its label having arrived with the diagonal-leakage fix without a waiver
     "run_p2_benchmark.py": "this IS that study's benchmark driver; the label names what it runs",
-    "run_p2_temporal_strict.py": "this IS that study's strict-temporal protocol",
+    "run_p2_temporal_strict.py": "this IS that study's phishing-temporal protocol",
     "run_p2_stacking_baseline.py": "this IS that study's stacking arm",
     "make_p2_bench_assets.py": "generates that study's tables; the paths it writes name them",
     "audit_label_noise.py": "the label-noise audit that study's decomposition rests on",
@@ -122,6 +122,22 @@ PROSE_WAIVERS = {
     "run_gwo_temporal.py": "the HPO arm on the temporal window, named by its output path",
     "run_cross_dataset.py": "the transfer matrix of that study; the leakage note points at its "
                             "sibling temporal protocol, which carries the same domain guard",
+    "run_p2_charcnn.py": "this IS that study's CharCNN arm",
+    # ELEVEN scripts ARE the XAI study's own code, exported 2026-09-02 for the same reason as
+    # the benchmark's: that paper states in the present tense that this code is public, and it
+    # was not. Mentions of the OTHER unreleased siblings were removed rather than waived --
+    # the gate is right that those are not this repository's to announce.
+    "run_p6_suffix_blindspot.py": "this IS that study's blind-spot measurement",
+    "run_p6_vn_deficit.py": "this IS that study's pooled-versus-split deficit",
+    "run_p6_vn_reading.py": "this IS that study's off-manifold diagnostic",
+    "run_p6_group_threshold.py": "this IS that study's per-group threshold remedy",
+    "run_p6_prospective_ablation.py": "this IS that study's locked forward holdout",
+    "run_p6_protocol_shap.py": "this IS that study's attribution contrast across protocols",
+    "run_p6_attribution_drift.py": "this IS that study's re-seeding band",
+    "run_p6_charcnn_strata.py": "this IS that study's representation-change replication",
+    "run_p6_budget_frontier.py": "this IS that study's reweighting frontier",
+    "run_p6_case_studies.py": "this IS that study's worked cases",
+    "make_p6_xai_assets.py": "generates that study's tables; the paths it writes name them",
 }
 
 # Only scripts that build/reproduce the RELEASED P1a URL dataset and baselines; those for
@@ -160,7 +176,7 @@ INCLUDE_SCRIPTS = [
     "lib/axguard.py",                    # refuses to write a figure that clips its own data
     # P2 (URL benchmark) — the conclusion promises the code behind every table
     "train/run_p2_benchmark.py",         # 7-family benchmark under the bundled protocols
-    "train/run_p2_temporal_strict.py",   # the strict-temporal protocol (+ rolling origins)
+    "train/run_p2_temporal_strict.py",   # the phishing-temporal protocol (+ rolling origins)
     "train/run_p2_stacking_baseline.py", # stacked ensembles / base-learner combos
     "train/run_p2_drift_forecastability.py",  # the three forecastability diagnostics
     "train/run_cross_dataset.py",        # 4-corpus transfer matrix
@@ -168,7 +184,25 @@ INCLUDE_SCRIPTS = [
     "train/run_gwo_temporal.py",         # the HPO arm on the temporal window
     "audit/audit_label_noise.py",        # confident-learning label-noise audit
     "lib/paired_eval.py",                # NB-corrected paired t-test + BH (all significance)
+    "train/run_p2_charcnn.py",           # the CharCNN arm. Exported 2026-09-02: P2's results
+                                         # discuss it and P6 builds on it, but it had been left
+                                         # out of a list whose stated rule is "the code behind
+                                         # every table" -- found by the closure gate, not by eye
     "assets/make_p2_bench_assets.py",    # regenerates every P2 table/figure/verdict macro
+    # P6 (XAI / suffix blind spot) -- its "Data and code availability" section states, in the
+    # present tense, that this code is public. That was false until 2026-09-02: none of these
+    # eleven were exported while the paper claimed all of them. A referee can click the URL.
+    "train/run_p6_suffix_blindspot.py",  # the blind-spot measurement the abstract opens with
+    "train/run_p6_vn_deficit.py",        # the pooled-vs-split .vn deficit
+    "train/run_p6_vn_reading.py",        # the off-manifold diagnostic on tld_len
+    "train/run_p6_group_threshold.py",   # the per-group threshold remedy (0.906 -> 0.177)
+    "train/run_p6_prospective_ablation.py",  # locked forward holdout + the no-tld_len refit
+    "train/run_p6_protocol_shap.py",     # SHAP under both protocols (the rho = 0.968 claim)
+    "train/run_p6_attribution_drift.py", # the re-seeding band that rho is compared against
+    "train/run_p6_charcnn_strata.py",    # the deployment-stack replication
+    "train/run_p6_budget_frontier.py",   # eight-cell reweighting / budget frontier
+    "train/run_p6_case_studies.py",      # the worked cases behind the .id finding
+    "assets/make_p6_xai_assets.py",      # regenerates every P6 table, figure and verdict macro
 ]
 
 # ----------------------------------------------------------------------------------------
@@ -201,7 +235,7 @@ INFRA_SCRIPTS = [
     "collect/watch_urlscan_brands.py",  # brand-token urlscan feed (the live phishing channel)
     "collect/watch_chongluadao.py",     # capture helpers watch_urlscan_brands imports
     "audit/audit_p4_labels.py",         # the label gate + registry-wildcard probe
-    "assets/make_p4_assets.py",         # build_population (funnel stages); refuses to fit below trigger
+    "assets/make_p4_assets.py",         # candidate population + T1, behind the trusted-label lock
     "assets/make_p4_funnel.py",         # funnel + accrual tables/figure
     "assets/make_p4b_assets.py",        # the data article's generated tables/figures
     "lib/psl.py",                       # vendored from the URL-corpus repo (source of truth there)
@@ -211,6 +245,7 @@ INFRA_SCRIPTS = [
     "lib/axguard.py",                   # refuses to write a figure that clips its data
     "lib/paired_eval.py",               # wilson() used by build_population's tables
     "lib/compphish_features.py",        # lexical channel make_p4_assets imports at module load
+    "lib/p4_outcome_gate.py",           # shared fail-closed unlock for every P4 outcome path
     "assets/make_p4_perishability.py", # capture perishability (live vs backfill resolvability)
     "audit/audit_infra_capture.py",     # its helper: the WHOIS-by-policy artefact, measured
     "release/make_public_repo.py",      # this exporter
@@ -244,7 +279,7 @@ INFRA_PROSE_WAIVERS = {
     "make_p4_perishability.py": "names the paper folder its table is written into",
     "urlscan_brands_run.sh": "the wrapper comment names the study its feed serves",
     "rowcount_snapshot.sh": "the comment names the arm whose back-dated stamps it exists for",
-    "ct_benign_vn_run.sh": "names the pre-registration amendment that created the stratum",
+    "ct_benign_vn_run.sh": "names the pre-specification amendment that created the stratum",
 }
 INFRA_DOC_FORBIDDEN = re.compile(r"\bcompanion\b", re.I)
 
@@ -321,7 +356,7 @@ temporal split.
 ## What's here
 - `scripts/` — URL data collection, normalisation, CompPhish features, baselines, audit, release tools.
 - `docs/` — datasheet, column schema, data-source notes.
-- `docs/verify/` — the completed human label audit: pre-registered codebook (with its amendment
+- `docs/verify/` — the completed human label audit: time-stamped pre-specified codebook (with its amendment
   log), both annotators' independent sheets, the machine pass, and the arbitration record.
 - `tests/`, `configs/`, `Makefile`, `dvc.yaml` — reproducibility.
 
@@ -407,6 +442,22 @@ def _flatten_sh(src: str) -> str:
     return re.sub(r"scripts/(collect|audit|assets|lib|dataset|train|release)/", "scripts/", src)
 
 
+def _drop_unshipped_doc_links(src: str, shipped: set[str]) -> str:
+    """Stop the exported copy from naming a design note this mirror does not carry.
+
+    Added 2026-09-02 with the XAI study's eleven scripts. Their headers each end on a line like
+    "The three measurements and the four additions: kept in the development repository, not shipped in this mirror",
+    and the link gate is right to refuse them: in the mirror that path is a promise to a file
+    that is not there. Deleting the line from the repository would have satisfied the gate by
+    destroying a pointer that is useful HERE, so the rewrite happens on export instead -- the
+    same principle as the flattening above. The sentence survives; only the dead path goes.
+    """
+    def sub(m):
+        return m.group(0) if os.path.basename(m.group(0)) in shipped else \
+            "kept in the development repository, not shipped in this mirror"
+    return re.sub(r"docs/(?:design-notes|decisions)/[\w.-]+\.md", sub, src)
+
+
 def _sh_prose(path: str) -> str:
     src = open(path, encoding="utf-8").read()
     return "\n".join(m.group(1) for m in re.finditer(r"^\s*#\s?(.*)$", src, re.M))
@@ -427,6 +478,36 @@ def _closure_gate(out: str, private: set[str], files: list[tuple[str, str]]) -> 
     if dangling:
         raise SystemExit("SAFETY: exported file imports a non-exported script: "
                          + ", ".join(sorted(set(dangling))))
+
+
+def _row_gate(out: str, ops: list[str], protocol_rel: str) -> None:
+    """An exported ops script may only name collectors the deposit's own protocol describes.
+
+    jetson_health.sh carries one row per collector, `name|log|data|period`, and rows accumulate as
+    the host gains collectors -- including collectors belonging to studies this deposit says
+    nothing about. Such a row is invisible to the other gates: it is not an import, not a paper
+    label, and the paths it names are data files rather than in-repo scripts, so the closure,
+    prose and link gates all pass it. What a cloner sees is a collector named nowhere else in the
+    mirror, pointing at a log and a CSV nothing here produces. Rows for those live in a side file
+    that is not exported (see jetson_health.rows.local), which is what this gate enforces."""
+    proto = os.path.join(out, protocol_rel)
+    if not os.path.exists(proto):
+        raise SystemExit(f"SAFETY: {protocol_rel} missing; cannot check exported collector rows")
+    described = open(proto, encoding="utf-8").read()
+    undocumented = []
+    for fn in ops:
+        p = os.path.join(out, "scripts", "ops", fn)
+        if not os.path.exists(p):
+            continue
+        for m in re.finditer(r'^\s*"([a-z0-9_]+)\|[^"]*\|[^"]*\|\d+"',
+                             open(p, encoding="utf-8").read(), re.M):
+            if m.group(1) not in described:
+                undocumented.append(f"scripts/ops/{fn}: {m.group(1)}")
+    if undocumented:
+        raise SystemExit("SAFETY: exported ops script names a collector the deposit does not "
+                         f"describe in {protocol_rel}:\n  " + "\n  ".join(sorted(set(undocumented)))
+                         + "\n  Move the row to scripts/ops/jetson_health.rows.local (not exported), "
+                           "or document the collector in the protocol.")
 
 
 def _link_gate(out: str, waivers: dict[str, str]) -> None:
@@ -524,7 +605,7 @@ def _count_files(out: str) -> int:
 
 def build_infra(out: str) -> None:
     """Assemble the phishvn-infra mirror. Same discipline as the default profile: whitelist only,
-    flat scripts/, no data payloads, no papers, no pre-registration, no .env; both gates."""
+    flat scripts/, no data payloads, no papers, no pre-specification, no .env; both gates."""
     _clean_out(out)
     for f in INFRA_COPY_FILES:
         if os.path.exists(f):
@@ -581,7 +662,7 @@ def build_infra(out: str) -> None:
         f.write(PUBLIC_GITIGNORE)
 
     # safety assertion: nothing forbidden slipped in -- the default profile's classes, plus the
-    # secrets file, anything named like a pre-registration, and any payload under data/.
+    # secrets file, anything named like a pre-specification, and any payload under data/.
     leaked = []
     for dp, dns, fns in os.walk(out):
         dns[:] = [d for d in dns if d != ".git"]
@@ -615,6 +696,7 @@ def build_infra(out: str) -> None:
         raise SystemExit("SAFETY: infra docs name a paper or call it a companion:\n  "
                          + "\n  ".join(bad))
 
+    _row_gate(out, INFRA_OPS, os.path.join("docs", "collection_protocol.md"))
     _link_gate(out, DOC_LINK_WAIVERS)
 
     print(f"[+] public_infra repo assembled at {out}  ({_count_files(out)} files)")
@@ -668,8 +750,8 @@ def main():
             # names a path this mirror does not have. The rewrite only touches the role directory, and
             # every occurrence here is text a person reads rather than a path opened at run time
             dst = os.path.join(args.out, "scripts", os.path.basename(s))
-            open(dst, "w", encoding="utf-8").write(
-                _flatten_sh(open(src, encoding="utf-8").read()))
+            open(dst, "w", encoding="utf-8").write(_drop_unshipped_doc_links(
+                _flatten_sh(open(src, encoding="utf-8").read()), set(INCLUDE_DOCS)))
             shutil.copymode(src, dst)
     # a trimmed Makefile whose targets only reference the exported scripts
     with open(os.path.join(args.out, "Makefile"), "w", encoding="utf-8") as f:

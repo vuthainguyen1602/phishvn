@@ -14,6 +14,7 @@ Used by train_url_baseline.py via `--tune --tune-method gwo`.
 from __future__ import annotations
 import os
 import sys
+import warnings
 
 import numpy as np
 from sklearn.model_selection import cross_val_score, StratifiedKFold
@@ -74,13 +75,48 @@ def _fitness(model, params, X, y, seed):
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=seed)
         return float(cross_val_score(_factory(model, seed, params), X, y,
                                      scoring="average_precision", cv=cv, n_jobs=-1).mean())
-    except Exception:
-        return -1.0  # invalid config -> worst score
+    except Exception as exc:
+        # Invalid candidates may occur near a search-space boundary, but silently
+        # swallowing every failure makes a broken estimator indistinguishable from
+        # a genuinely poor configuration.
+        warnings.warn(
+            f"fitness evaluation failed for {model} with {params}: {exc}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return -1.0
 
 
 def gwo_budget(n_agents, iters):
     """True number of fitness evaluations gwo_search(n_agents, iters) performs."""
     return n_agents * (iters + 1)
+
+
+def _gwo_step(wolves, leaders, a, rng):
+    """Return one canonical GWO position update.
+
+    Each of X1, X2 and X3 is computed independently from the same pre-update
+    position.  Updating a wolf in-place once per leader changes the algorithm
+    into an order-dependent recurrence and is not the GWO update of Mirjalili
+    et al.
+    """
+    old = np.asarray(wolves, dtype=float)
+    estimates = []
+    for lead in np.asarray(leaders, dtype=float):
+        r1 = rng.random(old.shape)
+        r2 = rng.random(old.shape)
+        A = 2.0 * a * r1 - a
+        C = 2.0 * r2
+        estimates.append(lead - A * np.abs(C * lead - old))
+    return np.clip(np.mean(estimates, axis=0), 0.0, 1.0)
+
+
+def _update_leaders(leader_pos, leader_fit, wolves, fit):
+    """Keep the best three evaluated positions seen so far."""
+    candidate_pos = np.vstack((leader_pos, wolves))
+    candidate_fit = np.concatenate((leader_fit, fit))
+    order = np.argsort(-candidate_fit, kind="stable")[:3]
+    return candidate_pos[order].copy(), candidate_fit[order].copy()
 
 
 def random_search(model, X, y, seed=0, budget=48):
@@ -108,29 +144,24 @@ def gwo_search(model, X, y, seed=0, n_agents=6, iters=8):
     space = SPACE.get(model, [])
     if not space:
         return {}, float("nan")
+    if n_agents < 3:
+        raise ValueError("GWO requires at least three agents (alpha, beta, delta)")
+    if iters < 1:
+        raise ValueError("GWO requires at least one iteration")
     d = len(space)
     rng = np.random.default_rng(seed)
     wolves = rng.random((n_agents, d))
     fit = np.array([_fitness(model, _decode(w, space), X, y, seed) for w in wolves])
     # alpha/beta/delta = three best (we maximise, so take the largest)
     order = np.argsort(-fit)
-    alpha, beta, delta = wolves[order[0]].copy(), wolves[order[1]].copy(), wolves[order[2]].copy()
-    a_fit = fit[order[0]]
+    leaders = wolves[order[:3]].copy()
+    leader_fit = fit[order[:3]].copy()
     for t in range(iters):
         a = 2 - 2 * t / max(1, iters - 1)  # linearly 2 -> 0
-        for i in range(n_agents):
-            for lead in (alpha, beta, delta):
-                r1, r2 = rng.random(d), rng.random(d)
-                A = 2 * a * r1 - a
-                C = 2 * r2
-                Dlead = np.abs(C * lead - wolves[i])
-                wolves[i] = np.clip(0.5 * (wolves[i] + (lead - A * Dlead)), 0, 1)
+        wolves = _gwo_step(wolves, leaders, a, rng)
         fit = np.array([_fitness(model, _decode(w, space), X, y, seed) for w in wolves])
-        order = np.argsort(-fit)
-        if fit[order[0]] > a_fit:
-            alpha, a_fit = wolves[order[0]].copy(), fit[order[0]]
-        beta, delta = wolves[order[1]].copy(), wolves[order[2]].copy()
-    return _decode(alpha, space), float(a_fit)
+        leaders, leader_fit = _update_leaders(leaders, leader_fit, wolves, fit)
+    return _decode(leaders[0], space), float(leader_fit[0])
 
 
 if __name__ == "__main__":  # quick self-test

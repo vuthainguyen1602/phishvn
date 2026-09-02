@@ -183,7 +183,7 @@ def fig_family_pr():
     ax.grid(True, alpha=0.25, lw=0.6)
     ax.set_axisbelow(True)
     ax.legend(frameon=False, fontsize=8, loc="lower left", title="PR-AUC", title_fontsize=8)
-    ax.set_title("strict-temporal protocol, mean over 5 seeds", fontsize=8.5)
+    ax.set_title("phishing-temporal protocol, mean over 5 seeds", fontsize=8.5)
     fig.tight_layout()
     out = os.path.join(FIG, "pr_families.pdf")
     os.makedirs(FIG, exist_ok=True)
@@ -328,7 +328,7 @@ def fig_prauc_cost():
                     fontsize=7.5, color=col if col != GRAY else INK)
     ax.set_xscale("log")
     ax.set_xlabel("mean fit time per run (s, log scale)")
-    ax.set_ylabel("PR-AUC (strict-temporal)")
+    ax.set_ylabel("PR-AUC (phishing-temporal)")
     ax.set_xlim(d.secs.min() * 0.36, d.secs.max() * 3.2)
     span = d.prauc.max() - d.prauc.min()
     ax.set_ylim(d.prauc.min() - 0.25 * span, d.prauc.max() + 0.25 * span)
@@ -384,12 +384,12 @@ def tab_strict():
     lines = [
         "\\begin{table*}[t]\\centering",
         "\\caption{Seven families, same dated rows, both protocols, every recorded metric;"
-        " $\\Delta$F1 = strict-temporal minus random; FPR@0.90 = false-positive rate at $0.90$"
+        " $\\Delta$F1 = phishing-temporal minus random; FPR@0.90 = false-positive rate at $0.90$"
         " phishing recall (lower is better).}",
         "\\label{tab:strict}",
         "\\small\\setlength{\\tabcolsep}{3pt}",
         "\\begin{tabular}{lccccccccc}\\toprule",
-        " & \\multicolumn{4}{c}{Random (same rows)} & \\multicolumn{4}{c}{Strict-temporal}"
+        " & \\multicolumn{4}{c}{Random (same rows)} & \\multicolumn{4}{c}{Phishing-temporal}"
         " & \\\\",
         "\\cmidrule(lr){2-5}\\cmidrule(lr){6-9}",
         "Family & F1 & PR-AUC & ROC-AUC & FPR@0.90 & F1 & PR-AUC & ROC-AUC & FPR@0.90 &"
@@ -422,12 +422,12 @@ def tab_stacking():
     lines = [
         "\\begin{table*}[t]\\centering",
         "\\caption{Stacked ensembles (Algorithm~\\ref{alg:stacking}) on the rows and protocols of"
-        " Table~\\ref{tab:strict}. Gap = random minus strict-temporal PR-AUC; +HFS = hybrid"
+        " Table~\\ref{tab:strict}. Gap = random minus phishing-temporal PR-AUC; +HFS = hybrid"
         " feature selection.}",
         "\\label{tab:stacking}",
         "\\small\\setlength{\\tabcolsep}{4pt}",
         "\\begin{tabular}{lcccccc}\\toprule",
-        " & \\multicolumn{2}{c}{Random (same rows)} & \\multicolumn{2}{c}{Strict-temporal} & & \\\\",
+        " & \\multicolumn{2}{c}{Random (same rows)} & \\multicolumn{2}{c}{Phishing-temporal} & & \\\\",
         "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}",
         "Ensemble & F1 & PR-AUC & F1 & PR-AUC & Gap & FPR@0.90 (temp.) \\\\ \\midrule",
     ]
@@ -499,7 +499,7 @@ def tab_confusion():
         "\\label{tab:confusion}",
         "\\small\\setlength{\\tabcolsep}{5pt}",
         "\\begin{tabular}{lcccc}\\toprule",
-        " & \\multicolumn{2}{c}{Random (same rows)} & \\multicolumn{2}{c}{Strict-temporal} \\\\",
+        " & \\multicolumn{2}{c}{Random (same rows)} & \\multicolumn{2}{c}{Phishing-temporal} \\\\",
         "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}",
         "Actual $\\backslash$ Pred. & phish & benign & phish & benign \\\\ \\midrule",
         f"Phishing ($n = {n_ph:,}$) & {tp:,} & {fn:,} & {tp:,} & {fn:,} \\\\",
@@ -572,7 +572,7 @@ def gen_forecastability():
               f"(${w1w4.auc:.3f}$ at {int(w1w4.delta_days)} days).")
 
     # (c) the novelty probe, two-sided on purpose: it is below chance on every seed, so novelty is
-    # ANTI-predictive and the bar is max(AUC, 1-AUC). docs/decisions/novelty-probe-two-sided.md
+    # ANTI-predictive and the bar is max(AUC, 1-AUC). kept in the development repository, not shipped in this mirror
     nov = pd.read_csv("data/processed/p2/p2_forecastability_novelty.csv")
     cb = nov[nov.family == "CatBoost"]
     a_all, a_ph = cb.auc_all.mean(), cb.auc_phish.mean()
@@ -679,7 +679,7 @@ def gen_polarity_verdict():
 
 def gen_stacking_verdict():
     """The stacking significance sentences, computed from the CSVs so printed p/q-values cannot drift
-    from the runs: (a) the K=5 family of ensemble-vs-CatBoost paired tests under strict-temporal,
+    from the runs: (a) the K=5 family of ensemble-vs-CatBoost paired tests under phishing-temporal,
     BH-adjusted; (b) the K=20 crossover for Stack[CB+LR]. Regenerate the K=20 sources with:
       run_p2_temporal_strict.py --families CatBoost --seeds 20 --out .../p2_temporal_strict_cb_k20.csv
       run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg --out .../p2_stacking_cblr_k20.csv"""
@@ -698,7 +698,7 @@ def gen_stacking_verdict():
     res = {f: paired(ref5, df5, "CatBoost", f, "temporal_strict") for f in fams}
     qs, _ = bh_adjust([res[f]["p"] for f in fams])
     q = dict(zip(fams, qs))
-    tree = (f"Under the strict-temporal protocol the literature's recipe is not merely "
+    tree = (f"Under the phishing-temporal protocol the literature's recipe is not merely "
             f"unhelpful but significantly \\emph{{worse}} than its strongest constituent's "
             f"family peer: Stack[RF+XGB] trails CatBoost by "
             f"${abs(res['Stacking']['mean']):.4f}$ PR-AUC "
@@ -721,7 +721,7 @@ def gen_stacking_verdict():
              f"${res['Stack[CB+HGB+LR+MLP]']['mean']:+.4f}$ "
              f"(${fmt_p(q['Stack[CB+HGB+LR+MLP]'], 'q')}$). The significance claim therefore "
              f"rests on the pre-planned 20-seed extension for the focal pair, adjusted over its "
-             f"own two tests: Stack[CB+LR] beats CatBoost under the strict-temporal protocol "
+             f"own two tests: Stack[CB+LR] beats CatBoost under the phishing-temporal protocol "
              f"(paired $\\Delta$PR-AUC $= {t['mean']:+.4f}$, {t['wins']}/{t['k']} seeds, "
              f"corrected ${fmt_p(tq, 'q')}$) and loses to it under random-same-rows "
              f"($\\Delta = {r['mean']:+.4f}$, {r['k'] - r['wins']}/{r['k']} seeds against, "
@@ -753,7 +753,7 @@ REFRESH_CBLR = "data/processed/p2/p2_refresh_cblr_k20.csv"
 
 
 def gen_refresh_verdict():
-    """The pre-registered Test 1 verdict (PREREG_refresh_window.md): Stack[CB+LR] vs CatBoost on the
+    """The time-stamped pre-specified Test 1 verdict (PREREG_refresh_window.md): Stack[CB+LR] vs CatBoost on the
     refresh window `ph_te2`, K seeds, Nadeau--Bengio corrected paired t on PR-AUC, BH over
     m=REFRESH_BH_M. Reads the two --test-after CSVs written by
       run_p2_temporal_strict.py --families CatBoost --seeds 20 --test-after <max current date>
@@ -776,7 +776,7 @@ def gen_refresh_verdict():
     f1 = float((pick(st, "Stack[CB+LR]", "F1") - pick(cb, "CatBoost", "F1")).mean())
     fpr = float((pick(st, "Stack[CB+LR]", "FPR@R0.90") - pick(cb, "CatBoost", "FPR@R0.90")).mean())
     cbm = float(pick(cb, "CatBoost", "PR-AUC").mean())
-    txt = (f"On the pre-registered refresh window ($K={t['k']}$ seeds, CatBoost PR-AUC "
+    txt = (f"On the time-stamped pre-specified refresh window ($K={t['k']}$ seeds, CatBoost PR-AUC "
            f"${cbm:.4f}$) Stack[CB+LR] {'beats' if ok else 'does not significantly beat'} "
            f"CatBoost: paired $\\Delta$PR-AUC $= {t['mean']:+.4f}$ ({t['wins']}/{t['k']} seeds, "
            f"corrected ${fmt_p(t['p'])}$, BH over $m={REFRESH_BH_M}$ ${fmt_p(q, 'q')}$); "
@@ -786,7 +786,7 @@ def gen_refresh_verdict():
 
 
 def tab_decomp():
-    """Decompose the random-full -> strict-temporal drop into its two steps: composition
+    """Decompose the random-full -> phishing-temporal drop into its two steps: composition
     (full corpus -> dated-row subset, protocol still random) and protocol (random -> temporal
     on the SAME dated rows). This is the table the headline claim must rest on."""
     full = pd.read_csv("data/processed/p2/p2_benchmark.csv")
@@ -795,10 +795,10 @@ def tab_decomp():
         "\\begin{table*}[t]\\centering",
         "\\caption{Decomposing the \\textbf{F1} drop. $\\Delta_{comp}$ = dated-subset random"
         " minus full-corpus random (\\emph{composition}, protocol unchanged); $\\Delta_{proto}$"
-        " = strict-temporal minus dated-subset random (\\emph{protocol}, rows unchanged).}",
+        " = phishing-temporal minus dated-subset random (\\emph{protocol}, rows unchanged).}",
         "\\label{tab:decomp}",
         "\\begin{tabular}{lccccc}\\toprule",
-        "Family & Random (full) & Random (dated rows) & Strict-temporal & $\\Delta_{comp}$ &"
+        "Family & Random (full) & Random (dated rows) & Phishing-temporal & $\\Delta_{comp}$ &"
         " $\\Delta_{proto}$ \\\\ \\midrule",
     ]
     for f in ORDER:
@@ -829,7 +829,7 @@ def tab_gwo_cv():
     df = df[df.config != "default"].copy()
     lines = [
         "\\begin{table}[t]\\centering",
-        "\\caption{Best 3-fold CV PR-AUC on the strict-temporal train window: Grey Wolf Optimizer"
+        "\\caption{Best 3-fold CV PR-AUC on the phishing-temporal train window: Grey Wolf Optimizer"
         " vs.\\ equal-budget uniform random search.}",
         "\\label{tab:gwocv}",
         "\\begin{tabular}{lccc}\\toprule",
@@ -897,7 +897,7 @@ def gen_decomp_macros():
 
 
 def gen_strict_verdict():
-    """Paired-by-seed CatBoost-vs-LogReg under strict-temporal, on ALL FOUR recorded metrics.
+    """Paired-by-seed CatBoost-vs-LogReg under phishing-temporal, on ALL FOUR recorded metrics.
 
     ROUND-2 REVIEW, M4. This sentence used to report F1 alone and conclude "statistically tied" --
     true of threshold-fixed F1 and false of the other three, most sharply of FPR@0.90 where CatBoost
@@ -930,7 +930,7 @@ def gen_strict_verdict():
 
     return (
         f"Paired by seed (the benign split mask is shared within a seed), CatBoost minus"
-        f" logistic regression under the strict-temporal protocol is "
+        f" logistic regression under the phishing-temporal protocol is "
         f"${f1['mean']:+.4f}$ F1 (95\\% CI $\\pm{ci:.4f}$, corrected resampled $t$-test "
         f"${fmt_p(f1['p'])}$, $n={n}$ seeds). On threshold-fixed F1 the two families are"
         f" therefore tied, but that verdict is a property of the metric, not of the"
@@ -945,7 +945,7 @@ CURVES_STRICT = "data/processed/p2/p2_pr_curves_strict.csv"
 # (label, curve file, protocol) for the three same-schema designs, in decomposition order.
 MAXF1_DESIGNS = [("Random (full)", CURVES_FULL, "random"),
                  ("Random (dated rows)", CURVES_STRICT, "random_same_rows"),
-                 ("Strict-temporal", CURVES_STRICT, "temporal_strict")]
+                 ("Phishing-temporal", CURVES_STRICT, "temporal_strict")]
 
 
 def _max_f1(curves: pd.DataFrame) -> dict:
@@ -1212,11 +1212,13 @@ def gen_leakage_verdict():
 
 
 def gen_charcnn():
-    """The character-CNN arm, and the source swap that says what its margin is made of.
+    """The character-CNN arm, and the source-swap stress test on its margin.
 
     §II answers three deep-learning citations by scope rather than by measurement, one of them a
     CNN over URL strings on the same task this benchmark evaluates. run_p2_charcnn.py supplies the
-    number; run_p2_source_probe.py supplies the check that the number is not provenance.
+    number; run_p2_source_probe.py measures sensitivity to the benign-source family. Because
+    every PhishVN source is single-class, that diagnostic cannot identify provenance separately
+    from label and must never be rendered as ruling provenance out.
 
     Every quantity here is a PAIRED difference on identical rows -- the arm imports the split and
     the per-seed benign mask rather than re-drawing them -- so the corrected resampled t applies
@@ -1269,7 +1271,8 @@ def gen_charcnn():
 
     out = [
         f"Against the strongest tabular family ({best}) on identical rows and seeds, the "
-        f"character-CNN gains ${d_f1:+.3f}$ F1 and ${d_pr:+.3f}$ PR-AUC under the strict-temporal "
+        f"character-CNN gains ${d_f1:+.3f}$ F1 and ${d_pr:+.3f}$ PR-AUC under the direct-dated "
+        f"phishing rolling-origin "
         f"protocol, and reduces FPR at $90\\%$ recall by ${abs(d_fpr):.3f}$; all "
         f"{n_sig} paired comparisons across the seven families, three metrics and two protocols "
         f"survive Benjamini--Hochberg ({qfmt}). "
@@ -1302,7 +1305,8 @@ def gen_charcnn():
         out.append(
             f"Because a model reading the raw string could key on the benign feed rather than on "
             f"phishing, we swapped the benign source: trained against one benign family and tested "
-            f"against the other, with the phishing side held at its strict-temporal split. Trained "
+            f"against the other, with the phishing side held at its direct-dated rolling-origin "
+            f"split. Trained "
             f"on the broad list the character-CNN loses ${abs(cnn_tr):.3f}$ F1, inside its own seed "
             f"spread, while the tabular families lose ${abs(cb_tr):.3f}$ and ${abs(lr_tr):.3f}$ and "
             f"the gradient booster falls to ${cb_pr:.3f}$ PR-AUC on a test set whose positive rate "
@@ -1311,14 +1315,15 @@ def gen_charcnn():
             f"exactly those coordinates. The effect is one-directional, and we report it as such: "
             f"trained on the narrow registry population every model collapses "
             f"(${cnn_ti:+.3f}$ and ${cb_ti:+.3f}$ F1 respectively) and the character-CNN holds no "
-            f"advantage. What the swap establishes is therefore not that one model cheats, but that "
-            f"the margin measured above is not an artefact of benign provenance.")
+            f"advantage. Because every source in PhishVN is single-class, this one-sided swap does "
+            f"not identify provenance separately from label; it is a sensitivity analysis, not "
+            f"evidence that benign provenance has been ruled out.")
 
     return "\n\n".join(out) + "\n"
 
 
 def gen_guard_control():
-    """The M7 control: strict-temporal against a random control carrying the SAME domain guard.
+    """The M7 control: phishing-temporal against a random control carrying the SAME domain guard.
 
     Section~\\ref{sec:method} claimed protocol was the only variable between the two arms. It was
     not -- the guard was applied on one side only, so part of Delta_proto was the guard. The arm is
@@ -1357,7 +1362,7 @@ def gen_guard_control():
 
     # Delta_proto reads as "protocol plus a constant" only if the family ORDERING survives even though
     # the level does not. Rank CORRELATION, not equality (a 0.0000 tie breaks either way); the
-    # extremes carry the claim and are pinned exactly. docs/decisions/guard-control-rank-test.md
+    # extremes carry the claim and are pinned exactly. kept in the development repository, not shipped in this mirror
     from scipy.stats import spearmanr
     rho = float(spearmanr([d_old[f] for f in ORDER], [d_new[f] for f in ORDER]).statistic)
     if rho < 0.9 or min(d_old, key=d_old.get) != worst \
@@ -1372,7 +1377,7 @@ def gen_guard_control():
     return (
         f"\\textbf{{The control's own leakage, and the arm that removes it.}} One asymmetry has "
         f"to be closed before $\\Delta_{{proto}}$ can be called a protocol effect. The "
-        f"strict-temporal arm applies the registrable-domain guard; the random control re-splits "
+        f"phishing-temporal arm applies the registrable-domain guard; the random control re-splits "
         f"the pooled rows without it, so ${100*shared:.1f}\\%$ of the control's phishing test "
         f"window shares a domain with its own training window against "
         f"${100*shared_t:.1f}\\%$ under the temporal arm: the guard, not the protocol. We "
@@ -1831,14 +1836,39 @@ def _fig_shap(feats, imp_m, imp_s, sign_m, top):
 
 
 def tab_hpo():
+    # The optimiser comparison is withdrawn.  The corrected GWO rerun remains an audit artifact,
+    # but the manuscript's HPO control is random-search-only until a pre-specified, adequately
+    # repeated equal-budget optimiser study is run.
     path = "data/processed/p2/p2_hpo.csv"
     if not os.path.exists(path):
         return "% p2_hpo.csv not generated yet -- run scripts/run_p2_hpo.py\n[HPO table to be filled]"
     df = pd.read_csv(path)
+    if "search_seed" in df.columns and df["search_seed"].notna().any():
+        lines = [
+            "\\begin{table*}[t]\\centering",
+            "\\scriptsize",
+            "\\caption{Corrected GWO versus equal-budget random search on the phishing-temporal"
+            " train window. Default rows are evaluated over 3 model seeds; tuned rows are shown"
+            " for 3 independent search seeds, with each test metric reported as mean$\\pm$std over"
+            " the same 3 model seeds.}",
+            "\\label{tab:hpo}",
+            "\\begin{tabular}{llrccccc}\\toprule",
+            "Family & Config & Search & CV GWO & CV random & F1 & PR-AUC & FPR@0.90 \\\\ \\midrule",
+        ]
+        for _, r in df.iterrows():
+            seed = "--" if pd.isna(r.get("search_seed")) else f"{int(r.search_seed)}"
+            cv_gwo = "--" if pd.isna(r.get("cv_prauc_gwo")) else f"{r['cv_prauc_gwo']:.4f}"
+            cv_random = "--" if pd.isna(r.get("cv_prauc_random")) else f"{r['cv_prauc_random']:.4f}"
+            lines.append(f"{r.family} & {r.config} & {seed} & {cv_gwo} & {cv_random} & "
+                         f"{r['F1']:.3f}$\\pm${r['F1_std']:.3f} & "
+                         f"{r['PR-AUC']:.3f}$\\pm${r['PR-AUC_std']:.3f} & "
+                         f"{r['FPR@R0.90']:.3f}$\\pm${r['FPR@R0.90_std']:.3f} \\\\")
+        lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
+        return "\n".join(lines)
     lines = [
         "\\begin{table*}[t]\\centering",
-        "\\caption{Tuned vs.\\ default configurations, tuned on the strict-temporal train"
-        " window only and evaluated once on the test window; mean$\\pm$std over 3 model"
+        "\\caption{Tuned vs.\\ default configurations, tuned on the direct-dated phishing"
+        " rolling-origin train window only and evaluated once on the test window; mean$\\pm$std over 3 model"
         " seeds.}",
         "\\label{tab:hpo}",
         "\\begin{tabular}{llcccc}\\toprule",
@@ -1850,6 +1880,37 @@ def tab_hpo():
                      f"{r['ROC-AUC']:.3f}$\\pm${r['ROC-AUC_std']:.3f} & "
                      f"{r['FPR@R0.90']:.3f}$\\pm${r['FPR@R0.90_std']:.3f} \\\\")
     lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
+    return "\n".join(lines)
+
+
+def tab_official_split_priors():
+    """Audit the immutable P1 split without treating it as a P2 evaluation arm."""
+    df = pd.read_csv("data/processed/dataset_url.csv", usecols=["label", "tier", "split"])
+    df["is_phish"] = df["label"].astype(str).eq("phishing")
+    populations = [
+        ("All tiers", df),
+        ("Gold$+$silver", df[df["tier"].astype(str).isin(["gold", "silver"])]),
+        ("Gold only", df[df["tier"].astype(str).eq("gold")]),
+    ]
+
+    def cell(d, split):
+        s = d[d["split"].astype(str).eq(split)]
+        n, p = len(s), int(s["is_phish"].sum())
+        return f"{p:,}/{n:,} ({100 * p / n:.1f}\\%)" if n else "--"
+
+    lines = [
+        "\\begin{table}[t]\\centering",
+        "\\caption{Class support in PhishVN's published hybrid group split (phishing/total and"
+        " phishing share). This is a split audit, not a P2 evaluation arm. Gold-only validation"
+        " has no positive row and therefore cannot calibrate or select a binary detector.}",
+        "\\label{tab:official-priors}",
+        "\\small",
+        "\\begin{tabular}{lccc}\\toprule",
+        "Population & Train & Validation & Test \\\\ \\midrule",
+    ]
+    for name, d in populations:
+        lines.append(f"{name} & {cell(d, 'train')} & {cell(d, 'val')} & {cell(d, 'test')} \\\\")
+    lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}"]
     return "\n".join(lines)
 
 
@@ -1871,6 +1932,7 @@ def main(shap_too: bool = False):
                      ("gen_forecastability", gen_forecastability),
                      ("gen_fcts", gen_fcts),
                      ("tab_xdataset", tab_xdataset), ("tab_hpo", tab_hpo),
+                     ("tab_official_split_priors", tab_official_split_priors),
                      # transfer interventions, moved from P3 on 2026-08-19
                      ("tab_xdataset_rf", tab_xdataset_rf),
                      ("tab_pruned", tab_pruned),

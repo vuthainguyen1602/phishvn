@@ -241,7 +241,7 @@ def build_p4b(version, out):
         f = os.path.join(root, arc)
         manifest.append(f"{_sha256(f)}  {arc}  ({os.path.getsize(f)} bytes)")
     if "draft" in version:
-        manifest += ["", "DRAFT: v1.0.0 freezes at the pre-registered trigger of the companion",
+        manifest += ["", "DRAFT: v1.0.0 freezes at the time-stamped pre-specified trigger of the companion",
                      "study; these files are the build snapshot, not the deposit.",
                      "Written at freeze: " + ", ".join(INFRA_AT_FREEZE)]
     open(os.path.join(root, "MANIFEST.txt"), "w", encoding="utf-8").write(

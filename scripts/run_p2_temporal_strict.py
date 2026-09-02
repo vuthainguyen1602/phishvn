@@ -13,8 +13,8 @@ randomly per seed at the same rate — stated in the paper, and standard in the 
 LEAKAGE GUARD: a registrable domain seen in train is removed from test (kept in train), else the
 model scores "memorised domain" rather than "generalises forward".
 
-The comparison that matters is strict-temporal vs random ON THE SAME ROW SET, so protocol is the
-only variable; rows carry protocol "random_same_rows" and "temporal_strict".
+The comparison that matters is the direct-dated phishing rolling-origin arm vs random ON THE SAME
+ROW SET; rows retain the legacy protocol identifiers "random_same_rows" and "temporal_strict".
 
 ONE ASYMMETRY, AND THE ARM THAT CLOSES IT (round-2 review, M7). The temporal arm applies the
 domain guard and the random control does not, so ~7% of the control's phishing test window shares
@@ -118,7 +118,7 @@ def main():
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--curves", default=CURVES)
     ap.add_argument("--guard-control", action="store_true",
-                    help="run the M7 arm: strict-temporal against a random control that carries "
+                    help="run the M7 arm: phishing-temporal against a random control that carries "
                          "the SAME registrable-domain guard, so protocol is genuinely the only "
                          "variable. Writes protocols temporal_strict + random_same_rows_guarded.")
     args = ap.parse_args()

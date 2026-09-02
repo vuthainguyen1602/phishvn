@@ -113,7 +113,7 @@ def _match_tokens(d: str) -> bool:
 # A match on the separator-stripped spelling counts only when it is whole segments glued together:
 # it must START where a segment starts, END where one ends, and be at least this long. Restricted
 # to the hand-curated core -- the registry tier's audited precision is 0.10 on the raw name.
-# The measurement behind the floor of 6: docs/decisions/vn-filter-aligned-min-token.md
+# The measurement behind the floor of 6: kept in the development repository, not shipped in this mirror
 ALIGNED_MIN_TOKEN = 6
 
 

@@ -12,7 +12,7 @@ temporal split.
 ## What's here
 - `scripts/` — URL data collection, normalisation, CompPhish features, baselines, audit, release tools.
 - `docs/` — datasheet, column schema, data-source notes.
-- `docs/verify/` — the completed human label audit: pre-registered codebook (with its amendment
+- `docs/verify/` — the completed human label audit: time-stamped pre-specified codebook (with its amendment
   log), both annotators' independent sheets, the machine pass, and the arbitration record.
 - `tests/`, `configs/`, `Makefile`, `dvc.yaml` — reproducibility.
 
