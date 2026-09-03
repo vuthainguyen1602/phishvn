@@ -698,8 +698,8 @@ def gen_stacking_verdict():
     res = {f: paired(ref5, df5, "CatBoost", f, "temporal_strict") for f in fams}
     qs, _ = bh_adjust([res[f]["p"] for f in fams])
     q = dict(zip(fams, qs))
-    tree = (f"Under the phishing-temporal protocol the literature's recipe is not merely "
-            f"unhelpful but significantly \\emph{{worse}} than its strongest constituent's "
+    tree = (f"Under the phishing-temporal protocol the literature's recipe is significantly "
+            f"\\emph{{worse}} than its strongest constituent's "
             f"family peer: Stack[RF+XGB] trails CatBoost by "
             f"${abs(res['Stacking']['mean']):.4f}$ PR-AUC "
             f"(corrected, BH-adjusted ${fmt_p(q['Stacking'], 'q')}$) and Stack[XGB+LGBM] by "
@@ -1183,8 +1183,8 @@ def gen_leakage_verdict():
     if oracle >= best.max():
         raise SystemExit(
             f"gen_leakage_verdict: the memorisation oracle ({oracle:.3f}) now matches or beats "
-            f"the best fitted family ({best.max():.3f}) — the 'the models are not merely "
-            "memorising' clause is no longer true; rewrite Section VI-A before regenerating.")
+            f"the best fitted family ({best.max():.3f}) — the 'the models do more than "
+            "memorise' clause is no longer true; rewrite Section VI-A before regenerating.")
     return (
         f"\\textbf{{What the full-corpus random split leaks.}} The $0.922$ is produced by a "
         f"plain stratified split with neither a domain guard nor de-duplication, and the "
@@ -1200,8 +1200,8 @@ def gen_leakage_verdict():
         f"training vector, answer the training majority class otherwise), which learns nothing "
         f"and scores ${oracle:.3f}$ F1, against ${allpos:.3f}$ for the all-positive classifier "
         f"(Table~\\ref{{tab:trivialfloor}}) and ${best.max():.3f}$ for {top}. Two readings "
-        f"follow, and only the second is licensed. The models are \\emph{{not}} merely "
-        f"memorising: they clear the memorisation oracle by "
+        f"follow, and only the second is licensed. The models do \\emph{{more}} than memorise: "
+        f"they clear the memorisation oracle by "
         f"${best.max() - oracle:.3f}$ F1. But ${100*d.test_twin_rate.mean():.0f}\\%$ of the "
         f"test window being a copy of training means this design does not estimate "
         f"generalisation to unseen URLs at all, and the level it reports should not be read as "
@@ -1310,7 +1310,7 @@ def gen_charcnn():
             f"on the broad list the character-CNN loses ${abs(cnn_tr):.3f}$ F1, inside its own seed "
             f"spread, while the tabular families lose ${abs(cb_tr):.3f}$ and ${abs(lr_tr):.3f}$ and "
             f"the gradient booster falls to ${cb_pr:.3f}$ PR-AUC on a test set whose positive rate "
-            f"is higher than that: it does not merely stop discriminating, it inverts. The "
+            f"is higher than that: the ranking inverts. The "
             f"21~features are aggregate string statistics, and the two benign populations differ in "
             f"exactly those coordinates. The effect is one-directional, and we report it as such: "
             f"trained on the narrow registry population every model collapses "
@@ -1901,7 +1901,7 @@ def tab_official_split_priors():
     lines = [
         "\\begin{table}[t]\\centering",
         "\\caption{Class support in PhishVN's published hybrid group split (phishing/total and"
-        " phishing share). This is a split audit, not a P2 evaluation arm. Gold-only validation"
+        " phishing share). This is a split audit, not our evaluation arm. Gold-only validation"
         " has no positive row and therefore cannot calibrate or select a binary detector.}",
         "\\label{tab:official-priors}",
         "\\small",
@@ -1917,7 +1917,7 @@ def tab_official_split_priors():
 def main(shap_too: bool = False):
     os.makedirs(SEC, exist_ok=True)
     for name, fn in [("tab_families", tab_families), ("tab_strict", tab_strict),
-                     ("tab_decomp", tab_decomp), ("tab_gwo_cv", tab_gwo_cv),
+                     ("tab_decomp", tab_decomp),
                      ("tab_maxf1", tab_maxf1),
                      ("gen_maxf1_verdict", gen_maxf1_verdict),
                      ("tab_trivial_floor", tab_trivial_floor),

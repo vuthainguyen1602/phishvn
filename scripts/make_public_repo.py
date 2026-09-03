@@ -69,6 +69,16 @@ INCLUDE_AUDITS = [
     # the unified-feed snapshot the token audit sampled from (836 -> 1,115 claim), archived so
     # the audited numbers are reproducible against a fixed input rather than a moving feed
     ("data/interim/vn_phishing_candidates_20260812.csv", "feed_snapshot_20260812.csv"),
+    # The 386 paraphrased lures. Attack content, released on purpose: the fusion study's ethics
+    # section argues that an evasion result nobody can reproduce is one nobody can check, and that
+    # a defender has to be able to run the attack against their own detector. It is publishable
+    # because it is inert by construction, and the file was measured against that construction
+    # before it shipped rather than trusted: every row carries the simulated link
+    # http://sim.example.vn/x and no other URL, none of 29 real Vietnamese brand tokens, and no
+    # Vietnamese diacritics. p3_jaccard_check.guardrail_problems reports 0 violations over all 386.
+    # What stays withheld is the generation PROMPTING, exactly as that section promises: the
+    # exported generator applies the guardrails to pre-generated rewrites and makes no API call.
+    ("data/processed/p3/p3_paraphrase.csv", "p3_paraphrase_lures.csv"),
 ]
 
 # CITATION.cff tracks the LOCAL corpus, which ran ahead of what readers could fetch, so it
@@ -141,6 +151,27 @@ PROSE_WAIVERS = {
     "run_p6_budget_frontier.py": "this IS that study's reweighting frontier",
     "run_p6_case_studies.py": "this IS that study's worked cases",
     "make_p6_xai_assets.py": "generates that study's tables; the paths it writes name them",
+    # P3's own code naming P3, on the same principle as the two studies above: stripping the label
+    # from a docstring that opens "the P3 paraphrase corpus" leaves the file describing an
+    # experiment it cannot name. Mentions of OTHER unreleased siblings are still removed, not
+    # waived -- that is what happened to P6's references to P3, P4 and P5 on 2026-09-03.
+    "make_p3_assets.py": "this IS that study's asset generator",
+    "make_p3_band_assets.py": "this IS that study's paraphrase-strength band",
+    "make_p3_cross_generator_eval.py": "this IS that study's cross-generator evaluation",
+    "make_p3_dose_response.py": "this IS that study's dose-response curve",
+    "make_p3_llm_assets.py": "this IS that study's LLM arm",
+    "make_p3_llm_detector_assets.py": "this IS that study's LLM-detector comparison",
+    "make_p3_paraphrase_assets.py": "this IS that study's paraphrase tables",
+    "make_p3_scenario_ood.py": "this IS that study's out-of-scenario split",
+    "p3_paraphrase_band.py": "band construction shared by that study's generators",
+    "p3_jaccard_check.py": "that study's lexical-overlap audit of its own paraphrases",
+    "p3_nuisance_floor.py": "that study's nuisance floor",
+    "p3_xdata_bootstrap.py": "that study's cluster bootstrap; it also names the benchmark whose "
+                             "transfer matrix it resamples, which is already exported",
+    "p3_gemini_generator.py": "this IS that study's paraphrase generator, which is the protocol",
+    "p3_paraphrase_corpus.py": "this IS that study's corpus builder",
+    "p3_paraphrase_ext.py": "this IS that study's extension round",
+    "p3_paired_test.py": "the paired test behind that study's contrasts",
 }
 
 # Only scripts that build/reproduce the RELEASED P1a URL dataset and baselines; those for
@@ -220,6 +251,31 @@ INCLUDE_SCRIPTS = [
     "train/benchmark_qr.py",             # the sweep itself; the generator drives it
     "lib/qr_decode.py",                  # the three-decoder wrapper every arm reads through
     "lib/emvco.py",                      # EMVCo payment-QR parsing used by the landing-page audit
+    # P3 (content + URL fusion) -- its "Data and code availability" promises the training and
+    # evaluation code, the paraphrase protocol and the label-audit instruments by name.
+    "assets/make_p3_assets.py",          # regenerates the paper's tables and figures
+    "assets/make_p3_band_assets.py",     # the paraphrase-strength band
+    "assets/make_p3_cross_generator_eval.py",  # the cross-generator transfer evaluation
+    "assets/make_p3_dose_response.py",   # the dose-response curve and its notes
+    "assets/make_p3_llm_assets.py",      # the LLM arm's tables
+    "assets/make_p3_llm_detector_assets.py",   # the LLM-detector comparison
+    "assets/make_p3_paraphrase_assets.py",     # the paraphrase attack's tables
+    "assets/make_p3_scenario_ood.py",    # the out-of-scenario split
+    "assets/p3_paraphrase_band.py",      # band construction shared by those generators
+    "audit/p3_jaccard_check.py",         # lexical-overlap audit of the paraphrases
+    "audit/p3_nuisance_floor.py",        # the nuisance floor the effect is measured against
+    "audit/p3_xdata_bootstrap.py",       # cluster bootstrap for the cross-dataset arm
+    "dataset/p3_gemini_generator.py",    # the paraphrase generator (the protocol itself)
+    "dataset/p3_paraphrase_corpus.py",   # builds the paraphrase corpus and its lure sets
+    "dataset/p3_paraphrase_ext.py",      # the extension round
+    "train/p3_paired_test.py",           # the paired test behind every reported contrast
+    "train/train_content_fusion.py",     # the training code the availability sentence names
+    "train/train_fusion.py",             # the fusion head every asset generator imports
+    "train/train_html_baseline.py",      # the HTML channel
+    "train/train_image_baseline.py",     # the screenshot channel
+    "lib/extract_js_features.py",        # the JS features the content model reads
+    "train/llm_content_baseline.py",     # the LLM baseline that study reports beside the encoders
+    "train/convert_phobert_safetensors.py",  # the checkpoint conversion the training code needs
 ]
 
 # ----------------------------------------------------------------------------------------
