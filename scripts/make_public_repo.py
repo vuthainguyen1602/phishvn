@@ -131,7 +131,7 @@ PROSE_WAIVERS = {
     "run_p2_stacking_baseline.py": "this IS that study's stacking arm",
     "make_p2_bench_assets.py": "generates that study's tables; the paths it writes name them",
     "audit_label_noise.py": "the label-noise audit that study's decomposition rests on",
-    "hpo_gwo.py": "the HPO method that study benchmarks against random search",
+    "hpo_gwo.py": "the corrected GWO search; released for reuse, not compared in the paper",
     "run_gwo_temporal.py": "the HPO arm on the temporal window, named by its output path",
     "run_cross_dataset.py": "the transfer matrix of that study; the leakage note points at its "
                             "sibling temporal protocol, which carries the same domain guard",
@@ -214,7 +214,7 @@ INCLUDE_SCRIPTS = [
     "train/run_p2_stacking_baseline.py", # stacked ensembles / base-learner combos
     "train/run_p2_drift_forecastability.py",  # the three forecastability diagnostics
     "train/run_cross_dataset.py",        # 4-corpus transfer matrix
-    "train/hpo_gwo.py",                  # GWO vs equal-budget random search
+    "train/hpo_gwo.py",                  # corrected GWO; no comparison is reported
     "train/run_gwo_temporal.py",         # the HPO arm on the temporal window
     "audit/audit_label_noise.py",        # confident-learning label-noise audit
     "lib/paired_eval.py",                # NB-corrected paired t-test + BH (all significance)
@@ -843,7 +843,19 @@ def main():
             shutil.copy2(src, os.path.join(args.out, "docs", "verify", fn))
     for src, name in INCLUDE_AUDITS:
         if os.path.exists(src):
-            shutil.copy2(src, os.path.join(args.out, "docs", "verify", name))
+            dst = os.path.join(args.out, "docs", "verify", name)
+            # Normalise CRLF to LF on the way out. Two of these are written by a csv.writer that
+            # emits \r\n, so a byte copy made every line of feed_snapshot_20260812.csv (1,116) and
+            # p3_paraphrase_lures.csv (387) differ from the published copy while the content was
+            # identical -- a 3,000-line diff on a public repo that says nothing. The mirror's line
+            # endings should depend on the mirror, not on how the private file happened to be
+            # written. Binary-ish payloads are copied untouched.
+            if name.endswith((".csv", ".json", ".md", ".txt")):
+                data = open(src, "rb").read().replace(b"\r\n", b"\n")
+                open(dst, "wb").write(data)
+                shutil.copystat(src, dst)
+            else:
+                shutil.copy2(src, dst)
 
     os.makedirs(os.path.join(args.out, "docs"), exist_ok=True)
     for fn in INCLUDE_DOCS:

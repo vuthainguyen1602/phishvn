@@ -1674,16 +1674,28 @@ def fig_repair_attempts():
         s = _matrix_stats(os.path.join("data/processed", fname))
         return None if s is None else (s[0], s[1])
 
-    base = stats("cross_dataset_F1.csv")
-    pruned = stats("cross_dataset_F1_pruned.csv")
-    coral = stats("cross_dataset_F1_coral.csv")
-    lr_base = stats("cross_dataset_F1_LogReg.csv")
-    lr_coral = stats("cross_dataset_F1_LogReg_coral.csv")
+    # The p2/ prefix is the 2026-08-22 per-paper split of data/processed. comb_path below was
+    # moved then and these five were not, so the figure quietly stopped regenerating for eleven
+    # days -- the branch prints [i] and returns, so `make` stayed green while shipping a frozen PDF.
+    base = stats("p2/cross_dataset_F1.csv")
+    pruned = stats("p2/cross_dataset_F1_pruned.csv")
+    coral = stats("p2/cross_dataset_F1_coral.csv")
+    lr_base = stats("p2/cross_dataset_F1_LogReg.csv")
+    lr_coral = stats("p2/cross_dataset_F1_LogReg_coral.csv")
     comb_path = "data/processed/p2/combined_training.csv"
     if any(v is None for v in (base, pruned, coral, lr_base, lr_coral)) \
             or not os.path.exists(comb_path):
-        print("[i] repair-attempt inputs incomplete — run run_cross_dataset.py (+ --drop/--adapt) "
-              "and run_combined_training.py; skipping figure.")
+        # [!] not [i]: this branch shipped a frozen figure for eleven days because an [i] line
+        # scrolls past in a green build. Name the missing files so the next reader sees which.
+        missing = [n for n, v in (("cross_dataset_F1.csv", base), ("cross_dataset_F1_pruned.csv", pruned),
+                                  ("cross_dataset_F1_coral.csv", coral),
+                                  ("cross_dataset_F1_LogReg.csv", lr_base),
+                                  ("cross_dataset_F1_LogReg_coral.csv", lr_coral)) if v is None]
+        if not os.path.exists(comb_path):
+            missing.append(comb_path)
+        print("[!] repair-attempt inputs missing, figure NOT regenerated (the one on disk is stale): "
+              + ", ".join(missing)
+              + " — run run_cross_dataset.py (+ --drop/--adapt) and run_combined_training.py.")
         return
     comb = pd.read_csv(comb_path)
     # combined_training.csv stores the 21-feature diagonal as indist_F1 for both configs; the

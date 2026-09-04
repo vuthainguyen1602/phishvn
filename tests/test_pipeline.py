@@ -338,3 +338,69 @@ def test_not_content_catches_wildcard_parking_and_browser_errors():
     assert m.NOT_CONTENT.search("Impossible de traiter cette demande HTTP ERROR 500")
     # a real Vietnamese login lure must not be swept up
     assert not m.NOT_CONTENT.search("Vui lòng đăng nhập tài khoản ngân hàng để xác minh")
+
+
+def test_is_vn_target_rejects_foreign_cctlds_and_lures():
+    """Foreign sovereign ccTLDs (.in, .lk, .ph, .id, .br, .ru, .cn) and non-Vietnamese scam lure
+    words (hadiah, undian, layanan, gerar, afiliado) must be rejected to prevent cross-border leakage."""
+    from vn_filter import is_vn_target
+    foreign = [
+        "hadiah-shopee1111.blogspot.com",
+        "undianshopee-46.blogspot.com",
+        "info-layananshopee89.blogspot.com",
+        "gerar-link-afiliado-shopee-rapido.pages.dev",
+        "shopeepay-53.blogspot.in",
+        "ticketbox.lk",
+        "qa-resale.ticketbox.lk",
+        "bidvid.in",
+        "dropshopee.com.br",
+        "steamcommunity.vov.ru",
+        "momoking.in",
+        "dichvucong.com.ph",
+        "kekhaidichvucong.id",
+        "tiktok-shop.egirtj.cn",
+    ]
+    for d in foreign:
+        assert not is_vn_target(d), f"Expected False for foreign domain {d}"
+
+    # Legitimate Vietnamese phishing with domestic brand/lure on generic or .vn TLDs must pass
+    vn = [
+        "shopee-vietnam-quatang.com",
+        "momo-credits.vercel.app",
+        "vietin-bank.com",
+        "dichvucong-gov.com",
+        "congdichvucong-quocgiadvc.com",
+        "ticketbox.vn",
+        "vietcombank.com.vn",
+    ]
+    for d in vn:
+        assert is_vn_target(d), f"Expected True for VN domain {d}"
+
+
+def test_foreign_cctlds_and_ecommerce_targets():
+    """Foreign ccTLDs (.tz, .cz, .kz, .rs, .tr, .il, etc.) must be rejected by is_vn_target,
+    while RMIT-verified Vietnamese e-commerce patterns must be recognized."""
+    from vn_filter import is_vn_target
+
+    foreign = [
+        "coopbank.co.tz",
+        "phish-vietcombank.cz",
+        "bidv-portal.kz",
+        "shopee-gift.com.tr",
+        "tiki-vn.il",
+        "lazada-promo.sn",
+    ]
+    for d in foreign:
+        assert not is_vn_target(d), f"Expected False for foreign ccTLD {d}"
+
+    ecommerce_vn = [
+        "ctvshopee-trian.com",
+        "tikivip-hoantien.xyz",
+        "lazadavn-gift.top",
+        "shopeevip-khuyenmai.club",
+        "tiktokshopvn-tangqua.vip",
+    ]
+    for d in ecommerce_vn:
+        assert is_vn_target(d), f"Expected True for VN e-commerce domain {d}"
+
+

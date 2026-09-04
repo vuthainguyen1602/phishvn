@@ -23,6 +23,16 @@ import argparse, csv, hashlib, os, sys, time
 import numpy as np
 
 
+def _zx_worker(path):
+    """Module-level so the child can import it. One decode, QR formats only."""
+    import numpy as _np
+    import zxingcpp
+    from PIL import Image
+    r = zxingcpp.read_barcode(_np.array(Image.open(path).convert("L")),
+                              formats=zxingcpp.BarcodeFormat.QRCode)
+    return [r.text] if r and r.text else []
+
+
 def load_decoders(names: list) -> dict:
     out = {}
     if "opencv" in names:
@@ -80,6 +90,63 @@ def load_decoders(names: list) -> dict:
                 except cv2.error:
                     return []
             out["wechat"] = _wx
+    # ZXing, added 2026-09-03 and POST-HOC by construction. The registered grid ran on three
+    # decoders and the registered tests are computed over those three; this arm exists because the
+    # paper called them "widely deployed" while omitting the one server-side engine a reader is
+    # most likely to name. It is reported beside the registered three, never pooled into them.
+    if "zxing" in names:
+        try:
+            import zxingcpp
+            from PIL import Image
+            import numpy as _np
+        except ImportError as e:
+            print(f"[!] zxing requested but zxing-cpp is not installed ({e}) — skipping",
+                  file=sys.stderr)
+        else:
+            # QR ONLY, and not just for speed. A quishing pipeline configures its reader for the
+            # symbology it is looking for; leaving the multi-format reader on makes ZXing try every
+            # barcode family on every image, which is both unfaithful and pathological here. The
+            # first attempt at this sweep ran the default reader and spent 36 minutes of CPU inside
+            # ZXing::QRCode::Reader::read on ONE degraded image without emitting a row -- found by
+            # sampling the stuck process, not by guessing. Restricting the formats takes the mean
+            # from 2.71 ms to 0.35 ms an image, measured over the geometric and noise transforms.
+            _fmt = zxingcpp.BarcodeFormat.QRCode
+
+            # BOUNDED, because ZXing does not always come back. On this grid there is at least one
+            # degraded image on which ZXing::QRCode::Reader::read runs at 100% CPU without
+            # terminating -- three minutes on a single 58x58 render before the run was killed, the
+            # same image every time because the generator is seeded. That is not a benchmarking
+            # nuisance, it is the finding: an automated defence that hands attacker-supplied images
+            # to this decoder has a denial-of-service surface, and a decoder that never answers is
+            # a decoder that failed.
+            #
+            # A signal cannot interrupt a C++ call, so the decode runs in a child process with a
+            # deadline. The child is reused between images and replaced only when it is killed, so
+            # the cost is one fork per timeout rather than per image. A timeout is recorded as a
+            # decode failure and counted separately, never silently dropped.
+            import multiprocessing as _mp
+            _ZX_BUDGET_S = float(os.environ.get("PHISHVN_ZXING_BUDGET", "2.0"))
+            _ctx = _mp.get_context("fork")
+            _state = {"pool": None, "timeouts": 0}
+
+            def _pool():
+                if _state["pool"] is None:
+                    _state["pool"] = _ctx.Pool(1)
+                return _state["pool"]
+
+            def _zx(path):
+                try:
+                    r = _pool().apply_async(_zx_worker, (path,)).get(_ZX_BUDGET_S)
+                except _mp.TimeoutError:
+                    _state["timeouts"] += 1
+                    _state["pool"].terminate()
+                    _state["pool"] = None
+                    return []
+                except Exception:
+                    return []
+                return r
+            _zx.timeouts = lambda: _state["timeouts"]
+            out["zxing"] = _zx
     return out
 
 

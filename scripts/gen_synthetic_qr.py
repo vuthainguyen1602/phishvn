@@ -270,6 +270,14 @@ def stream_run(a, picked, levels, boxes, meta, total) -> int:
                             el = __import__("time").time() - t0
                             print(f"    [{done:,}/{total:,}] {el:.0f}s, {done/max(el,1):.0f} img/s")
     os.unlink(tmp.name)
+    # A decoder that never answers has to be counted, not just survived. load_decoders attaches a
+    # timeouts() reader to any bounded decoder; without this the budget would silently turn a
+    # non-terminating decode into an ordinary failure row and the finding would vanish.
+    for _name, _fn in decs.items():
+        _t = getattr(_fn, "timeouts", None)
+        if _t and _t():
+            print(f"[!] {_name}: {_t():,} image(s) exceeded the decode budget and were recorded "
+                  f"as failures")
     print(f"[+] {done:,} images streamed, 0 written to disk -> {a.dfr_out}")
     return 0
 
