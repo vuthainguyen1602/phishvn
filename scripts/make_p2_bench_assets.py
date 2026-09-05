@@ -73,18 +73,20 @@ def fig_eval_design():
     ax.yaxis.grid(True)
 
     xs = list(range(len(stages)))
-    # recessive families first, so the highlighted envelope sits on top
+    # The seven families are a BAND, not a roster, and three shapes were tried before saying so.
+    # Stacked dots could not be counted, since CatBoost, MLP and XGBoost all score 0.922. Fanned
+    # apart they could be counted and still said nothing, because no reader can tell which grey
+    # dot is which family. Naming all seven needs seven hues; figstyle has four categorical slots
+    # and its GRAY is documented as "families whose individual identity is not the story", which
+    # is the house answering the question. Table~\ref{tab:families} already prints every family's
+    # numbers one page away, so the figure draws what only a figure can: the width of the field
+    # and how it moves.
     for xi, (_, series) in zip(xs, stages):
-        for fam in fams:
-            if fam in ("CatBoost", "LogReg"):
-                continue
-            ax.plot(xi, series[fam], "o", ms=5, color=GRAY, alpha=0.55,
-                    mec="white", mew=0.6, zorder=2)
-    # envelope lines + dots for the two extremes
+        ax.vlines(xi, series.min(), series.max(), color=GRAY, lw=11, alpha=0.28, zorder=1)
     for fam, col in [("CatBoost", ORANGE), ("LogReg", BLUE)]:
         ys = [s[fam] for _, s in stages]
-        ax.plot(xs, ys, "-", color=col, lw=1.8, zorder=3)
-        ax.plot(xs, ys, "o", ms=7, color=col, mec="white", mew=0.8, zorder=4)
+        ax.plot(xs, ys, "-", color=col, lw=1.9, zorder=4)
+        ax.plot(xs, ys, "o", ms=7, color=col, mec="white", mew=0.8, zorder=5)
 
     # Cross-dataset stage: only CatBoost and Random Forest have a transfer matrix, so the blue envelope
     # ends at stage 3 -- name the grey dot that DOES continue, or it reads as a dropped series
@@ -111,12 +113,14 @@ def fig_eval_design():
                     xytext=(0, -19), ha="center", fontsize=7.5, color=INK, zorder=6,
                     bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.9))
 
-    # LogReg is the MINIMUM of the first cluster, so its spread annotation sits directly under the dot
-    # and the label cannot go below; right puts its own horizontal line through the text
+    # Only the two that bound the band are named. Every family's own number is in the family
+    # benchmark table; repeating the roster here would cost seven labels inside 0.053 F1 on an
+    # axis 0.37 tall, which is what the fanned version demonstrated does not read.
+    ax.set_ylim(0.58, 0.95)
     ax.annotate("CatBoost", (0, stages[0][1]["CatBoost"]), textcoords="offset points",
-                xytext=(8, 5), fontsize=8, color=ORANGE, fontweight="bold")
+                xytext=(9, 5), fontsize=8, color=ORANGE, fontweight="bold")
     ax.annotate("LogReg", (0, stages[0][1]["LogReg"]), textcoords="offset points",
-                xytext=(-9, -3), ha="right", fontsize=8, color=BLUE, fontweight="bold")
+                xytext=(-10, -2), ha="right", fontsize=8, color=BLUE, fontweight="bold")
     if "CatBoost" in xdata:
         ax.annotate("cross-dataset\ntransfer", (xc, xdata["CatBoost"]),
                     textcoords="offset points", xytext=(-4, 12), ha="center",
@@ -125,7 +129,6 @@ def fig_eval_design():
     ax.set_xticks(xs + [xc])
     ax.set_xticklabels([s[0] for s in stages] + ["Cross-\ndataset"])
     ax.set_xlim(-0.4, xc + 0.45)
-    ax.set_ylim(0.58, 0.95)
     ax.set_ylabel("F1")
     ax.margins(x=0.02)
     os.makedirs(FIG, exist_ok=True)
@@ -263,11 +266,11 @@ def fig_prauc_designs():
     xs = list(range(len(stages)))
     fams = sorted(bench["family"].unique())
     for xi, (_, series) in zip(xs, stages):
-        for fam in fams:
-            if fam in ("CatBoost", "LogReg"):
-                continue
-            ax.plot(xi, series[fam], "o", ms=5, color=GRAY, alpha=0.55, mec="white", mew=0.6,
-                    zorder=2)
+        # Same fan as the F1 figure, for the same reason: stacked dots cannot be counted, and the
+        # first PR-AUC column packs all seven families inside 0.009. Offsets fixed by family
+        # order; the two coloured series stay on the centre so their lines stay straight.
+        # Same band as the F1 figure, for the reason recorded there.
+        ax.vlines(xi, series.min(), series.max(), color=GRAY, lw=11, alpha=0.28, zorder=1)
     for fam, col in (("CatBoost", ORANGE), ("LogReg", BLUE)):
         ys = [st[fam] for _, st in stages]
         ax.plot(xs, ys, "-", color=col, lw=1.8, zorder=3)
@@ -275,12 +278,17 @@ def fig_prauc_designs():
     # Above the cluster, not below it: below the last cluster the annotation landed on the
     # x tick label, and the level falls stage to stage so the space overhead is always free.
     for xi, (_, series) in zip(xs, stages):
-        # The first cluster's overhead is taken by the CatBoost series label, so its spread annotation moves
-        # left; labels are lifted clear with an opaque box where the descending line would cross them
-        dx, ha = (-8, "right") if xi == 0 else (0, "center")
-        ax.annotate(f"spread {series.max() - series.min():.3f}", (xi, series.max()),
-                    textcoords="offset points", xytext=(dx, 13), ha=ha, fontsize=7.5, color=INK,
-                    zorder=6,
+        # The first cluster's overhead belongs to the CatBoost series label. Pushing the spread
+        # annotation LEFT to dodge it put the text outside the axes entirely, over the y-axis
+        # label, because x=0 already sits near the left spine. It goes BELOW that cluster instead,
+        # where the descending lines have not yet arrived and the space is empty; later clusters
+        # keep the overhead, since below them is the x tick label. Opaque box either way, for
+        # where a line does cross.
+        below = xi == 0
+        anchor = series.min() if below else series.max()
+        ax.annotate(f"spread {series.max() - series.min():.3f}", (xi, anchor),
+                    textcoords="offset points", xytext=(-20 if below else 0, -16 if below else 13), ha="center",
+                    va="top" if below else "baseline", fontsize=7.5, color=INK, zorder=6,
                     bbox=dict(boxstyle="round,pad=0.15", fc="white", ec="none", alpha=0.9))
     ax.annotate("CatBoost", (0, stages[0][1]["CatBoost"]), textcoords="offset points",
                 xytext=(8, 4), fontsize=8, color=ORANGE, fontweight="bold")
@@ -291,7 +299,9 @@ def fig_prauc_designs():
     ax.set_xlim(-0.45, len(stages) - 0.55)
     lo = min(st.min() for _, st in stages)
     hi = max(st.max() for _, st in stages)
-    ax.set_ylim(lo - 0.06 * (hi - lo), hi + 0.16 * (hi - lo))   # headroom for the annotations
+    # Headroom above for the annotations, and enough below that the lowest grey family dot is not
+    # sitting on the spine: at 0.06 the 0.880 dot touched the axis and read as clipped.
+    ax.set_ylim(lo - 0.14 * (hi - lo), hi + 0.16 * (hi - lo))
     ax.set_ylabel("PR-AUC")
     os.makedirs(FIG, exist_ok=True)
     out = os.path.join(FIG, "pr_auc_designs.pdf")
@@ -790,7 +800,10 @@ def tab_decomp():
     full = pd.read_csv("data/processed/p2/p2_benchmark.csv")
     strict = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
     lines = [
-        "\\begin{table*}[t]\\centering",
+        # Single-column: at table* width these two and the wide strict table formed a float page
+        # with a third of it blank, and they are narrow enough to sit beside the prose that
+        # discusses them, which is where a reader wants them.
+        "\\begin{table}[t]\\centering",
         "\\caption{Decomposing the \\textbf{F1} drop. $\\Delta_{comp}$ = dated-subset random"
         " minus full-corpus random (\\emph{composition}, protocol unchanged); $\\Delta_{proto}$"
         " = phishing-temporal minus dated-subset random (\\emph{protocol}, rows unchanged).}",
@@ -816,7 +829,7 @@ def tab_decomp():
                         (strict.protocol == "temporal_strict")]["F1"].mean() for f in ORDER])
     lines.append("\\midrule")
     lines.append(f"family spread & {sa:.3f} & {sb:.3f} & {sc:.3f} & & \\\\")
-    lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
     return "\n".join(lines)
 
 
@@ -960,7 +973,10 @@ def tab_maxf1():
     entitled to assert, and which family is ahead at the end of it."""
     stages = _maxf1_stages()
     lines = [
-        "\\begin{table*}[t]\\centering",
+        # Single-column: at table* width these two and the wide strict table formed a float page
+        # with a third of it blank, and they are narrow enough to sit beside the prose that
+        # discusses them, which is where a reader wants them.
+        "\\begin{table}[t]\\centering",
         "\\caption{Table~\\ref{tab:decomp} at each family's \\emph{chosen} operating point:"
         " the best F1 on the seed-mean precision--recall curve of the Table~\\ref{tab:strict}"
         " models; $\\Delta_{comp}$ and $\\Delta_{proto}$ as in Table~\\ref{tab:decomp}.}",
@@ -975,7 +991,7 @@ def tab_maxf1():
     lines.append("\\midrule")
     sp = [max(s[1].values()) - min(s[1].values()) for s in stages]
     lines.append("family spread & " + " & ".join(f"{v:.3f}" for v in sp) + " & & \\\\")
-    lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
     return "\n".join(lines)
 
 
