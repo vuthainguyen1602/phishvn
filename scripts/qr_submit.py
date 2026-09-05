@@ -57,7 +57,7 @@ LEDGER_FIELDS = ["domain", "attempt", "attempted_at", "scan_uuid", "shot_file", 
 # are also the NEWEST rows in host_infra, so ordering by detection date puts them at the very front
 # of the queue: without this the budget would go almost entirely to names that cannot carry a QR
 # because there is no page. Excluded by IP rather than by suffix, so a genuine .ph phishing site
-# still qualifies. audit_p4_labels.py probes for these rather than hardcoding them; this collector
+# still qualifies. audit_capture_labels.py probes for these rather than hardcoding them; this collector
 # reads the answer it already reached.
 WILDCARD_IPS = {"45.79.222.138"}
 

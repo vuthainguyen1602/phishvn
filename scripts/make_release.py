@@ -62,11 +62,11 @@ OPEN_FILES = [
 # a -draft suffix so nothing built here can be mistaken for the deposit.
 INFRA_FILES = [
     ("data/raw/host_infra/host_infra.csv", "data/host_infra.csv"),
-    ("data/processed/p4/p4_infra_dataset.csv", "data/p4_infra_dataset.csv"),
-    ("data/processed/p4/p4_funnel.csv", "data/funnel.csv"),
-    ("data/processed/p4/p4_accrual.csv", "data/accrual.csv"),
-    ("data/processed/p4/p4_label_audit.csv", "data/label_audit.csv"),
-    ("data/processed/p4/p4_wildcard_probe.csv", "data/wildcard_probe.csv"),
+    ("data/processed/infra/infra_dataset.csv", "data/infra_dataset.csv"),
+    ("data/processed/infra/funnel.csv", "data/funnel.csv"),
+    ("data/processed/infra/accrual.csv", "data/accrual.csv"),
+    ("data/processed/infra/label_audit.csv", "data/label_audit.csv"),
+    ("data/processed/infra/wildcard_probe.csv", "data/wildcard_probe.csv"),
     ("data/raw/ct_benign/seen_domains.txt", "data/ct_benign_seen.txt"),
     ("data/raw/ct_benign_vn/seen_domains.txt", "data/ct_benign_vn_seen.txt"),
     ("data/docs/infra/README_infra.md", "README.md"),
