@@ -45,7 +45,7 @@ try:
     from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:
-    ROOT = os.path.dirname(os.path.dirname(_HERE))
+    ROOT = os.path.dirname(_HERE)
 
 from train_url_baseline import _metrics
 from run_p2_benchmark import pr_curve_row, write_curves

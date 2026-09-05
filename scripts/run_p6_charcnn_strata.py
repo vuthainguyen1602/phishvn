@@ -38,7 +38,7 @@ try:
     from _path import ROOT, add_script_dirs
     add_script_dirs()
 except ImportError:
-    ROOT = os.path.dirname(os.path.dirname(_HERE))
+    ROOT = os.path.dirname(_HERE)
 
 from train_url_baseline import COMPPHISH
 from run_p2_benchmark import make_any_model

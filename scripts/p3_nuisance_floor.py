@@ -21,8 +21,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
-from _path import ROOT, add_script_dirs
-add_script_dirs()
+try:
+    from _path import ROOT, add_script_dirs
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
 from make_p3_paraphrase_assets import strip_url
 from genfile import write_generated
 
