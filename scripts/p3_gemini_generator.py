@@ -16,7 +16,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "audit"))
 from p3_jaccard_check import jaccard, guardrail_problems, toks, BRAND_STOP
 
-LINK = "http://sim.example.com/x"
+LINK = "http://sim.example.vn/x"
 
 def clean_unaccented(text: str) -> str:
     nfkd = unicodedata.normalize('NFD', text)

@@ -8,8 +8,8 @@ this module holds only what was added afterwards, auditable as its own object.
 
 It exists because the paraphrase pilot resolved nothing — five contrasts in the time-stamped pre-specified
 direction, none surviving the corrected test — and the extension was committed before any of it was
-re-measured. Same guardrails as the corpus it extends: links only under the RFC 2606 reserved example.com,
-generic sector references, no real person targeted. Ships in the public code mirror as of
+re-measured. Same guardrails as the corpus it extends: placeholder links only, generic sector
+references, no real person targeted. Ships in the public code mirror as of
 2026-09-05, on the reasoning recorded in p2_generate_corpus.py.
 
 RUN:  python scripts/p2_corpus_ext.py
@@ -17,7 +17,7 @@ The pilot's post-mortem, the sizing argument and what was added: kept in the dev
 """
 from __future__ import annotations
 
-LINK = "http://sim.example.com/x"
+LINK = "http://sim.example.vn/x"
 L = LINK
 
 # ---- SIMULATED phishing lures, +120 over the pilot's 73 ----

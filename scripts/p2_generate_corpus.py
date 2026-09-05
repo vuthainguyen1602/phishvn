@@ -5,7 +5,7 @@ p2_generate_corpus.py — Write the P2 SIMULATED Vietnamese phishing corpus + a 
 DEFENSIVE PURPOSE (P2 + P1b adversarial set): a labelled corpus to (a) characterise LLM-generated
 Vietnamese phishing and (b) train/evaluate a detector robust to it. Every phishing sample is a
 SIMULATION, watermarked is_llm=1 with a gen_model tag, and follows the P2 guardrails:
-  * links only under example.com, which RFC 2606 reserves and nobody can register,
+  * placeholder links only (http://sim.example.vn/...), never a real or reachable target,
   * GENERIC sector references (a bank / the tax office / a carrier), NOT real brand names or URLs,
   * no targeting of real people, no operational attack instructions.
 
@@ -28,7 +28,7 @@ import csv
 import os
 
 GEN_MODEL = "claude-fable-5"
-LINK = "http://sim.example.com/x"   # simulated, non-resolving
+LINK = "http://sim.example.vn/x"   # simulated, non-resolving
 
 # ---- SIMULATED phishing lures (generic entities, urgency/persuasion variety) ----
 # keyed by (channel, scenario) -> list of texts

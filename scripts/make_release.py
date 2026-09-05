@@ -121,7 +121,7 @@ Released {_dt.date.today().isoformat()} under CC BY 4.0 (see LICENSE). Cite via 
 - `data/splits/url_{{train,val,test}}.csv` — the official group-aware temporal split.
 - `data/attacks/p3_paraphrase{{,_band}}.csv` — the 386 paraphrased lures of the evasion study and
   their Jaccard-controlled counterparts. Every lure carries the simulated link
-  `http://sim.example.com/x` and no other URL, contains no real brand token, and is stripped of
+  `http://sim.example.vn/x` and no other URL, contains no real brand token, and is stripped of
   diacritics: the set is for re-running a detector against a published attack, and resolves
   nowhere.
 - `data/abuse_type.csv` — what KIND of abuse each listed domain is, where a conservative rule can
