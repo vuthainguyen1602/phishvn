@@ -510,6 +510,7 @@ def _prose(path: str) -> str:
 def _flatten_sh(src: str) -> str:
     """Rewrite script subfolder paths to the flattened mirror layout."""
     src = re.sub(r"scripts/ops/", "scripts/ops/", src)
+    src = re.sub(r'\(dirname "\$0"\)/\.\./\.\./\.\.', r'(dirname "$0")/../..', src)
     return re.sub(r"scripts/(?:core|studies|collect|audit|assets|lib|dataset|train|release)(?:/[a-zA-Z0-9_]+)*/", "scripts/", src)
 
 
