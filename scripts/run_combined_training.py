@@ -2,9 +2,9 @@
 """
 run_combined_training.py — P2: does POOLING corpora rescue transfer?
 
-The label read P3 until 2026-09-05. It was stale: the transfer material moved to the URL
-benchmark on 2026-08-19, and OUT_TEX below has written into that paper's sections/ ever
-since. The file keeps its p3_multimodal/ home so no import path moves.
+Named for P2 though it sits in p3_multimodal/: the transfer material moved to the URL benchmark
+on 2026-08-19, and OUT_TEX below writes into that paper's sections/. The file stays put so no
+import path moves.
 
 For each held-out corpus j, train on the UNION of the other three and test on all of j — the
 strongest "just add more corpora" baseline the cross-dataset matrix admits. Run once on the full

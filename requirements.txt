@@ -16,8 +16,7 @@ shap==0.44.1
 joblib>=1.3
 
 # Plotting. Every figure in the repo is drawn through core/lib/figstyle.py, which imports this
-# and installs the axis guard; it was missing from this file until 2026-09-05, so a clean
-# install from these requirements could run the experiments but not draw a single figure.
+# and installs the axis guard, so an install without it runs every experiment and draws nothing.
 # Not pinned exactly: it decides how a number is drawn, not what the number is.
 matplotlib>=3.8
 

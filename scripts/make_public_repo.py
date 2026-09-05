@@ -34,11 +34,9 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 
 COPY_DIRS = ["configs"]                                # safe: config only
-# dvc.yaml USED to ship here, because the README listed it and both its stages (normalize,
-# train_url) were exported. It was deleted from this repo in 8944c8a and the loop below skipped
-# it in silence, so the mirror kept serving an orphan copy of a file upstream no longer has --
-# found 2026-09-05 by diffing a fresh build against the live mirror. The loop now refuses a
-# missing entry instead of skipping it.
+# The loop below refuses an entry that does not exist, rather than skipping it. A silent skip
+# left the mirror serving dvc.yaml on every refresh after 8944c8a deleted it here: a file the
+# published repo had and this one did not.
 # CITATION.cff is NOT here: it is version-bound and handled below.
 COPY_FILES = ["requirements.txt", "LICENSE", "LICENSE-CODE"]
 DOCS_FROM = "data/docs"
