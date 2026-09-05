@@ -119,6 +119,8 @@ PROSE_WAIVERS = {
     "make_p2_shiftmatrix_figure.py": "draws that study's shift matrix; the path it writes names it",
     "audit_xdata_leakage.py": "the domain-disjoint guard that study's transfer diagonal carries",
     "run_combined_training.py": "the pooling baseline of that study; OUT_TEX writes into it",
+    "run_ml_label_sensitivity.py": "one script serves the tier-sensitivity table of every ML"
+                                   " study, so its docstring has to say which arm is which",
     # P6 XAI / suffix blind spot study scripts.
     "run_p6_suffix_blindspot.py": "this IS that study's blind-spot measurement",
     "run_p6_vn_deficit.py": "this IS that study's pooled-versus-split deficit",
@@ -206,6 +208,7 @@ INCLUDE_SCRIPTS = [
     "studies/p2_url_benchmark/p2_xdata_bootstrap.py",       # bootstrap CIs for the transfer-matrix cells
     "studies/p2_url_benchmark/audit_xdata_leakage.py",      # the domain-disjoint guard on the transfer diagonal
     "studies/p3_multimodal/run_combined_training.py",       # pooling three corpora: the "just add corpora" baseline
+    "studies/p3_multimodal/run_ml_label_sensitivity.py",   # the tier/noise sensitivity tables three papers print
     # P6 (XAI / suffix blind spot)
     "studies/p6_xai/run_p6_suffix_blindspot.py",  # the blind-spot measurement the abstract opens with
     "studies/p6_xai/run_p6_vn_deficit.py",        # the pooled-vs-split .vn deficit
@@ -451,6 +454,9 @@ runs the three drivers; the remaining arms take their own flags.
   `p2_xdata_bootstrap.py`, `run_p2_source_probe.py` — the audits: confident-learning label
   noise, the domain-disjoint guard on the transfer diagonal, how much of the random split is
   memorisable, bootstrap CIs, and the benign-source swap.
+- `run_ml_label_sensitivity.py` — recall by provenance tier, the sensitivity analysis that
+  answers the corpus audit's 12.1% positive-label error rate. One script serves several
+  studies; run `--papers p2` for this one.
 - `make_p2_bench_assets.py`, `make_p2_shiftmatrix_figure.py` — the table and figure generators.
   They write LaTeX into a manuscript tree that is not part of this repository; they ship so the
   path from a stored result to a printed number is inspectable.
@@ -901,11 +907,14 @@ def main():
     # CLOSURE ASSERTION (see _closure_gate). Nested imports count: test_pipeline.py imports its
     # collection modules inside test bodies.
     exported = {os.path.basename(s) for s in INCLUDE_SCRIPTS}
-    # Three exemptions, all on paths the mirror cannot reach: hpo_gwo backs an unreleased study's
+    # Five exemptions, all on paths the mirror cannot reach: hpo_gwo backs an unreleased study's
     # --tune flag; p3_jaccard_check is reached only by make_release after inputs absent here, so
     # it aborts before the import; _path is the bootstrap every header imports inside
-    # try/except ImportError -- falling back IS the flat-mirror design
-    private = _private_scripts(exported) - {"hpo_gwo", "p3_jaccard_check", "_path"}
+    # try/except ImportError -- falling back IS the flat-mirror design; and make_p5_assets and
+    # retrain_drift are imported inside run_ml_label_sensitivity's p5() alone, so the p2, p3 and
+    # p6 arms -- the three this mirror exists to reproduce -- never reach them.
+    private = _private_scripts(exported) - {"hpo_gwo", "p3_jaccard_check", "_path",
+                                            "make_p5_assets", "retrain_drift"}
     files = [("scripts", fn) for fn in sorted(exported)] + [("tests", t) for t in INCLUDE_TESTS]
     _closure_gate(args.out, private, files)
 

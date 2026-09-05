@@ -66,6 +66,9 @@ runs the three drivers; the remaining arms take their own flags.
   `p2_xdata_bootstrap.py`, `run_p2_source_probe.py` — the audits: confident-learning label
   noise, the domain-disjoint guard on the transfer diagonal, how much of the random split is
   memorisable, bootstrap CIs, and the benign-source swap.
+- `run_ml_label_sensitivity.py` — recall by provenance tier, the sensitivity analysis that
+  answers the corpus audit's 12.1% positive-label error rate. One script serves several
+  studies; run `--papers p2` for this one.
 - `make_p2_bench_assets.py`, `make_p2_shiftmatrix_figure.py` — the table and figure generators.
   They write LaTeX into a manuscript tree that is not part of this repository; they ship so the
   path from a stored result to a printed number is inspectable.
