@@ -15,7 +15,7 @@ does not belong in the denominator either.
 
 RUN
     python3 scripts/qr_prevalence.py                      # from synced data
-    python3 scripts/qr_prevalence.py --host bvdung@...    # straight off a collector
+    python3 scripts/qr_prevalence.py --host user@collector   # straight off a collector
 """
 from __future__ import annotations
 import argparse, csv, os, subprocess, sys
