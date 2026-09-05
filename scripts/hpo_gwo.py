@@ -39,7 +39,7 @@ SPACE = {
                ("max_iter", 100, 500, "int")],
     "MLP": [("mlpclassifier__alpha", -5, -2, "logfloat"),
             ("mlpclassifier__learning_rate_init", -4, -2, "logfloat")],
-    # P2 booster additions — constructed via run_p2_benchmark.make_any_model (see _factory)
+    # booster additions — constructed via run_p2_benchmark.make_any_model (see _factory)
     "CatBoost": [("iterations", 100, 600, "int"), ("depth", 4, 10, "int"),
                  ("learning_rate", -2, -0.5, "logfloat"), ("l2_leaf_reg", 1.0, 10.0, "float")],
     "XGBoost": [("n_estimators", 100, 600, "int"), ("max_depth", 3, 10, "int"),
@@ -49,7 +49,7 @@ SPACE = {
 
 
 def _factory(model, seed, params):
-    """make_model knows the four P1b families; the boosters live in run_p2_benchmark."""
+    """make_model knows the four baseline families; the boosters live in run_p2_benchmark."""
     if model in ("CatBoost", "XGBoost", "LightGBM"):
         from run_p2_benchmark import make_any_model
         return make_any_model(model, seed, params)
