@@ -20,8 +20,6 @@ RUN
 from __future__ import annotations
 import argparse, csv, hashlib, os, sys, time
 
-import numpy as np
-
 
 def _zx_worker(path):
     """Module-level so the child can import it. One decode, QR formats only."""
@@ -96,9 +94,7 @@ def load_decoders(names: list) -> dict:
     # most likely to name. It is reported beside the registered three, never pooled into them.
     if "zxing" in names:
         try:
-            import zxingcpp
-            from PIL import Image
-            import numpy as _np
+            __import__("zxingcpp")
         except ImportError as e:
             print(f"[!] zxing requested but zxing-cpp is not installed ({e}) — skipping",
                   file=sys.stderr)
@@ -110,7 +106,6 @@ def load_decoders(names: list) -> dict:
             # ZXing::QRCode::Reader::read on ONE degraded image without emitting a row -- found by
             # sampling the stuck process, not by guessing. Restricting the formats takes the mean
             # from 2.71 ms to 0.35 ms an image, measured over the geometric and noise transforms.
-            _fmt = zxingcpp.BarcodeFormat.QRCode
 
             # BOUNDED, because ZXing does not always come back. On this grid there is at least one
             # degraded image on which ZXing::QRCode::Reader::read runs at 100% CPU without

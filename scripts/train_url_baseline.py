@@ -203,17 +203,17 @@ def main():
         for c in feats:
             if c not in te:
                 te[c] = 0
-        tr = va = df
+        tr = df
         print(f"CROSS-DATASET  train={len(tr)} ({os.path.basename(args.inp)})  "
               f"test={len(te)} ({os.path.basename(args.test_in)})")
     elif "split" in df and df["split"].notna().any():
-        tr = df[df.split == "train"]; va = df[df.split == "val"]; te = df[df.split == "test"]
+        tr = df[df.split == "train"]; te = df[df.split == "test"]
         if len(te) == 0:
             from sklearn.model_selection import train_test_split
-            tr, te = train_test_split(df, test_size=0.3, stratify=df.y, random_state=0); va = te
+            tr, te = train_test_split(df, test_size=0.3, stratify=df.y, random_state=0)
     else:
         from sklearn.model_selection import train_test_split
-        tr, te = train_test_split(df, test_size=0.3, stratify=df.y, random_state=0); va = te
+        tr, te = train_test_split(df, test_size=0.3, stratify=df.y, random_state=0)
 
     Xtr, ytr = tr[feats], tr.y
     print(f"train={len(tr)} test={len(te)} | phishing ratio test={te.y.mean():.2f}")

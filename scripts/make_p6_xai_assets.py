@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 make_p6_xai_assets.py — Generate the XAI paper's results tables from the experiment CSVs
-(never hand-typed; papers/P6_xai). A separate generator serves the companion drift study.
+(never hand-typed; papers/P6_xai).
 
 Reads  data/processed/p6/p6_protocol_shap.csv, p6_tld_shap.csv, p6_brand_hits.csv
 Writes papers/P6_xai/sections/tab_shap_contrast.tex, tab_tld.tex, tab_brands.tex
@@ -776,7 +776,7 @@ def gen_drift_verdict():
             f"With only {nwin} windows this is a descriptive co-movement, not a powered lead/lag "
             f"test, and we report it as one: the candidate the discussion floated is not "
             f"refuted and not established, and what it earns is a powered replication in the "
-            f"companion drift study rather than a place among this paper's findings")
+            f"study designed for it rather than a place among this paper's findings")
 
 
 def tab_case_studies():
@@ -808,7 +808,7 @@ def fig_tld_blindspot():
     diagonal: the TLDs whose tld_len SHAP is NEGATIVE are exactly the ones the model misses, and .vn
     sits at the extreme -- the attribution predicts the failure. Read from Table~\\ref{tab:tld}'s CSV."""
     plt = _figstyle()
-    from figstyle import ORANGE, BLUE, INK, GRAY
+    from figstyle import ORANGE, BLUE, INK
     # Same inclusion floor as Table~\ref{tab:tld}: without it ~100 singleton suffixes whose FNR is
     # 0 or 1 by construction are drawn at the same weight as the groups the claim is about.
     df = pd.read_csv("data/processed/p6/p6_tld_shap.csv").dropna(subset=["fnr_phish@0.5"])

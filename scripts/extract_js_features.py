@@ -167,7 +167,7 @@ def codebert_embed(codes: list, batch=16):
     import numpy as np
     tok, mdl = _CODEBERT["tok"], _CODEBERT["mdl"]
     out = []
-    with __import__("torch").no_grad():
+    with torch.no_grad():
         for i in range(0, len(codes), batch):
             chunk = [c[:4000] if c else "" for c in codes[i:i + batch]]
             enc = tok(chunk, truncation=True, padding=True, max_length=256, return_tensors="pt")

@@ -54,7 +54,7 @@ SUITE = [("LogReg", "Logistic Regression"), ("RandomForest", "Random Forest"),
 
 # ---------- figure ----------
 def make_distribution(df):
-    from figstyle import apply, ORANGE, INK
+    from figstyle import apply, ORANGE
     plt = apply()
 
     ph = df[df.label == "phishing"]
@@ -463,7 +463,6 @@ def make_benchmark(df, feats):
     basic, bfeat = _basic_logreg()
     best_f1 = max(r["mean"]["F1"] for r in res.values())
     best_key = max(res, key=lambda k: res[k]["mean"]["PR-AUC"])
-    best_disp = dict(SUITE)[best_key]
 
     # Is the leading F1 actually ahead of the runner-up, or just nominally? Decided on the shared
     # test rows, not by comparing the two models' separate intervals.
@@ -471,9 +470,6 @@ def make_benchmark(df, feats):
     top_key, runner_key = f1_rank[0], f1_rank[1]
     f1_d, f1_lo, f1_hi = paired_boot_f1(yte, scores[top_key], scores[runner_key])
     f1_separated = not (f1_lo <= 0 <= f1_hi)
-    # same question for the PR-AUC ranking that picks the model the difficulty table then uses
-    pr_rank = sorted(res, key=lambda k: -res[k]["mean"]["PR-AUC"])
-    pr_gap = res[pr_rank[0]]["mean"]["PR-AUC"] - res[pr_rank[1]]["mean"]["PR-AUC"]
 
     # Bootstrap 95% CI for the best model (by PR-AUC), so this single table carries the same
     # rigour the old two-model baseline table did (seed spread + test-set CI).

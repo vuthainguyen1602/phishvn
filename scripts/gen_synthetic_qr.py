@@ -43,7 +43,7 @@ RUN (on the second Jetson: it is idle, and it has all three decoders)
         --out data/raw/qr_restore
 """
 from __future__ import annotations
-import argparse, csv, hashlib, io, os, random, sys
+import argparse, csv, hashlib, os, random, sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -220,7 +220,6 @@ def stream_run(a, picked, levels, boxes, meta, total) -> int:
         return 1
     print(f"[*] streaming through {len(decs)} decoder(s): {', '.join(decs)} — no images written")
 
-    import numpy as _np
     import tempfile
     os.makedirs(os.path.dirname(a.dfr_out) or ".", exist_ok=True)
     rng = np.random.default_rng(a.seed)

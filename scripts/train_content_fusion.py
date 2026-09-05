@@ -26,7 +26,7 @@ from scipy import sparse
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import (f1_score, precision_score, recall_score,
+from sklearn.metrics import (f1_score,
                              average_precision_score, roc_auc_score, roc_curve)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +38,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from compphish_features import extract
 from train_html_baseline import html_to_text
-from extract_js_features import js_vector, JS_COLUMNS, scripts_of, all_js, codebert_embed
+from extract_js_features import js_vector, scripts_of, all_js, codebert_embed
 
 URL_NUM = ["url_len", "dom_len", "is_ip", "tld_len", "subdom_cnt", "letter_cnt", "digit_cnt",
            "special_cnt", "eq_cnt", "qm_cnt", "amp_cnt", "dot_cnt", "dash_cnt", "under_cnt",

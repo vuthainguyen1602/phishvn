@@ -80,7 +80,8 @@ def per_rewrite(df: pd.DataFrame) -> pd.DataFrame:
         # Drawn before the D1 augmentation, exactly as in run(): the shared rng makes the
         # consumption ORDER part of the definition of D1.
         clean_ph = txt[ph_te]
-        _obf_ph = np.array([perturb(t, rng) for t in clean_ph], dtype=object)
+        for t in clean_ph:
+            perturb(t, rng)
         para_ph = pb[ph_te]                        # variant 'b' — test role only
 
         v0 = vec()
@@ -517,7 +518,7 @@ def main() -> None:
            f"moved the corpus up the $J$ axis, so the effect it halved was measured at a gentler "
            f"dose than the effect it was sized to detect"
            if stratum else "")
-        + f". This diagnoses the null and does not repair it.\n")
+        + ". This diagnoses the null and does not repair it.\n")
     write_generated(os.path.join(SEC, "gen_dose_response_notes.tex"), notes)
     write_generated(os.path.join(SEC, "gen_dose_response.tex"), prose)
 

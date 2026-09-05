@@ -14,14 +14,11 @@ The full within-generator/dual matrix is still written as an audit CSV, but the 
 the LOO summary only. Dual augmentation is not a leave-one-out contrast.
 """
 import os
-import re
 import sys
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import recall_score, f1_score
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
@@ -109,7 +106,7 @@ def run_cross_generator_matrix():
     print("=" * 85)
     print(f"Total dataset rows: {len(df)} (Phishing: {df.y.sum()}, Benign: {(df.y == 0).sum()})")
     print(f"Total Claude rewrites: {len(claude_map)}, Total Gemini rewrites: {len(gemini_map)}")
-    print(f"Harness: TF-IDF char_wb(2,5), 20 seeds, 70/30 split, Nadeau-Bengio corrected stats")
+    print("Harness: TF-IDF char_wb(2,5), 20 seeds, 70/30 split, Nadeau-Bengio corrected stats")
     print("-" * 85)
     
     txt, y = df["clean_text"].to_numpy(), df["y"].to_numpy()

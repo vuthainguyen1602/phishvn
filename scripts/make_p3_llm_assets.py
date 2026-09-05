@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-r"""
-make_p3_llm_assets.py — P3's LLM-robustness table, driven by the generated adversarial set.
+r"""make_p3_llm_assets.py — Evaluate LLM adversarial text robustness for P3.
 
-Closes the generation -> detection loop. The corpus has ONE generator (claude-fable-5), so
-per-generator leave-one-LLM-out is not yet possible; what one generator does support is the core
-question: does the content detector survive obfuscated phishing, and does adversarial training
-restore robustness? TF-IDF char-n-gram content detector (the P1b text branch) over stratified
-splits.
-
-RUN:  python scripts/make_p3_llm_assets.py
-The experiment grid and what a second generator would add: kept in the development repository, not shipped in this mirror
+Tests content detector survival under character-perturbed lures and whether
+adversarial data augmentation restores detection recall.
 """
+
 from __future__ import annotations
 import os
 import random

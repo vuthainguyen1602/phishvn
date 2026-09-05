@@ -165,7 +165,7 @@ def gwo_search(model, X, y, seed=0, n_agents=6, iters=8):
 
 
 if __name__ == "__main__":  # quick self-test
-    import argparse, pandas as pd
+    import argparse
     from train_url_baseline import load
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", default="data/processed/vn_compphish.csv")

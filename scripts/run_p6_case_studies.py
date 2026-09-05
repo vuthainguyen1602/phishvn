@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
-"""
-run_p6_case_studies.py — P6 experiment 4: the .vn blind spot in named cases.
+"""run_p6_case_studies.py — Case studies of .vn blind spot and SHAP feature attribution.
 
-Experiment 2 gives the aggregate (90.4% of .vn-registered phishing missed, traced to a benign-ward
-tld_len prior); this grounds it in concrete rows — specific missed .vn domains with the model's
-score and top signed SHAP contributions, plus a caught non-.vn contrast showing the same feature
-pushing the right way. The examples are historical, taken-down indicators from public national
-blocklists.
-
-RUN:  python scripts/run_p6_case_studies.py
-Selection rule, disclosure policy and outputs: kept in the development repository, not shipped in this mirror
+Finds false negatives in .vn domains and contrasts them with caught phishing cases,
+computing signed SHAP feature contributions for each case.
 """
+
 from __future__ import annotations
 
 import argparse

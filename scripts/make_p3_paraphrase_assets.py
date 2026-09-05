@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
-r"""
-make_p3_paraphrase_assets.py — P3's paraphrase-evasion experiment (protocol fixed in advance:
-papers/P3_multimodal/protocols/PARAPHRASE_PROTOCOL.md, committed before this script was run).
+r"""make_p3_paraphrase_assets.py — Paraphrase-evasion experiment evaluation for P3.
 
-Char-n-gram TF-IDF is near-robust to character perturbation by construction, so "miss rate barely
-moves" cannot distinguish understanding from a too-shallow attack. Runs the intent-preserving
-REWRITE instead: 3 detectors (naive, char-obfuscation-trained, paraphrase-trained) x 3 test
-conditions (clean, obfuscated, paraphrased), with variant 'a' allowed only to train and 'b' only to
-test so "adversarial training helps" cannot be leakage. 20 splits, paired by seed, corrected
-resampled t-test through scripts/paired_eval.py with BH over the family of five.
-
-Emits papers/P3_multimodal/sections/tab_paraphrase.tex and gen_paraphrase_verdict.tex.
-
-RUN:  python scripts/p3_paraphrase_corpus.py && python scripts/make_p3_paraphrase_assets.py
-The design grid, role disjunction and the resolution limit: kept in the development repository, not shipped in this mirror
+Evaluates 3 detectors (naive, char-obfuscation-trained, paraphrase-trained) across
+clean, obfuscated, and paraphrased test splits using corrected paired t-tests.
+Emits tab_paraphrase.tex and gen_paraphrase_verdict.tex.
 """
+
 from __future__ import annotations
 
 import os
@@ -141,17 +132,7 @@ COMPARISONS = (
 
 
 def corpus_multiple_for_significance(t_now: float, k: int = SEEDS, alpha: float = 0.05):
-    """How much larger would the phishing corpus have to be for this effect to clear the
-    corrected test, holding the effect size fixed?
-
-    The corrected standard error is sqrt((1/K + n2/n1) * Var(d)). More SPLITS barely help: the
-    1/K term is already dominated by n2/n1 = 0.43, which is exactly Nadeau-Bengio's point —
-    significance cannot be bought by resampling the same small corpus harder. More DATA does
-    help, because a miss-rate difference over n test messages has Var(d) ~ 1/n. Scaling the
-    corpus by f therefore shrinks the standard error by sqrt(f), so the multiple needed is
-    (t_required / t_now)^2. Assumes the effect size and the per-message variance are what this
-    pilot measured — a projection, not a promise.
-    """
+    """Estimate corpus size multiplier needed to achieve significance under corrected paired test."""
     try:
         from scipy import stats
     except ImportError:
@@ -163,16 +144,8 @@ def corpus_multiple_for_significance(t_now: float, k: int = SEEDS, alpha: float 
 
 
 def lexical_shift(df: pd.DataFrame) -> dict:
-    """Mean token Jaccard between a source lure and its test-role rewrite — how far the attack
-    actually moved the surface. Reported so 'paraphrase' is a measured claim, not a label.
+    """Mean token Jaccard similarity between source lures and test-role rewrites by stratum."""
 
-    Split by corpus stratum, and NOT as an afterthought. The 2026-08-07 extension was written to
-    reach the pilot's projected sample size, and comparing the strata is how we discovered that
-    it also changed the attack: the extension's rewrites keep noticeably more of their source's
-    tokens than the pilot's do. That makes the extended corpus a weaker attack as well as a
-    larger one, so the shrinking effect cannot be read as the pilot having been inflated. It is
-    a defect in our own generation consistency and the paper says so.
-    """
     from p3_paraphrase_corpus import PARA as PILOT_IDS
     ph = df[df.y == 1]
     out: dict = {}
@@ -247,7 +220,7 @@ D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
                 f"BH-adjusted {fmt_p(t['p_adj'], 'q')}")
 
     need_h1 = T["H1"]["need"]
-    j_all, j_pilot, j_ext = jac["all"][0], jac["pilot"][0], jac["extension"][0]
+    _, j_pilot, j_ext = jac["all"][0], jac["pilot"][0], jac["extension"][0]
     # How many contrasts the uncorrected test would have handed us, and the largest p among
     # THOSE — quoting max() over all five would misstate the threshold once one stops clearing it.
     naive_hits = [t for t in tests if t["p_naive"] < 0.05]

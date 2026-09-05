@@ -21,7 +21,6 @@ The split, the budget definition and each condition: kept in the development rep
 """
 from __future__ import annotations
 import argparse
-import math
 import os
 import sys
 
@@ -191,7 +190,6 @@ def one_seed(df, feats, family: str, seed: int, cal_frac: float,
     thr_mapped = bq(pd.Series(cal_be_mapped))
     # The balanced model needs its own budget-matched threshold: its scores live on a different
     # scale, so reusing the baseline's would confound training with thresholding.
-    alpha_bal = float((cal_be["pred_bal"] >= 0.5).mean())
     thr_bal = float(cal_be["pred_bal"].quantile(1 - alpha)) if len(cal_be) else 0.5
 
     # Per-group ROC area, carried on every row so the paper's "the .vn group ranks BETTER than
@@ -275,7 +273,7 @@ def make_figure(res, family: str, seeds: int):
     (a rule can look good on both miss rates and be paid for entirely in false alarms — vn-only
     is exactly that). This view surfaced that per-group's residual is a budget constraint, not a
     representational floor: the same scores reach FNR 0.010 once the threshold drops 0.083 -> 0.003."""
-    from figstyle import apply, BLUE, ORANGE, TEAL, GRAY, INK
+    from figstyle import apply, BLUE, ORANGE, TEAL, INK
     plt = apply()
 
     order = ["default", "global", "per-group", "mapped", "vn-only"]

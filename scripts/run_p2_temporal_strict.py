@@ -53,7 +53,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH, add_label
-from run_p2_benchmark import (DETERMINISTIC, FAMILIES, pr_curve_row, run_one,
+from run_p2_benchmark import (FAMILIES, pr_curve_row, run_one,
                               write_curves)
 from psl import registered_domain
 

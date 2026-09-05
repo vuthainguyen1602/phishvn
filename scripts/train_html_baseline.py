@@ -17,7 +17,7 @@ RUN:
          --dom-col dom_file --label-col label --model both
 """
 from __future__ import annotations
-import argparse, os, re, sys
+import argparse, os, re
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer

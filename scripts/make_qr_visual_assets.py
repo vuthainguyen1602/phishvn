@@ -13,12 +13,12 @@ RUN:
     python3 scripts/make_qr_visual_assets.py
 """
 from __future__ import annotations
-import json, os, random, sys
+import json, os, sys
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 import qrcode
-from qrcode.constants import ERROR_CORRECT_M, ERROR_CORRECT_H
+from qrcode.constants import ERROR_CORRECT_M
 
 # Ensure repo root is in python path
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

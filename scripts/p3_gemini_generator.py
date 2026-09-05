@@ -14,7 +14,7 @@ import unicodedata
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "audit"))
-from p3_jaccard_check import BAND, jaccard, guardrail_problems, sources, toks, URL_RE, BRAND_STOP
+from p3_jaccard_check import jaccard, guardrail_problems, toks, BRAND_STOP
 
 LINK = "http://sim.example.vn/x"
 
@@ -131,7 +131,6 @@ def calibrate_single(src: str, cand: str, role: str) -> str:
         cand_clean = f"{cand_clean} tai {LINK}"
         
     cand_words = [w for w in cand_clean.split() if w != LINK]
-    cand_set = set(w.lower() for w in cand_words)
     
     # Check current Jaccard
     j = jaccard(src_clean, " ".join(cand_words) + f" {LINK}")
@@ -151,20 +150,7 @@ def calibrate_single(src: str, cand: str, role: str) -> str:
     non_shared = [t for t in fillers if t not in src_set and t not in BRAND_STOP]
     
     best_text = cand_clean
-    best_j = j
     best_diff = abs(j - 0.25)
-    
-    # Search for optimal phrasing
-    # Target k shared tokens and m non-shared tokens
-    # |A| = len(src_set)
-    # J = k / (len(src_set) + m)
-    A_size = len(src_set)
-    target_k = max(2, int(A_size * 0.25))
-    target_m = max(1, int(target_k / 0.25 - A_size))
-    
-    # Build sentence around template
-    base_prefix = "Canh bao tu he thong:" if role == 'a' else "Thong bao tu trung tam:"
-    action = f"Vui long kiem tra va xu ly tai {LINK}"
     
     # Try multiple combinations of shared and disjoint tokens
     for k in range(1, len(shared) + 1):
@@ -186,7 +172,6 @@ def calibrate_single(src: str, cand: str, role: str) -> str:
             if not errs and abs(cur_j - 0.25) < best_diff:
                 best_diff = abs(cur_j - 0.25)
                 best_text = sent
-                best_j = cur_j
 
     return best_text
 

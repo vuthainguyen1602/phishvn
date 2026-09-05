@@ -26,7 +26,13 @@ from __future__ import annotations
 import argparse, csv, os, sys, time
 import requests
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import add_script_dirs
+    add_script_dirs()
+except ImportError:
+    pass
 import qr_decode  # noqa: E402
 
 H = {"User-Agent": "PhishVN-research/1.0 (+quishing prevalence study)"}

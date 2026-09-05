@@ -8,7 +8,7 @@
 - **Purpose:** train and evaluate Vietnamese-targeted phishing **URL** detection, and provide a
   time-stamped, leakage-controlled benchmark aligned with the CompPhish feature schema.
 - **Creators:** Thai Nguyen Vu, Campus in Ho Chi Minh City, University of Transport and
-  Communications, thaivn_ph@utc.edu.vn. **Funding:** [if any].
+  Communications, Ho Chi Minh City, Vietnam, thaivn_ph@utc.edu.vn. **Funding:** [if any].
 
 ## 2. Composition
 - **Unit:** URLs (not people, not messages).

@@ -18,12 +18,17 @@ import sys
 import time
 import requests
 
-# Add lib to path so we can import qr_decode
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import add_script_dirs
+    add_script_dirs()
+except ImportError:
+    pass
 try:
     import qr_decode
 except ImportError:
-    raise SystemExit("Could not import qr_decode. Make sure it's in scripts/")
+    raise SystemExit("Could not import qr_decode.")
 
 
 # Mechanical triage of a decoded payload. NOT a verdict: this records what the payload IS, and
@@ -50,7 +55,6 @@ def triage(source_page: str, payload: str) -> dict:
     # payload, and the fraud is that the account it names is not the one the victim means to pay.
     emv = {}
     try:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
         import emvco
         emv = emvco.parse(payload)
     except Exception:

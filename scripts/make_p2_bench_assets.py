@@ -638,9 +638,7 @@ def gen_polarity_verdict():
     inversions are "a property of the models". That is a false dichotomy: it never tested the third
     possibility, that the inversion belongs to the CORPUS PAIR. It does. Under four learners the
     below/above-chance verdict is identical for 9 of 12 cells and the three that disagree sit
-    against 0.5; a property invariant to the learner is not a property of the learner. No new
-    experiment -- all four matrices were already on disk -- and generated so it cannot go stale."""
-    import numpy as np
+    against 0.5; a property invariant to the learner is not a property of the learner."""
     files = {"RandomForest": "cross_dataset_ROC-AUC.csv",
              "LogReg": "cross_dataset_ROC-AUC_LogReg.csv",
              "HistGB": "cross_dataset_ROC-AUC_HistGB.csv",
@@ -822,28 +820,6 @@ def tab_decomp():
     return "\n".join(lines)
 
 
-def tab_gwo_cv():
-    """The GWO-vs-random-search CV head-to-head the adoption rule was applied to. Printing it
-    is the difference between reporting a null and burying one."""
-    df = pd.read_csv("data/processed/p2/p2_hpo.csv")
-    df = df[df.config != "default"].copy()
-    lines = [
-        "\\begin{table}[t]\\centering",
-        "\\caption{Best 3-fold CV PR-AUC on the phishing-temporal train window: Grey Wolf Optimizer"
-        " vs.\\ equal-budget uniform random search.}",
-        "\\label{tab:gwocv}",
-        "\\begin{tabular}{lccc}\\toprule",
-        "Family & CV PR-AUC (GWO) & CV PR-AUC (random) & budget \\\\ \\midrule",
-    ]
-    for _, r in df.iterrows():
-        if pd.isna(r.get("cv_prauc_gwo")):
-            continue
-        lines.append(f"{r.family} & {r.cv_prauc_gwo:.4f} & {r.cv_prauc_random:.4f} & "
-                     f"{int(r.budget)} evals \\\\")
-    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
-    return "\n".join(lines)
-
-
 def gen_decomp_macros():
     """Emit the numbers Figure~\\ref{fig:decomp} prints, as \\newcommand macros.
 
@@ -935,9 +911,9 @@ def gen_strict_verdict():
         f"${fmt_p(f1['p'])}$, $n={n}$ seeds). On threshold-fixed F1 the two families are"
         f" therefore tied, but that verdict is a property of the metric, not of the"
         f" families. On the other three quantities the same runs record, the booster is ahead"
-        f" on every seed: " + "; ".join(parts) + ". The ranking advantage is real and small;"
-        f" what the threshold-fixed comparison shows is that it does not convert into a"
-        f" better operating point at $\\tau = 0.5$.")
+        " on every seed: " + "; ".join(parts) + ". The ranking advantage is real and small;"
+        " what the threshold-fixed comparison shows is that it does not convert into a"
+        " better operating point at $\\tau = 0.5$.")
 
 
 CURVES_FULL = "data/processed/p2/p2_pr_curves.csv"
@@ -1081,7 +1057,6 @@ def tab_trivial_floor():
         rates[n] = float(y.mean())
         floor[n] = 2 * rates[n] / (1 + rates[n])
     off = [(i, j) for i in names for j in names if i != j]
-    below = [(i, j) for i, j in off if float(mat.loc[i, j]) < floor[j]]
     off_mean = float(np.mean([float(mat.loc[i, j]) for i, j in off]))
     # The mean of the per-target floors, NOT the floor of the mean prior: cells are scored one target at
     # a time. The two differ in the third decimal and only one is the comparison the sentence makes
@@ -1464,8 +1439,6 @@ def tab_xdataset_rf():
     roc = pd.read_csv(rocp, index_col=0)
     names = list(f1.index)
     fd, fo, fg = _matrix_stats(f1p)
-    off = roc.to_numpy(float)[~np.eye(len(names), dtype=bool)]
-    sub = off[off < 0.5]
 
     def f1cell(i, j):
         v = f1.loc[i, j]

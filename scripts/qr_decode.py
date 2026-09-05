@@ -34,12 +34,12 @@ def decode_pyzbar(path):
 
 def get_decoder():
     try:
-        import cv2
+        __import__("cv2")
         return decode_opencv, "opencv"
     except Exception:
         pass
     try:
-        import pyzbar
+        __import__("pyzbar")
         return decode_pyzbar, "pyzbar"
     except Exception:
         raise SystemExit("Install opencv-python or pyzbar+pillow to decode QR images.")

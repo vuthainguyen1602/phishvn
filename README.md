@@ -14,7 +14,7 @@ temporal split.
 - `docs/` — datasheet, column schema, data-source notes.
 - `docs/verify/` — the completed human label audit: time-stamped pre-specified codebook (with its amendment
   log), both annotators' independent sheets, the machine pass, and the arbitration record.
-- `tests/`, `configs/`, `Makefile`, `dvc.yaml` — reproducibility.
+- `tests/`, `configs/`, `Makefile` — reproducibility.
 
 ## Label audit (completed 2026-08-15)
 Two annotators independently re-checked a blinded, stratified 200-row sample against a four-way
@@ -49,6 +49,26 @@ make test         # unit tests
   Read it as evidence that this corpus cannot be adjudicated from web archives — not as a
   composition estimate, and never as a substitute for the human audit.
 - `make_release.py` — build the citable open / gated release bundles.
+
+## Multi-protocol URL benchmark
+Seven tabular families plus a character-CNN, evaluated under a full-corpus random split, a
+phishing-temporal split on dated detections, and a four-corpus transfer matrix. `make benchmark`
+runs the three drivers; the remaining arms take their own flags.
+- `run_p2_benchmark.py` / `run_p2_temporal_strict.py` — the random and phishing-temporal
+  protocols; the temporal one carries the registrable-domain guard and the rolling origins.
+- `run_cross_dataset.py` — the four-corpus transfer matrix; `--drop` prunes the SHAP-named
+  artefact features and `--adapt coral` aligns second-order statistics to the unlabelled target.
+- `run_combined_training.py` — pooling three corpora against the held-out fourth.
+- `run_p2_stacking_baseline.py`, `run_p2_hpo.py`, `run_p2_charcnn.py`, `run_p2_fcts.py`,
+  `run_p2_residual_lambda.py`, `run_p2_drift_forecastability.py` — the ensemble, tuning,
+  string-reading, meta-learning and forecastability arms.
+- `audit_label_noise.py`, `audit_xdata_leakage.py`, `p2_dup_leakage.py`,
+  `p2_xdata_bootstrap.py`, `run_p2_source_probe.py` — the audits: confident-learning label
+  noise, the domain-disjoint guard on the transfer diagonal, how much of the random split is
+  memorisable, bootstrap CIs, and the benign-source swap.
+- `make_p2_bench_assets.py`, `make_p2_shiftmatrix_figure.py` — the table and figure generators.
+  They write LaTeX into a manuscript tree that is not part of this repository; they ship so the
+  path from a stored result to a printed number is inspectable.
 
 ## Citation
 See `CITATION.cff`. Please cite the dataset DOI and credit the upstream sources

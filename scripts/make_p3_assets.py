@@ -21,7 +21,6 @@ import random
 import sys
 
 import numpy as np
-import pandas as pd
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
@@ -97,7 +96,7 @@ def _fig_pr_curves():
     if not _PR_PANELS:
         return
     import numpy as np
-    from figstyle import apply, ORANGE, BLUE, GRAY, INK
+    from figstyle import apply, ORANGE, BLUE, GRAY
     plt = apply()
     from sklearn.metrics import precision_recall_curve
 
@@ -377,7 +376,6 @@ def make_encoder_sweep_table(encoders=("tfidf", "phobert", "phobert-v2", "visobe
                        f"lend rank to the sparse ones.")
     note = (f" Checkpoints unavailable in this environment: {', '.join(skipped)}." if skipped else "")
 
-    url_ref = verdicts[0]["mean"]["url"]
     head_metrics = " & ".join("\\multicolumn{2}{c}{" + lab + "}" for _m, lab, _s in SWEEP_METRICS)
 
     def body_rows(direction, lead):
@@ -510,8 +508,6 @@ def make_hybrid_head_table(rows, agg_lin, text_encoder="xlm-r", tag="_xgb"):
     Emits tab_content_fusion_xgb.tex + gen_hybrid_verdict.tex."""
     from train_content_fusion import evaluate as _eval
     agg = _eval(rows, CONFIGS, text_encoder, "lightweight", False, FUSION_SEEDS, head="xgboost")
-    n_ph = sum(r["y"] for r in rows)
-    n_be = len(rows) - n_ph
 
     def row(cfg):
         m = agg[cfg]
