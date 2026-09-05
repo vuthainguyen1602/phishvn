@@ -13,7 +13,7 @@ Keyed by the source row's content-derived uuid5 id, so the mapping survives corp
 """
 from __future__ import annotations
 
-L = "http://sim.example.vn/x"
+L = "http://sim.example.com/x"
 
 PARA_EXT: dict[str, tuple[str, str]] = {
  # ---- sms / bank ----

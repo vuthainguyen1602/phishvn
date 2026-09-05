@@ -34,7 +34,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 
 BAND = (0.20, 0.30)
-LINK = "http://sim.example.vn/x"
+LINK = "http://sim.example.com/x"
 URL_RE = re.compile(r"https?://\S+|\bsim\.example\.vn\S*", re.I)
 BRAND_STOP = ("vietcom", "techcom", "vietin", "agribank", "bidv", "mbbank", "sacombank",
               "acb", "tpbank", "vpbank", "momo", "zalopay", "vnpay", "shopee", "lazada",

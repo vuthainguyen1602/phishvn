@@ -30,7 +30,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 OUT = os.path.join(ROOT, "data", "processed", "p3", "p3_paraphrase.csv")
 GEN_MODEL = "claude-fable-5"
-L = "http://sim.example.vn/x"
+L = "http://sim.example.com/x"
 
 # id -> (variant 'a' — training augmentation, variant 'b' — test attack)
 PARA: dict[str, tuple[str, str]] = {
