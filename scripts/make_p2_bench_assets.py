@@ -1715,8 +1715,10 @@ def fig_repair_attempts():
     # Stops above its own caption: a full-height axvline ran through the words.
     ax.vlines(base[1], -0.34, len(rows) - 0.55, color=INK, lw=0.8, ls=(0, (4, 3)),
               alpha=0.55, zorder=0)
-    ax.text(base[1] - 0.006, -0.66, "baseline transfer", fontsize=7.5, color=INK,
-            ha="right", va="bottom", alpha=0.75)
+    # 8 pt at alpha 0.85, not 7.5 at 0.75: it still sits a step below the 8.5 pt data labels,
+    # which is right for a reference line's caption, but it has to survive print.
+    ax.text(base[1] - 0.006, -0.66, "baseline transfer", fontsize=8.0, color=INK,
+            ha="right", va="bottom", alpha=0.85)
     ax.set_yticks(ys)
     ax.set_yticklabels([r[0] for r in rows], fontsize=8.5)
     ax.set_xlabel("F1 (four-corpus setup, Random Forest, five seeds)", fontsize=8.5)
