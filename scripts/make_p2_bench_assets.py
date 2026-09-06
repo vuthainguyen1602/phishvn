@@ -1705,16 +1705,22 @@ def fig_repair_attempts():
         ax.plot([off, diag], [y, y], color=GRAY, lw=2.0, solid_capstyle="round", zorder=1)
         ax.scatter([off], [y], s=52, color=ORANGE, zorder=3)
         ax.scatter([diag], [y], s=52, color=BLUE, zorder=3)
-        ax.text((off + diag) / 2, y + 0.20, f"gap {diag - off:.3f}", ha="center", va="bottom",
+        # Right-aligned on the in-distribution end, not centred on the bar. Centred put every
+        # label's left edge within 0.004 of the baseline-transfer rule at 0.629, and three of
+        # the five printed with the dashed line through the word "gap". The in-distribution ends
+        # are all 0.769 or 0.779, so right-aligning there also stacks the five into a column.
+        ax.text(diag, y + 0.20, f"gap {diag - off:.3f}", ha="right", va="bottom",
                 fontsize=8.5, color=INK)
     # the baseline's transfer end, so every later row is read as a move against it
-    ax.axvline(base[1], color=INK, lw=0.8, ls=(0, (4, 3)), alpha=0.55, zorder=0)
-    ax.text(base[1] - 0.004, -0.62, "baseline transfer", fontsize=7.5, color=INK,
+    # Stops above its own caption: a full-height axvline ran through the words.
+    ax.vlines(base[1], -0.34, len(rows) - 0.55, color=INK, lw=0.8, ls=(0, (4, 3)),
+              alpha=0.55, zorder=0)
+    ax.text(base[1] - 0.006, -0.66, "baseline transfer", fontsize=7.5, color=INK,
             ha="right", va="bottom", alpha=0.75)
     ax.set_yticks(ys)
     ax.set_yticklabels([r[0] for r in rows], fontsize=8.5)
     ax.set_xlabel("F1 (four-corpus setup, Random Forest, five seeds)", fontsize=8.5)
-    ax.set_xlim(0.52, 0.93)
+    ax.set_xlim(0.53, 0.82)   # nothing lies past 0.779; the old 0.93 spent a third of the width on air
     ax.set_ylim(-0.75, len(rows) - 0.45)
     ax.grid(axis="x", zorder=0)
     # Legend ABOVE the axes: placed inside, its proxy markers sit on the value axis and read as a
