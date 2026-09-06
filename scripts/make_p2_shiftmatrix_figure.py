@@ -73,13 +73,21 @@ def summarise(rows: list[dict]) -> dict:
     }
 
 
+# (a, b) -> (dx, dy, ha) in points, for the labels the default placement collides at one column
+LABEL_NUDGE = {("W1", "W2"): (0, 8, "center"), ("W2", "W3"): (0, -14, "center"),
+               ("W1", "TEST"): (-7, 2, "right")}
+
+
 def figure(rows: list[dict], s: dict) -> str:
     from figstyle import apply, BLUE, ORANGE, GRAY, INK
     plt = apply()
-    import numpy as np
 
-    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(7.6, 3.3),
-                                  gridspec_kw={"width_ratios": [1.45, 1]})
+    # One panel, one column. The right panel used to reprint Table~\ref{tab:shiftmatrix} as a
+    # heat map: the same ten numbers, in the same layout, half a page from the table itself,
+    # which also carries the block distances the heat map had no room for. The table was
+    # strictly the more informative of the two. What only a figure can do is put separability
+    # against elapsed time, and that is the panel that stayed.
+    fig, ax = plt.subplots(figsize=(3.9, 3.1))
 
     # --- LEFT: separability against elapsed time.
     ax.axhline(0.5, color=GRAY, lw=0.9, ls=(0, (4, 3)), zorder=1)
@@ -89,53 +97,48 @@ def figure(rows: list[dict], s: dict) -> str:
         colour = ORANGE if r["boundary"] else BLUE
         ax.scatter(r["delta_days"], r["auc"], s=44, color=colour, zorder=3,
                    marker="D" if r["boundary"] else "o", edgecolor="white", linewidth=0.6)
+        # Default is above and centred. Three pairs need something else at one column: W1-W2
+        # and W2-W3 are 40 days and 0.013 apart, and W1-TEST is the rightmost point, whose
+        # centred label would run off the axis.
+        dx, dy, ha = LABEL_NUDGE.get((r["a"], r["b"]), (0, 8, "center"))
         ax.annotate(f"{r['a']}–{r['b']}", (r["delta_days"], r["auc"]),
-                    textcoords="offset points", xytext=(0, 8), ha="center", fontsize=6.8,
+                    textcoords="offset points", xytext=(dx, dy), ha=ha, fontsize=6.8,
                     color=colour)
-    # The two points that carry the non-monotonicity: further apart, less separable.
+    # The two points that break the ordering by distance. The label used to read "further apart
+    # in time, less separable", which is a directional law read off two hand-picked points, and
+    # the panel's own rho is +0.33: the weak trend across all ten runs the OTHER way. The two
+    # also differ in whether they cross the boundary, so elapsed time is not even the only thing
+    # separating them. What they show is the ordering failing, which is what the label now says
+    # and what the prose beside the table claims.
     st, fu = s["strongest"], s["furthest"]
     ax.annotate("", xy=(fu["delta_days"], fu["auc"]), xytext=(st["delta_days"], st["auc"]),
-                arrowprops={"arrowstyle": "->", "color": INK, "lw": 0.9,
-                            "shrinkA": 6, "shrinkB": 6,
-                            "connectionstyle": "arc3,rad=0.25"})
-    # Boxed: the annotation arrow drawn just above runs diagonally through this text.
-    ax.annotate("further apart in time,\nless separable", (fu["delta_days"], fu["auc"]),
-                textcoords="offset points", xytext=(-4, 14), ha="right", va="bottom",
-                fontsize=7, color=INK, bbox=dict(boxstyle="round,pad=0.12", fc="white", ec="none", alpha=0.85), zorder=6)
+                arrowprops={"arrowstyle": "->", "color": GRAY, "lw": 0.9,
+                            "shrinkA": 7, "shrinkB": 7,
+                            "connectionstyle": "arc3,rad=-0.3"})
+    # Above the arc rather than on it: the old placement put the text across the arrow and needed
+    # an opaque box to hide the collision, which broke the arrow into two pieces.
+    # No text on the arrow. At one column every placement collided with something: above ran
+    # through the Spearman line, below ran through W2-W4. The caption says what the arrow joins
+    # and the prose beside it gives both pairs with their numbers, so the panel does not need to
+    # repeat either.
     ax.annotate(f"Spearman $\\rho={s['rho']:+.2f}$ ($p={s['p']:.2f}$, $n={s['n']}$ pairs)",
                 (0.015, 0.965), xycoords="axes fraction", fontsize=7.5, color=INK, va="top")
     ax.set_xlabel("distance between block median dates (days)")
     ax.set_ylabel("discriminator ROC-AUC")
     ax.set_ylim(0.45, max(r["auc"] for r in rows) + 0.10)
+    span = max(r["delta_days"] for r in rows) - min(r["delta_days"] for r in rows)
+    ax.set_xlim(min(r["delta_days"] for r in rows) - 0.09 * span,
+                max(r["delta_days"] for r in rows) + 0.09 * span)
     ax.set_title("elapsed time does not order distributional distance", fontsize=8.5)
     ax.grid(axis="y", alpha=0.6)
-    ax.annotate("interior pair", (0.015, 0.875), xycoords="axes fraction",
-                fontsize=7.5, color=BLUE)
-    ax.annotate("crosses the deployment boundary", (0.015, 0.795), xycoords="axes fraction",
-                fontsize=7.5, color=ORANGE)
-
-    # --- RIGHT: the same ten numbers, indexed the way a reader looks a pair up.
-    idx = {b: i for i, b in enumerate(BLOCKS)}
-    grid = np.full((len(BLOCKS) - 1, len(BLOCKS) - 1), np.nan)
-    for r in rows:
-        grid[idx[r["a"]], idx[r["b"]] - 1] = r["auc"]
-    im = ax2.imshow(grid, cmap="BuPu", vmin=0.5, vmax=max(r["auc"] for r in rows),
-                    aspect="auto")
-    for i in range(grid.shape[0]):
-        for j in range(grid.shape[1]):
-            if not np.isnan(grid[i, j]):
-                # White on the dark end of the ramp, ink on the light end: one fixed colour
-                # would be unreadable at whichever end it did not suit.
-                dark = grid[i, j] > 0.5 + 0.62 * (max(r["auc"] for r in rows) - 0.5)
-                ax2.text(j, i, f"{grid[i, j]:.3f}", ha="center", va="center", fontsize=7.5,
-                         color="white" if dark else INK)
-    ax2.set_xticks(range(len(BLOCKS) - 1), BLOCKS[1:], fontsize=8)
-    ax2.set_yticks(range(len(BLOCKS) - 1), BLOCKS[:-1], fontsize=8)
-    ax2.set_title("the matrix itself", fontsize=8.5)
-    ax2.tick_params(length=0)
-    for sp in ax2.spines.values():
-        sp.set_visible(False)
-    fig.colorbar(im, ax=ax2, fraction=0.046, pad=0.04).outline.set_visible(False)
+    ax.scatter([], [], s=44, color=BLUE, marker="o", edgecolor="white", linewidth=0.6,
+               label="interior pair")
+    ax.scatter([], [], s=44, color=ORANGE, marker="D", edgecolor="white", linewidth=0.6,
+               label="crosses the boundary")
+    leg = ax.legend(loc="lower right", frameon=False, fontsize=7,
+                    handletextpad=0.4, borderpad=0.0, labelspacing=0.3)
+    for txt, col in zip(leg.get_texts(), (BLUE, ORANGE)):
+        txt.set_color(col)
 
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
