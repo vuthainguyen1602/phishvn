@@ -625,16 +625,18 @@ def gen_fcts():
                          "'no signal inside the window' reading no longer holds, rewrite it")
     ratio = (t.groupby("variant").coef_CB.mean() / t.groupby("variant").coef_LR.mean())
     return ("\\newcommand{\\ForecastFCTSVerdict}{"
-            f"Fitting it on forward-chained ones instead---bases fitted on each block of the "
-            f"training window and scored on the next---moves temporal PR-AUC by "
+            # No em dashes: the 2026-09 pass stripped them from every paper's prose and missed
+            # this file, because a generated one is rewritten by the script rather than edited.
+            f"Fitting it on forward-chained ones instead, with bases fitted on each block of the "
+            f"training window and scored on the next, moves temporal PR-AUC by "
             f"${vs_shuf['mean']:+.4f}$ ({vs_shuf['wins']}/{vs_shuf['k']} seeds, corrected "
             f"$p = {vs_shuf['p']:.2f}$) against a shuffled-order control sharing its blocked "
             f"folds and meta-sample size, and ${vs_rand['mean']:+.4f}$ "
             f"({vs_rand['wins']}/{vs_rand['k']}, $p = {vs_rand['p']:.2f}$) against the canonical "
-            f"stack. The blend does move---the weight ratio between the booster and the logistic "
+            f"stack. The blend does move: the weight ratio between the booster and the logistic "
             f"member falls from ${ratio['random_fold']:.1f}$:$1$ under random folds to "
             f"${ratio['forward_chained']:.1f}$:$1$ under chaining, the shuffled control between "
-            f"them at ${ratio['shuffled_order']:.1f}$:$1$---so the tilt toward the shift-stable "
+            f"them at ${ratio['shuffled_order']:.1f}$:$1$. So the tilt toward the shift-stable "
             f"member is bought mostly by the smaller fold-training sets, not by the order, and "
             f"none of it reaches the score."
             "}")
