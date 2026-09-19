@@ -46,8 +46,10 @@ def triage(source_page: str, payload: str) -> dict:
     """host of the payload, whether it points back at the page that carried it, and its kind."""
     from urllib.parse import urlparse
     try:
-        ph = (urlparse(payload).hostname or "").lower().lstrip("www.")
-        sh = (urlparse(source_page).hostname or "").lower().lstrip("www.")
+        # removeprefix, not lstrip: lstrip("www.") strips CHARACTERS ("web.x.vn" -> "eb.x.vn"),
+        # which can make two different hosts compare as the same site
+        ph = (urlparse(payload).hostname or "").lower().removeprefix("www.")
+        sh = (urlparse(source_page).hostname or "").lower().removeprefix("www.")
     except ValueError:
         ph = sh = ""
     # EMVCo first: a payment string is not a URL and would otherwise be filed as "non_url" and

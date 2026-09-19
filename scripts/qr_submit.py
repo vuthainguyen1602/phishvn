@@ -40,6 +40,49 @@ SUBMIT = "https://urlscan.io/api/v1/scan/"
 SHOT_DIR = os.path.join("data", "raw", "urlscan_screenshots")
 LEDGER = os.path.join("data", "raw", "qr_submit_ledger.csv")
 LEDGER_FIELDS = ["domain", "attempt", "attempted_at", "scan_uuid", "shot_file", "qr_count", "note"]
+# What each decoded code SAID. Until 2026-09-19 this was printed to the cron log and kept nowhere
+# else: the ledger held only qr_count, so 26 payloads on 23 pages (an APK download behind a
+# telecom brand name, a QR-login token on a public-service lookalike, a VietQR payment string)
+# existed in one log file, and qr_prevalence.py, which reads payloads, counted none of them.
+QRS = os.path.join("data", "raw", "qr_submit_qrs.csv")
+QRS_FIELDS = ["source_page", "urlscan_uuid", "qr_decoded_url", "screenshot_file", "found_at"]
+
+
+def append_qrs(rows: list, path: str = None) -> int:
+    """Append decoded-payload rows not already on file (same page, scan and payload)."""
+    path = path or QRS
+    have = set()
+    if os.path.isfile(path):
+        with open(path, newline="", encoding="utf-8") as f:
+            have = {(r["source_page"], r["urlscan_uuid"], r["qr_decoded_url"]) for r in csv.DictReader(f)}
+    new = [r for r in rows if (r["source_page"], r.get("urlscan_uuid", ""), r["qr_decoded_url"]) not in have]
+    if new:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        fresh = not os.path.isfile(path)
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=QRS_FIELDS)
+            if fresh:
+                w.writeheader()
+            w.writerows({k: r.get(k, "") for k in QRS_FIELDS} for r in new)
+    return len(new)
+
+
+def recover_from_log(log_path: str, ledger: dict) -> list:
+    """Rebuild payload rows from the '[+] QR on <domain> -> <payload>' lines of a cron log, joined
+    to the ledger for the scan id, the screenshot and the time. For the payloads found before
+    this script kept them."""
+    rows = []
+    with open(log_path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = re.match(r"\s*\[\+\] QR on (\S+) -> (.+?)\s*$", line)
+            if not m:
+                continue
+            dom, payload = m.group(1).lower(), m.group(2)
+            led = ledger.get(dom, {})
+            rows.append({"source_page": "https://" + dom, "urlscan_uuid": led.get("scan_uuid", ""),
+                         "qr_decoded_url": payload, "screenshot_file": led.get("shot_file", ""),
+                         "found_at": led.get("attempted_at", "")})
+    return rows
 
 # Where the domains come from, in the order they are drawn. Phishing detections first: they are the
 # population the prevalence claim is about. host_infra is the long tail and is only reached once the
@@ -207,7 +250,13 @@ def main() -> int:
     ap.add_argument("--budget", type=int, default=200,
                     help="submissions this run (unlisted/day is 1000; ct_capture_bridge uses ~70)")
     ap.add_argument("--dry-run", action="store_true", help="list what would be submitted, submit nothing")
+    ap.add_argument("--recover-from-log", metavar="LOG",
+                    help="rebuild qr_submit_qrs.csv rows from a cron log's '[+] QR on' lines and submit nothing")
     a = ap.parse_args()
+    if a.recover_from_log:
+        rows = recover_from_log(a.recover_from_log, load_ledger())
+        print(f"[+] {len(rows)} payload line(s) in the log, {append_qrs(rows)} new row(s) -> {QRS}")
+        return 0
 
     key = os.environ.get("QR_SCAN_API_KEY") or os.environ.get("URLSCAN_API_KEY")
     if not key:
@@ -275,7 +324,8 @@ def main() -> int:
                             row["qr_count"] += 1
                             qr_rows.append({"source_page": "https://" + dom,
                                             "urlscan_uuid": uuid, "qr_decoded_url": d_url,
-                                            "screenshot_file": img})
+                                            "screenshot_file": img,
+                                            "found_at": row["attempted_at"]})
                             print(f"    [+] QR on {dom} -> {d_url}")
                 else:
                     row["note"] = ("no_screenshot"
@@ -299,8 +349,7 @@ def main() -> int:
     print(f"[+] {len(new_rows)} domain(s) recorded, {len(qr_rows)} QR found"
           + (" (stopped early on 429)" if rate_stop else ""))
     if qr_rows:
-        print("[i] run qr_scan.py to fold these into urlscan_qrs.csv with its triage columns, or "
-              "read them from the ledger's qr_count")
+        print(f"[+] {append_qrs(qr_rows)} payload row(s) -> {QRS}")
     return 0
 
 

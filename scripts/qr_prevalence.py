@@ -55,7 +55,35 @@ def main() -> int:
         with open(LEDGER, newline="", encoding="utf-8") as f:
             sub_domains = {(r.get("domain") or "").strip().lower()
                            for r in csv.DictReader(f) if (r.get("shot_file") or "").strip()}
+    # Names that exist only because an earlier submission of THIS arm led to them (a parking
+    # service prepending a label to a name we had just scanned) are not pages anyone deployed, so
+    # they are neither examined pages nor findings. 85 of 12,486 submissions by 2026-09-19.
+    induced = set()
+    si_path = os.path.join("data", "processed", "infra", "self_induced_hosts.csv")
+    if os.path.isfile(si_path):
+        with open(si_path, newline="", encoding="utf-8") as f:
+            induced = {(r.get("domain") or "").strip().lower() for r in csv.DictReader(f)}
+        print(f"  [i] {len(sub_domains & induced)} self-induced name(s) left out of the submitted arm")
+    else:
+        print("  [!] self_induced_hosts.csv absent: the submitted arm still counts names our own scans made")
+    sub_domains -= induced
     n_sub = len(sub_domains)
+    # The submitted arm's payloads. Until 2026-09-19 they were only printed to a cron log, so this
+    # numerator held the in-the-wild arm alone while the denominator counted both arms: 23 pages
+    # with a code were missing from a ratio whose bottom half included the ~9,900 pages they came
+    # from. Triage is the in-the-wild arm's own function, so one rule classifies both.
+    sub_qrs = os.path.join("data", "raw", "qr_submit_qrs.csv")
+    if os.path.isfile(sub_qrs):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from qr_scan import triage
+        with open(sub_qrs, newline="", encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                rd.append({**r, **triage(r["source_page"], r["qr_decoded_url"])})
+    else:
+        print("  [!] qr_submit_qrs.csv absent: the submitted arm contributes pages to the denominator "
+              "and no finding to the numerator")
+    # the numerator too: a QR seen on a page that only our own scan produced is not a finding
+    rd = [r for r in rd if (urlparse(r.get("source_page", "")).hostname or "").lower() not in induced]
 
     # Both sides of the ratio must be pages. A screenshot is a scan, and URLScan rescans the same
     # page: the first sweep decoded 896 scans of 398 distinct URLs, so counting screenshots in the
