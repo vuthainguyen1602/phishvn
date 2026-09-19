@@ -8,6 +8,12 @@ temporal split.
 
 > **Dataset (with DOI):** Mendeley Data [`10.17632/b97hxbxtpd.4`](https://doi.org/10.17632/b97hxbxtpd.4) — CC BY 4.0.
 > This repository holds the **code** (MIT); the **data** is archived separately at the DOI above.
+>
+> **Article:** *Data in Brief* 68 (2026) 113195, <https://doi.org/10.1016/j.dib.2026.113195>.
+> The code **as that article describes it** is the release
+> [`dib-113195`](https://github.com/vuthainguyen1602/phishvn/releases/tag/dib-113195). This branch
+> has moved on since: it also carries the code of later studies, and some scripts the article
+> relies on have changed. Reproduce the article from the release; follow the project here.
 
 ## What's here
 - `scripts/` — URL data collection, normalisation, CompPhish features, baselines, audit, release tools.
