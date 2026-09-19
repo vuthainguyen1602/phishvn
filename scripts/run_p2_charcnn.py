@@ -97,12 +97,16 @@ def make_net(vocab_size, seed):
     return Net()
 
 
-def fit_predict(tr_urls, ytr, te_urls, seed, epochs, patience=2):
+def fit_predict(tr_urls, ytr, te_urls, seed, epochs, patience=2, device="cpu"):
     """Train on TRAIN (minus a seeded validation slice) and score the test window.
 
     Early stopping reads the validation slice only. The best state is restored before scoring, so
     a run that overfits late scores as its best epoch rather than its last -- otherwise `epochs`
-    becomes a hyperparameter nobody chose and the seeds disagree for the wrong reason."""
+    becomes a hyperparameter nobody chose and the seeds disagree for the wrong reason.
+
+    `device` defaults to the CPU the canonical P2 arm was run on; the transfer matrix
+    (run_p2_charcnn_xdata.py) passes "mps" because it fits forty networks, not ten. The
+    device is recorded in that run's CSV, and the two runs are never compared cell to cell."""
     import torch
     from torch.utils.data import DataLoader, TensorDataset
     torch.manual_seed(seed)
@@ -118,7 +122,8 @@ def fit_predict(tr_urls, ytr, te_urls, seed, epochs, patience=2):
     ytr_t = torch.from_numpy(np.asarray(ytr)[~vmask].astype(np.float32))
     yva_t = torch.from_numpy(np.asarray(ytr)[vmask].astype(np.float32))
 
-    net = make_net(len(vocab), seed)
+    net = make_net(len(vocab), seed).to(device)
+    Xva, yva_t = Xva.to(device), yva_t.to(device)
     opt = torch.optim.Adam(net.parameters(), lr=LR)
     lossf = torch.nn.BCEWithLogitsLoss()
     loader = DataLoader(TensorDataset(Xtr, ytr_t), batch_size=BATCH, shuffle=True,
@@ -128,6 +133,7 @@ def fit_predict(tr_urls, ytr, te_urls, seed, epochs, patience=2):
     for _ in range(epochs):
         net.train()
         for xb, yb in loader:
+            xb, yb = xb.to(device), yb.to(device)
             opt.zero_grad()
             lossf(net(xb), yb).backward()
             opt.step()
@@ -145,7 +151,11 @@ def fit_predict(tr_urls, ytr, te_urls, seed, epochs, patience=2):
         net.load_state_dict(best_state)
     net.eval()
     with torch.no_grad():
-        return torch.sigmoid(net(Xte)).numpy()
+        # score in slices: the test corpus can be 53k rows and the whole tensor need not sit on
+        # the accelerator at once
+        out = [torch.sigmoid(net(Xte[i:i + 4096].to(device))).cpu()
+               for i in range(0, len(Xte), 4096)]
+        return torch.cat(out).numpy()
 
 
 def main():

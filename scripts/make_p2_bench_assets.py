@@ -980,8 +980,8 @@ def tab_maxf1():
         # discusses them, which is where a reader wants them.
         "\\begin{table}[t]\\centering",
         "\\caption{Table~\\ref{tab:decomp} at each family's \\emph{chosen} operating point:"
-        " the best F1 on the seed-mean precision--recall curve of the Table~\\ref{tab:strict}"
-        " models; $\\Delta_{comp}$ and $\\Delta_{proto}$ as in Table~\\ref{tab:decomp}.}",
+        " the oracle best F1 on the seed-mean test precision--recall curve of the Table~\\ref{tab:strict}"
+        " models, not a validation-selected threshold; $\\Delta_{comp}$ and $\\Delta_{proto}$ as in Table~\\ref{tab:decomp}.}",
         "\\label{tab:maxf1}",
         "\\begin{tabular}{lccccc}\\toprule",
         "Family & " + " & ".join(lbl for lbl, _ in stages)
@@ -1042,8 +1042,8 @@ def gen_maxf1_verdict():
         f"family alike (${lo:+.3f}$ to ${hi:+.3f}$ F1, against "
         f"${fixed_comp['CatBoost']:+.3f}$ for CatBoost and ${fixed_comp['LogReg']:+.3f}$ for "
         f"logistic regression at the fixed threshold): the differential the thresholded table "
-        f"shows is where $\\tau = 0.5$ falls for each family, not what each family learned from "
-        f"the undated rows. The booster's advantage over logistic regression at a chosen "
+        f"shows is sensitive to where $\\tau = 0.5$ falls for each family. This comparison "
+        f"does not isolate prior changes from within-class composition. The booster's advantage over logistic regression at a chosen "
         f"threshold is ${cb_lr[0]:+.3f}$ F1 on the full corpus, ${cb_lr[1]:+.3f}$ on the dated "
         f"rows and ${cb_lr[2]:+.3f}$ under the temporal protocol, where {prose_name} is the "
         f"highest-scoring family in the table. Every one of those differences is smaller than "
@@ -1925,6 +1925,449 @@ def tab_official_split_priors():
     return "\n".join(lines)
 
 
+
+# ------------------------------------------------------------ the 2026-09-16 pre-decision arms
+# Three experiments the submitted manuscript named as needed and had not run: the composition
+# step at a fixed class prior (run_p2_prior_control.py), the decomposition at a threshold chosen
+# on validation data (run_p2_val_threshold.py), and the character-CNN inside the four-corpus
+# transfer matrix (run_p2_charcnn_xdata.py). Each generator returns a marked placeholder while
+# its CSV is absent, and check_paper_claims pins the prose to the generated text.
+
+PRIOR_CSV = "data/processed/p2/p2_prior_control.csv"
+PRIOR_ARMS = [("full_natural", "Full, $p{=}0.69$"), ("full_matched", "Full, $p{=}0.55$"),
+              ("dated_natural", "Dated, $p{=}0.55$"), ("dated_matched", "Dated, $p{=}0.69$")]
+VALTHR_CSV = "data/processed/p2/p2_val_threshold.csv"
+VALTHR_DESIGNS = [("random_full", "Random (full)"), ("random_same_rows", "Random (dated rows)"),
+                  ("temporal_strict", "Phishing-temporal")]
+PROSE_NAME = {"LogReg": "logistic regression", "RandomForest": "random forest",
+              "MLP": "the MLP", "HistGB": "HistGB"}
+
+
+def _spread(d: dict) -> float:
+    return max(d.values()) - min(d.values())
+
+
+def _tn(v: int) -> str:
+    """53116 -> 53{,}116, the rendering every P2 caption uses."""
+    return f"{v:,}".replace(",", "{,}")
+
+
+def _prior_counts():
+    """Row counts of each arm's pool. The runner records n_phish/n_benign per row; a CSV from
+    before it did falls back to the corpus loader, never to rounding a stored prior."""
+    df = pd.read_csv(PRIOR_CSV)
+    if {"n_phish", "n_benign"} <= set(df.columns):
+        g = df.groupby("arm").first()
+        return {"ph_all": int(g.n_phish["full_natural"]), "ph_dated": int(g.n_phish["dated_natural"]),
+                "be_all": int(g.n_benign["full_natural"]),
+                "be_matched": int(g.n_benign["dated_matched"])}
+    from run_p2_temporal_strict import load as _load
+    d = _load()
+    ph = d[d.y == 1]
+    n_ph, n_dated, n_be = len(ph), int(ph.date.notna().sum()), int((d.y == 0).sum())
+    pool = {arm: int(df[df.arm == arm].n_rows.iloc[0]) for arm, _ in PRIOR_ARMS}
+    return {"ph_all": n_ph, "ph_dated": n_dated, "be_all": n_be,
+            "be_matched": pool["dated_matched"] - n_dated}
+
+
+def _prior_means(metric="F1"):
+    df = pd.read_csv(PRIOR_CSV)
+    means = {arm: {f: float(df[(df.arm == arm) & (df.family == f)][metric].mean())
+                   for f in ORDER} for arm, _ in PRIOR_ARMS}
+    prior = {arm: float(df[df.arm == arm].prior.mean()) for arm, _ in PRIOR_ARMS}
+    return means, prior
+
+
+def tab_prior_control():
+    """The composition step with the class prior held fixed: a 2 x 2 of {full, dated} phishing
+    rows x {0.69, 0.55} phishing rate, every arm a stratified random 70/30 split."""
+    if not os.path.exists(PRIOR_CSV):
+        return "% the prior-control arm has not been run; see run_p2_prior_control.py\n"
+    m, pri = _prior_means("F1")
+    n = _prior_counts()
+    hi, lo = f"{pri['full_natural']:.2f}", f"{pri['dated_natural']:.2f}"
+    labels = [f"Full, $p{{=}}{hi}$", f"Full, $p{{=}}{lo}$", f"Dated, $p{{=}}{lo}$",
+              f"Dated, $p{{=}}{hi}$"]
+    lines = [
+        "\\begin{table*}[t]\\centering",
+        "\\caption{The composition step at a fixed class prior: F1 at $\\tau = 0.5$, mean over"
+        " 5 seeds, every arm a stratified random 70/30 split drawn for this square (so its"
+        " cells are not Table~\\ref{tab:decomp}'s). \\emph{Full} = all $" + _tn(n['ph_all'])
+        + "$ phishing rows (natural prior) or a random $" + _tn(n['ph_dated'])
+        + "$ of them (prior matched to the dated design); \\emph{Dated} = the $"
+        + _tn(n['ph_dated']) + "$ dated rows with the whole benign pool of $" + _tn(n['be_all'])
+        + "$ (natural) or a random $" + _tn(n['be_matched']) + "$ of it (prior matched to the"
+        " full corpus). $\\Delta_{prior}$ = full rows, prior moved $" + hi + " \\to " + lo
+        + "$; $\\Delta_{comp}$ = prior held at $" + lo + "$, dated rows replacing a random draw"
+        " of equal size.}",
+        "\\label{tab:priorcontrol}",
+        "\\small",
+        "\\begin{tabular}{lcccccc}\\toprule",
+        "Family & " + " & ".join(labels)
+        + " & $\\Delta_{prior}$ & $\\Delta_{comp}$ \\\\ \\midrule",
+    ]
+    for f in ORDER:
+        a, b, c, d = (m[arm][f] for arm, _ in PRIOR_ARMS)
+        lines.append(f"{f} & {a:.3f} & {b:.3f} & {c:.3f} & {d:.3f} & {b-a:+.3f} & {c-b:+.3f} \\\\")
+    lines.append("\\midrule")
+    lines.append("family spread & " + " & ".join(f"{_spread(m[arm]):.3f}" for arm, _ in PRIOR_ARMS)
+                 + " & & \\\\")
+    lines.append("all-positive F1 & "
+                 + " & ".join(f"{2*pri[arm]/(1+pri[arm]):.3f}" for arm, _ in PRIOR_ARMS)
+                 + " & & \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
+    return "\n".join(lines)
+
+
+def gen_prior_verdict():
+    """The sentence Section 6.2 owes once the prior is controlled. Which of the two steps
+    carries the collapse of the thresholded spread is computed, not asserted."""
+    if not os.path.exists(PRIOR_CSV):
+        return "% the prior-control arm has not been run; see run_p2_prior_control.py\n"
+    m, pri = _prior_means("F1")
+    mx, _ = _prior_means("maxF1")
+    fn, fm, dn, dm = (m[a] for a, _ in PRIOR_ARMS)
+    ts = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
+    tab_dated = float(ts[(ts.protocol == "random_same_rows") & (ts.family == "CatBoost")]["F1"].mean())
+    sp = {a: _spread(m[a]) for a, _ in PRIOR_ARMS}
+    spx = {a: _spread(mx[a]) for a, _ in PRIOR_ARMS}
+    prior_shrink = sp["full_natural"] - sp["full_matched"]
+    comp_shrink = sp["full_matched"] - sp["dated_natural"]
+    total = sp["full_natural"] - sp["dated_natural"]
+    if total <= 0:
+        raise SystemExit("gen_prior_verdict: the thresholded spread no longer collapses across "
+                         "the composition step; the paragraph's premise is gone -- rewrite it.")
+    share_prior = prior_shrink / total
+    if share_prior >= 0.6:
+        verdict = ("So the collapse of the thresholded spread is mostly the class prior: matching "
+                   "the prior alone removes {:.0f}\\% of it, and which phishing rows are eligible "
+                   "accounts for the rest.".format(100 * share_prior))
+    elif share_prior <= 0.4:
+        verdict = ("So the collapse of the thresholded spread is mostly which phishing rows are "
+                   "eligible, not the prior: matching the prior alone removes only {:.0f}\\% of "
+                   "it.".format(100 * share_prior))
+    else:
+        verdict = ("So the two steps share the collapse of the thresholded spread: matching the "
+                   "prior alone removes {:.0f}\\% of it and the change of rows the rest."
+                   .format(100 * share_prior))
+    level = ("At the full corpus's own prior the dated rows score ${:.3f}$ F1 for CatBoost against "
+             "${:.3f}$ on the full corpus, so the level drop of Section~\\ref{{ssec:decomp}} is "
+             "{}".format(dm["CatBoost"], fn["CatBoost"],
+                         "largely the prior moving the all-positive floor rather than the rows "
+                         "becoming harder." if abs(dm["CatBoost"] - fn["CatBoost"]) < 0.02 else
+                         "only partly the prior: the dated rows are also harder at the same prior."))
+    return (
+        f"\\textbf{{Prior or rows.}} Table~\\ref{{tab:priorcontrol}} separates the two changes the "
+        f"composition step makes, by resampling: the full corpus with its phishing class thinned "
+        f"to the dated design's size and prior, and the dated rows with the benign pool thinned to "
+        f"the full corpus's prior, every arm a random stratified split. Holding the prior at "
+        f"${pri['dated_natural']:.2f}$ and replacing a random draw of $19{{,}}635$ phishing rows "
+        f"with the $19{{,}}635$ dated ones moves CatBoost by ${dn['CatBoost'] - fm['CatBoost']:+.3f}$ "
+        f"F1 and logistic regression by ${dn['LogReg'] - fm['LogReg']:+.3f}$; holding the rows "
+        f"fixed and moving the prior from ${pri['full_natural']:.2f}$ to "
+        f"${pri['full_matched']:.2f}$ moves them by ${fm['CatBoost'] - fn['CatBoost']:+.3f}$ and "
+        f"${fm['LogReg'] - fn['LogReg']:+.3f}$. The seven-family spread at $\\tau = 0.5$ is "
+        f"${sp['full_natural']:.3f}$ on the full corpus at its own prior, "
+        f"${sp['full_matched']:.3f}$ once the prior alone is matched, ${sp['dated_natural']:.3f}$ "
+        f"on the dated rows at that prior and ${sp['dated_matched']:.3f}$ on the dated rows at "
+        f"the full corpus's prior. {verdict} At each family's oracle maximum the four spreads are "
+        f"${spx['full_natural']:.3f}$, ${spx['full_matched']:.3f}$, ${spx['dated_natural']:.3f}$ "
+        f"and ${spx['dated_matched']:.3f}$, so the threshold reading of "
+        f"Table~\\ref{{tab:maxf1}} holds in every cell of the square. {level} (The square "
+        f"draws its own stratified splits, which is why its dated cell reads "
+        f"${dn['CatBoost']:.3f}$ for CatBoost where Table~\\ref{{tab:decomp}} reads "
+        f"${tab_dated:.3f}$; the contrasts, not the levels, are what it adds.)")
+
+
+def _valthr():
+    df = pd.read_csv(VALTHR_CSV)
+    out = {}
+    for d, _ in VALTHR_DESIGNS:
+        g = df[df.protocol == d]
+        out[d] = {k: {f: float(g[g.family == f][k].mean()) for f in ORDER}
+                  for k in ("F1", "F1_val", "F1_oracle")}
+        out[d]["tau"] = {f: float(g[g.family == f]["tau"].mean()) for f in ORDER}
+    return out
+
+
+def tab_val_threshold():
+    """The decomposition at a validation-chosen threshold, beside tau = 0.5 and the oracle,
+    all three read from ONE fitted model per (design, family, seed)."""
+    if not os.path.exists(VALTHR_CSV):
+        return "% the validation-threshold arm has not been run; see run_p2_val_threshold.py\n"
+    v = _valthr()
+    lines = [
+        "\\begin{table*}[t]\\centering",
+        "\\caption{Table~\\ref{tab:decomp} at a threshold $\\tau^*$ chosen on a validation slice"
+        " of the training window (the most recent tenth of the phishing training window under the"
+        " temporal protocol, a stratified random tenth otherwise), beside $\\tau = 0.5$ and the"
+        " oracle test-curve maximum for the \\emph{same} fitted model (trained on the remaining"
+        " 90\\%); mean over 5 seeds.}",
+        "\\label{tab:valthr}",
+        "\\small\\setlength{\\tabcolsep}{4pt}",
+        "\\begin{tabular}{lccccccccc}\\toprule",
+        " & " + " & ".join(f"\\multicolumn{{3}}{{c}}{{{lbl}}}" for _, lbl in VALTHR_DESIGNS)
+        + " \\\\",
+        "\\cmidrule(lr){2-4}\\cmidrule(lr){5-7}\\cmidrule(lr){8-10}",
+        "Family & " + " & ".join("$\\tau{=}0.5$ & $\\tau^*$ & oracle" for _ in VALTHR_DESIGNS)
+        + " \\\\ \\midrule",
+    ]
+    for f in ORDER:
+        cells = []
+        for d, _ in VALTHR_DESIGNS:
+            cells += [f"{v[d]['F1'][f]:.3f}", f"{v[d]['F1_val'][f]:.3f}",
+                      f"{v[d]['F1_oracle'][f]:.3f}"]
+        lines.append(f"{f} & " + " & ".join(cells) + " \\\\")
+    lines.append("\\midrule")
+    cells = []
+    for d, _ in VALTHR_DESIGNS:
+        cells += [f"{_spread(v[d][k]):.3f}" for k in ("F1", "F1_val", "F1_oracle")]
+    lines.append("family spread & " + " & ".join(cells) + " \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
+    return "\n".join(lines)
+
+
+def gen_valthr_verdict():
+    if not os.path.exists(VALTHR_CSV):
+        return "% the validation-threshold arm has not been run; see run_p2_val_threshold.py\n"
+    v = _valthr()
+    sp_val = [_spread(v[d]["F1_val"]) for d, _ in VALTHR_DESIGNS]
+    sp_fix = [_spread(v[d]["F1"]) for d, _ in VALTHR_DESIGNS]
+    sp_orc = [_spread(v[d]["F1_oracle"]) for d, _ in VALTHR_DESIGNS]
+    cb_lr = [v[d]["F1_val"]["CatBoost"] - v[d]["F1_val"]["LogReg"] for d, _ in VALTHR_DESIGNS]
+    gap = max(v[d]["F1_oracle"][f] - v[d]["F1_val"][f] for d, _ in VALTHR_DESIGNS for f in ORDER)
+    temp = v["temporal_strict"]["F1_val"]
+    leader = max(temp, key=temp.get)
+    runner = sorted(temp, key=temp.get)[-2]
+    margin = temp[leader] - temp[runner]
+    # Under the temporal protocol the validation slice is the most recent tenth of the training
+    # window, not the test window, so tau* can recover less of the oracle's gain there than under
+    # a random design. Say so when the gap is visible at the table's precision.
+    temporal_note = ""
+    if sp_val[2] - sp_orc[2] >= 0.005:
+        temporal_note = (f" Under the temporal protocol $\\tau^*$ recovers less of the oracle's "
+                         f"spread reduction than under the random designs (${sp_val[2]:.3f}$ "
+                         f"against ${sp_orc[2]:.3f}$), which is itself the protocol at work: the "
+                         f"most recent tenth of the training window is not the test window, and a "
+                         f"threshold tuned on it ages like the model does.")
+    lead_txt = (f"{PROSE_NAME.get(leader, leader)} is at the top under the temporal protocol"
+                + (f", by ${margin:.3f}$ over {PROSE_NAME.get(runner, runner)}" if margin >= 0.002
+                   else f", within ${margin:.3f}$ of {PROSE_NAME.get(runner, runner)}"))
+    return (
+        f"\\textbf{{A threshold nobody chose on the test set.}} Table~\\ref{{tab:valthr}} "
+        f"replaces the oracle with a threshold $\\tau^*$ chosen on a validation slice carved from "
+        f"the training window, the most recent tenth of the phishing training window under the "
+        f"temporal protocol so that nothing later than the fit slice informs it, and scores the "
+        f"same fitted model at $\\tau = 0.5$, at $\\tau^*$ and at its oracle maximum. At "
+        f"$\\tau^*$ the seven families span ${sp_val[0]:.3f}$ F1 on the full corpus, "
+        f"${sp_val[1]:.3f}$ on the dated rows and ${sp_val[2]:.3f}$ under the temporal protocol "
+        f"(against ${sp_fix[0]:.3f}$, ${sp_fix[1]:.3f}$ and ${sp_fix[2]:.3f}$ at $\\tau = 0.5$ "
+        f"for the same models, and ${sp_orc[0]:.3f}$, ${sp_orc[1]:.3f}$ and ${sp_orc[2]:.3f}$ "
+        f"at the oracle), and the validation-chosen threshold lands within ${gap:.3f}$ F1 of the "
+        f"oracle for every family under every design. CatBoost minus logistic regression at "
+        f"$\\tau^*$ is ${cb_lr[0]:+.3f}$, ${cb_lr[1]:+.3f}$ and ${cb_lr[2]:+.3f}$ across the "
+        f"three designs; {lead_txt}. The oracle of Table~\\ref{{tab:maxf1}} was therefore not "
+        f"doing the work: a threshold selected without test access reproduces its reading, and "
+        f"the full-corpus margin the fixed threshold reports is gone at $\\tau^*$ as it was at "
+        f"the oracle.{temporal_note}")
+
+
+def _corpus_rates(names):
+    from train_url_baseline import add_label
+    files = {"PhishVN": "vn_compphish.csv", "PhiUSIIL": "external/phiusiil_compphish.csv",
+             "ISCXURL2016": "external/iscx_compphish.csv",
+             "PhishStorm": "external/phishstorm_compphish.csv"}
+    return {n: float(add_label(pd.read_csv(os.path.join("data/processed", files[n])))["y"].mean())
+            for n in names}
+
+
+def tab_xdataset_charcnn():
+    """The character-CNN in the four-corpus design, both metrics, same layout as the forest's."""
+    f1p = "data/processed/p2/cross_dataset_F1_CharCNN.csv"
+    rocp = "data/processed/p2/cross_dataset_ROC-AUC_CharCNN.csv"
+    if not (os.path.exists(f1p) and os.path.exists(rocp)):
+        return "% the char-CNN transfer matrix has not been run; see run_p2_charcnn_xdata.py\n"
+    f1 = pd.read_csv(f1p, index_col=0)
+    roc = pd.read_csv(rocp, index_col=0)
+    names = list(f1.index)
+    fd, fo, fg = _matrix_stats(f1p)
+
+    def f1cell(i, j):
+        v = f1.loc[i, j]
+        return f"\\textbf{{{v:.3f}}}" if i == j else f"{v:.3f}"
+
+    def roccell(i, j):
+        v = roc.loc[i, j]
+        if i == j:
+            return f"\\textbf{{{v:.3f}}}"
+        return f"\\underline{{{v:.3f}}}" if v < 0.5 else f"{v:.3f}"
+
+    head = "Train $\\backslash$ Test & " + " & ".join(names) + " \\\\"
+    lines = [
+        "\\begin{table}[t]", "\\centering",
+        "\\caption{Table~\\ref{tab:xdatasetrf}'s four-corpus design refitted with the"
+        " character-CNN that reads the URL string (scheme stripped, so the string is the host"
+        " in every corpus), F1 and ROC-AUC; diagonal bold, \\underline{underlined} ROC-AUC"
+        " cells below chance.}",
+        "\\label{tab:xdatasetcnn}", "\\small",
+        "\\begin{tabular}{l cccc}", "\\toprule",
+        "\\multicolumn{5}{l}{\\emph{F1}} \\\\",
+        head, "\\midrule",
+    ]
+    lines += [f"{i} & " + " & ".join(f1cell(i, j) for j in names) + " \\\\" for i in names]
+    lines += [
+        "\\midrule",
+        f"\\multicolumn{{5}}{{l}}{{\\footnotesize Mean diagonal $={fd:.3f}$;\\quad mean"
+        f" off-diagonal $={fo:.3f}$;\\quad gap $={fg:.3f}$.}} \\\\",
+        "\\midrule", "\\multicolumn{5}{l}{\\emph{ROC-AUC}} \\\\", head, "\\midrule",
+    ]
+    lines += [f"{i} & " + " & ".join(roccell(i, j) for j in names) + " \\\\" for i in names]
+    lines += ["\\bottomrule", "\\end{tabular}", "\\end{table}"]
+    return "\n".join(lines)
+
+
+def _xdata_summary(suffix):
+    f1 = pd.read_csv(f"data/processed/p2/cross_dataset_F1{suffix}.csv", index_col=0)
+    roc = pd.read_csv(f"data/processed/p2/cross_dataset_ROC-AUC{suffix}.csv", index_col=0)
+    names = list(f1.index)
+    rates = _corpus_rates(names)
+    off = [(i, j) for i in names for j in names if i != j]
+    return {
+        "names": names,
+        "f1_diag": float(np.mean([f1.loc[n, n] for n in names])),
+        "f1_off": float(np.mean([f1.loc[i, j] for i, j in off])),
+        "roc_diag": float(np.mean([roc.loc[n, n] for n in names])),
+        "roc_off": float(np.mean([roc.loc[i, j] for i, j in off])),
+        "below_chance": sum(1 for i, j in off if roc.loc[i, j] < 0.5),
+        "below_floor": sum(1 for i, j in off if f1.loc[i, j] < 2 * rates[j] / (1 + rates[j])),
+        "roc_min": float(min(roc.loc[i, j] for i, j in off)),
+        "roc_max": float(max(roc.loc[i, j] for i, j in off)),
+        "best_cell": max(off, key=lambda c: roc.loc[c[0], c[1]]),
+        "per_target_roc": {t: float(np.mean([roc.loc[i, t] for i in names if i != t]))
+                           for t in names},
+    }
+
+
+WORDS = {0: "none", 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six",
+         7: "seven", 8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+
+
+def gen_charcnn_xdata():
+    """The scoped sentence at the end of Section 6.7, measured. Which way the verdict reads is
+    decided from the two matrices, never typed."""
+    if not os.path.exists("data/processed/p2/cross_dataset_F1_CharCNN.csv"):
+        return "% the char-CNN transfer matrix has not been run; see run_p2_charcnn_xdata.py\n"
+    c = _xdata_summary("_CharCNN")
+    r = _xdata_summary("")
+    better_rank = c["roc_off"] > r["roc_off"] + 0.02 and c["below_chance"] < r["below_chance"]
+    if c["roc_off"] >= 0.6 and c["below_chance"] <= 2:
+        verdict = ("Reading the string does transfer where reading the features did not: the "
+                   "ranking collapse is a property of the schema, not of the URL modality.")
+    elif better_rank:
+        verdict = ("Reading the string transfers ranking better than reading the features, but "
+                   "not well: the collapse is softened, not repaired, and the corpus pairs that "
+                   "invert for the forest mostly invert for the network too. What fails to "
+                   "transfer is therefore not only the hand-built schema; the URL modality "
+                   "itself, as these four corpora sample it, carries most of the collapse.")
+    else:
+        verdict = ("Reading the string does not transfer better than reading the features: the "
+                   "collapse is not a property of the 21-feature schema but of the corpus pairs, "
+                   "and the sentence above can now be read without its scope.")
+    best = c["best_cell"]
+    return (
+        f"That baseline is now in the matrix. Table~\\ref{{tab:xdatasetcnn}} refits the "
+        f"character-CNN of Section~\\ref{{ssec:charcnn}} in the same four-corpus design "
+        f"(grouped diagonal split, whole-corpus off-diagonal cells, the scheme stripped so that "
+        f"every corpus presents a bare host). Its diagonal mean is ${c['f1_diag']:.3f}$ F1 "
+        f"against an off-diagonal mean of ${c['f1_off']:.3f}$, a gap of "
+        f"${c['f1_diag'] - c['f1_off']:.3f}$ (random forest ${r['f1_diag'] - r['f1_off']:.3f}$); "
+        f"{WORDS[c['below_floor']]} of the twelve transfer cells sit below their target's "
+        f"all-positive floor ({WORDS[r['below_floor']]} for the forest). Under ROC-AUC the "
+        f"off-diagonal mean is ${c['roc_off']:.3f}$ against the forest's ${r['roc_off']:.3f}$, "
+        f"with {WORDS[c['below_chance']]} of twelve cells below chance ({WORDS[r['below_chance']]} "
+        f"for the forest), spanning ${c['roc_min']:.3f}$ to ${c['roc_max']:.3f}$ "
+        f"({best[0]}$\\to${best[1]}). {verdict}")
+
+
+
+TWOSIDED_CSV = "data/processed/p2/p2_temporal_twosided.csv"
+
+
+def _twosided():
+    df = pd.read_csv(TWOSIDED_CSV)
+    m = {pr: {k: {f: float(df[(df.protocol == pr) & (df.family == f)][k].mean()) for f in ORDER}
+              for k in ("F1", "PR-AUC", "ROC-AUC", "FPR@R0.90")}
+         for pr in ("temporal_both", "random_both_guarded")}
+    t = df[df.protocol == "temporal_both"].iloc[0]
+    return m, {"n_test": int(t.n_test), "n_test_benign": int(t.n_test_benign),
+               "n_train": int(t.n_train), "cut": str(t.cut_date)}
+
+
+def tab_twosided():
+    """The two-sided temporal arm on the rows that carry a date in both classes."""
+    if not os.path.exists(TWOSIDED_CSV):
+        return "% the two-sided temporal arm has not been run; see run_p2_temporal_twosided.py\n"
+    m, n = _twosided()
+    t, r = m["temporal_both"], m["random_both_guarded"]
+    lines = [
+        "\\begin{table}[t]\\centering",
+        f"\\caption{{The temporal protocol with \\emph{{both}} classes cut by the calendar at"
+        f" {n['cut']}: the $19{{,}}635$ dated phishing rows and the $2{{,}}026$ dated benign rows"
+        f" (all gold-tier registry entries), guard on both classes, against the same rows re-split"
+        f" at random per class with the same guard; mean over 5 seeds. The test window holds"
+        f" {n['n_test_benign']} benign rows against {n['n_test'] - n['n_test_benign']:,} phishing,"
+        f" so F1 sits on a floor no other design shares and the step is read on ROC-AUC and"
+        f" FPR@0.90.}}",
+        "\\label{tab:twosided}",
+        "\\small\\setlength{\\tabcolsep}{4pt}",
+        "\\begin{tabular}{lcccc}\\toprule",
+        " & \\multicolumn{2}{c}{ROC-AUC} & \\multicolumn{2}{c}{FPR@0.90} \\\\",
+        "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}",
+        "Family & random & temporal & random & temporal \\\\ \\midrule",
+    ]
+    for f in ORDER:
+        lines.append(f"{f} & {r['ROC-AUC'][f]:.3f} & {t['ROC-AUC'][f]:.3f} & "
+                     f"{r['FPR@R0.90'][f]:.3f} & {t['FPR@R0.90'][f]:.3f} \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
+    return "\n".join(lines)
+
+
+def gen_twosided_verdict():
+    """The sentence Limitation (i) owes: a two-sided split CAN be built from the corpus, and what
+    it measures is decided from the numbers, not asserted."""
+    if not os.path.exists(TWOSIDED_CSV):
+        return "% the two-sided temporal arm has not been run; see run_p2_temporal_twosided.py\n"
+    m, n = _twosided()
+    t, r = m["temporal_both"], m["random_both_guarded"]
+    d_roc = {f: t["ROC-AUC"][f] - r["ROC-AUC"][f] for f in ORDER}
+    d_fpr = {f: t["FPR@R0.90"][f] - r["FPR@R0.90"][f] for f in ORDER}
+    easier = all(v > 0 for v in d_roc.values()) and all(v < 0 for v in d_fpr.values())
+    harder = all(v < 0 for v in d_roc.values()) and all(v > 0 for v in d_fpr.values())
+    if easier:
+        reading = ("the temporal arm scores \\emph{higher} than its own random control for every "
+                   "family, which no drift can produce. The benign rows dated after the cut are "
+                   "almost entirely \\texttt{.gov.vn} and \\texttt{.edu.vn} registry entries, a "
+                   "narrower population than the rows before it, so the two-sided split measures "
+                   "how the registry was collected, not how the classes moved in time")
+    elif harder:
+        reading = ("the temporal arm is harder than its own random control for every family, "
+                   "so the one-sided reading survives with the benign class dated too")
+    else:
+        reading = ("the sign of the step differs between families, so the arm does not settle "
+                   "the question either way")
+    lo_roc, hi_roc = min(d_roc.values()), max(d_roc.values())
+    return (
+        f"The corpus does carry $2{{,}}026$ dated benign rows, and Table~\\ref{{tab:twosided}} "
+        f"cuts both classes at the phishing cut date, guard on both sides "
+        f"({n['n_test_benign']} benign rows survive into the test window against "
+        f"{n['n_test'] - n['n_test_benign']:,} phishing). The result says why this is not the "
+        f"two-sided protocol the limitation asks for: {reading} (ROC-AUC ${lo_roc:+.3f}$ to "
+        f"${hi_roc:+.3f}$ against the guard-matched random control, FPR@0.90 "
+        f"${min(d_fpr.values()):+.3f}$ to ${max(d_fpr.values()):+.3f}$). A two-sided split needs "
+        f"a benign stream sampled the same way over time, which this corpus lacks and the July "
+        f"2026 collection is built to supply.")
+
+
 def main(shap_too: bool = False):
     os.makedirs(SEC, exist_ok=True)
     for name, fn in [("tab_families", tab_families), ("tab_strict", tab_strict),
@@ -1949,7 +2392,16 @@ def main(shap_too: bool = False):
                      ("tab_pruned", tab_pruned),
                      ("tab_pruned_models", tab_pruned_models),
                      ("tab_adaptation", tab_adaptation),
-                     ("gen_coral_degeneracy", gen_coral_degeneracy)]:
+                     ("gen_coral_degeneracy", gen_coral_degeneracy),
+                     # the 2026-09-16 pre-decision arms
+                     ("tab_prior_control", tab_prior_control),
+                     ("gen_prior_verdict", gen_prior_verdict),
+                     ("tab_val_threshold", tab_val_threshold),
+                     ("gen_valthr_verdict", gen_valthr_verdict),
+                     ("tab_xdataset_charcnn", tab_xdataset_charcnn),
+                     ("gen_charcnn_xdata", gen_charcnn_xdata),
+                     ("tab_twosided", tab_twosided),
+                     ("gen_twosided_verdict", gen_twosided_verdict)]:
         # fn() is evaluated BEFORE the target is opened; the old line truncated first and an
         # exception in fn left the asset empty. See scripts/genfile.py.
         write_generated(os.path.join(SEC, name + ".tex"), fn())

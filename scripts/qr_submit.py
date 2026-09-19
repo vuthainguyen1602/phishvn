@@ -23,7 +23,7 @@ RUN:
   Key: QR_SCAN_API_KEY, or URLSCAN_API_KEY from scripts/.env (gitignored).
 """
 from __future__ import annotations
-import argparse, csv, os, sys, time
+import argparse, csv, os, re, sys, time
 import requests
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -107,6 +107,45 @@ def wait_result(uuid: str, key: str, tries: int = 10, delay: float = 6.0) -> boo
     return False
 
 
+# --- names that exist only because this script submitted something -------------------------------
+# This script submits what the repository found; watch_urlscan_brands.py searches urlscan with the
+# same key and gets this script's scans back. Until 2026-09-19 that closed a loop: a wildcard-
+# parked typo domain, scanned here, landed on itself with `17.` or `ww17.` prepended; the brand
+# feed recorded that hostname as a detection; host_infra enriched it; it reached this queue as
+# the NEWEST name, was scanned, and came back one level deeper. 86 of 12,211 submissions went to
+# such names, and the feed kept 116 of them. The feed now ignores its own key's scans; the two
+# tests below are this side's half, for names already in host_infra and for whatever else finds a
+# way round.
+URLSCAN_DET = os.path.join("data", "raw", "urlscan_brands", "detections.csv")
+SELF_INDUCED = os.path.join("data", "raw", "urlscan_brands", "self_induced.csv")
+_PREPENDED = re.compile(r"^(?:ww\d{0,3}|\d{1,3})\.")
+
+
+def self_induced_names(own_ids: set) -> set:
+    """Hostnames the brand feed holds ONLY because a scan in this ledger led to them, plus the
+    ones it has logged as such since the fix."""
+    names = set()
+    if os.path.isfile(URLSCAN_DET):
+        with open(URLSCAN_DET, newline="", encoding="utf-8", errors="replace") as f:
+            names |= {(r.get("domain") or "").strip().lower() for r in csv.DictReader(f)
+                      if (r.get("scan_uuid") or "").strip() in own_ids}
+    if os.path.isfile(SELF_INDUCED):
+        with open(SELF_INDUCED, newline="", encoding="utf-8", errors="replace") as f:
+            names |= {(r.get("domain") or "").strip().lower() for r in csv.DictReader(f)}
+    return names - {""}
+
+
+def redirect_derivative(name: str, known: set) -> bool:
+    """`17.17.bidv.netify.app` when `17.bidv.netify.app` or `bidv.netify.app` is already known:
+    a parking service's prefix on a name this queue has had, not a new name."""
+    rest = name
+    while _PREPENDED.match(rest):
+        rest = _PREPENDED.sub("", rest, count=1)
+        if rest in known:
+            return True
+    return False
+
+
 def load_ledger() -> dict:
     if not os.path.isfile(LEDGER):
         return {}
@@ -128,13 +167,28 @@ def candidates(done: dict, want: int) -> list:
     everything, but a source that ever stops would otherwise vanish from the queue silently.
     """
     rows, seen = [], set(done)
+    induced = self_induced_names({(r.get("scan_uuid") or "").strip() for r in done.values()} - {""})
+    # every name any source offers, read first: a derivative is judged against all of them, not
+    # only against the ones that happen to come earlier in the file
+    known = set(done)
+    for path, col, _ in SOURCES:
+        if os.path.isfile(path):
+            with open(path, newline="", encoding="utf-8") as f:
+                known |= {(r.get(col) or "").strip().lower().removeprefix("www.") for r in csv.DictReader(f)}
+    skipped = 0
     for path, col, datecol in SOURCES:
         if not os.path.isfile(path):
             continue
         with open(path, newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
-                d = (row.get(col) or "").strip().lower().lstrip("www.")
+                # removeprefix, not lstrip: lstrip("www.") strips CHARACTERS, so `ww17.x` became
+                # `17.x` here and `wwf.vn` would have become `f.vn` -- names nobody ever reported
+                d = (row.get(col) or "").strip().lower().removeprefix("www.")
                 if not d or d in seen:
+                    continue
+                if d in induced or redirect_derivative(d, known):
+                    seen.add(d)
+                    skipped += 1
                     continue
                 a = (row.get("a_records") or "")
                 if a and all(ip in WILDCARD_IPS for ip in a.split(";") if ip):
@@ -142,6 +196,8 @@ def candidates(done: dict, want: int) -> list:
                     continue
                 seen.add(d)
                 rows.append((row.get(datecol) or "", d))
+    if skipped:
+        print(f"[i] {skipped} name(s) left out: they exist only because an earlier scan of ours led to them")
     rows.sort(key=lambda r: (r[0] == "", r[0]), reverse=True)
     return [d for _, d in rows[:want]]
 

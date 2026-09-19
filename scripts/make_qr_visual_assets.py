@@ -21,8 +21,12 @@ import qrcode
 from qrcode.constants import ERROR_CORRECT_M
 
 # Ensure repo root is in python path
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.insert(0, os.path.join(ROOT, "scripts", "dataset"))
+# Three levels, not two: this file moved to scripts/ in the September
+# reorganisation, which added a directory and left ROOT pointing at scripts/. The two figures
+# then went to scripts/papers/future_quishing/figures/, a path nothing reads, while the copies
+# the manuscript includes sat untouched. Same cause as abstract_text.py's parents[2].
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "scripts", "core", "dataset"))
 from gen_synthetic_qr import (t_clean, t_logo, t_blur, t_motion, t_saltpepper,
                               t_rotate, t_perspective, t_invert, t_contrast)
 
@@ -86,72 +90,29 @@ def build_degradations_gallery(out_path: str) -> None:
 
 
 
-RESTORE_SNAP = os.path.join("data", "processed", "qr", "restore_snapshot.json")
-
-
-def _recovery_pp() -> tuple[float, float]:
-    """(polarity, network) in percentage points of OpenCV DFR, from the confirmatory snapshot.
-
-    Falls back to the pilot's pair only if the snapshot is absent, and says so, because a figure
-    that silently prints a superseded number is exactly the failure this reads around."""
-    try:
-        r = json.load(open(RESTORE_SNAP, encoding="utf-8"))["by_arm"]["opencv"]
-        return r["raw"] - r["control"], r["control"] - r["restored"]
-    except Exception:
-        print(f"[!] {RESTORE_SNAP} missing — figure falls back to the PILOT's 16.1/20.7",
-              file=sys.stderr)
-        return 16.1, 20.7
-
 def build_restoration_demo(out_path: str) -> None:
-    rng = np.random.default_rng(101)
-    base_img = make_base_qr(SAMPLE_URL, box_size=8, border=4)
-    px = 8
-
-    # Create challenging combined degradation: Invert + Motion blur
-    inv_img = t_invert(base_img, 1.0, rng, px=px)
-    degraded = t_motion(inv_img, 0.40, rng, px=px, cal="modules")
-
-    # Step 1: Polarity correction
-    gray = np.array(degraded.convert("L"), dtype=float)
-    border_val = np.mean(np.concatenate([gray[0, :], gray[-1, :], gray[:, 0], gray[:, -1]]))
-    if border_val < 128:
-        polarity_corrected = ImageOps.invert(degraded)
-    else:
-        polarity_corrected = degraded
-
-    # Step 2: Simulated ConvNet restoration
-    restored_img = polarity_corrected.filter(ImageFilter.UnsharpMask(radius=2, percent=220, threshold=3))
-    # Step 3: Binarized thresholding
-    arr = np.array(restored_img.convert("L"))
-    thresh = np.mean(arr)
-    binarized = Image.fromarray(((arr > thresh) * 255).astype(np.uint8)).convert("RGB")
-
-    # The two recovery figures are MEASURED, not decorative, so they are read from the confirmatory
-    # snapshot rather than typed here. They were typed here once, as the pilot's +16.1/+20.7, and
-    # survived into the artwork for a day after the confirmatory run replaced the second of them.
-    pol, net = _recovery_pp()
-
+    """Schematic only: no simulated network output or unmeasured decode verdicts."""
+    fig, ax = plt.subplots(figsize=(7.4, 2.5))
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
     stages = [
-        ("(a) Adversarial Input\nInverted + Motion Blur", degraded, "DFR = 100% (Fail)", "#b0202a", "#fdf0f0", "bilinear"),
-        ("(b) Polarity Normalized\nDark Mode Inverted", polarity_corrected, f"+{pol:.1f} pp Recovery", "#b06e14", "#fef9ee", "bilinear"),
-        ("(c) ConvNet Restored\nDeblurred Modules", restored_img, f"+{net:.1f} pp Recovery", "#1c5491", "#eef5fc", "bilinear"),
-        ("(d) Binarized Output\nThresholded Payload", binarized, "Decoded Cleanly", "#196e46", "#effaf3", "nearest")
-    ]
-
-    fig, axes = plt.subplots(1, 4, figsize=(7.4, 2.3), dpi=300)
-    plt.subplots_adjust(wspace=0.28, left=0.02, right=0.98, top=0.74, bottom=0.20)
-
-    for i, (title, img, verdict, v_col, v_bg, interp) in enumerate(stages):
-        ax = axes[i]
-        ax.imshow(img, interpolation=interp)
-        ax.set_title(title, fontsize=7.5, pad=6, fontweight="bold", color="#1c5491", linespacing=1.2)
-        ax.text(0.5, -0.18, verdict, transform=ax.transAxes,
-                ha="center", va="top", fontsize=7.0, fontweight="bold", color=v_col,
-                bbox=dict(boxstyle="round,pad=0.28", facecolor=v_bg, edgecolor=v_col, lw=0.75))
-        ax.axis("off")
-
-    plt.savefig(out_path, format="pdf", bbox_inches="tight")
-    plt.close()
+        (0.16, "Raw image", "Try decoder cascade"),
+        (0.50, "Polarity normalisation", "If whole-image mean < 128:\ninvert, then retry cascade"),
+        (0.84, "Neural restoration", "Decode grayscale output\n(no binarisation)")]
+    for x, title, detail in stages:
+        ax.text(x, .68, title + "\n\n" + detail, ha="center", va="center",
+                fontsize=8, bbox=dict(boxstyle="round,pad=0.8", facecolor="#eef5fc",
+                                     edgecolor="#1c5491"))
+        ax.text(x, .22, "Any payload returned: stop", ha="center", fontsize=7)
+    for x1, x2 in ((.29, .36), (.65, .71)):
+        ax.annotate("", xy=(x2, .68), xytext=(x1, .68),
+                    arrowprops=dict(arrowstyle="->", color="#1c5491"))
+        ax.text((x1+x2)/2, .36, "No payload", ha="center", fontsize=6)
+    fig.text(.5, .04, "Processing schematic; not a restored-image example or a latency measurement.",
+             ha="center", fontsize=8)
+    fig.savefig(out_path, format="pdf", bbox_inches="tight")
+    plt.close(fig)
     print(f"[+] Rendered {out_path}")
 
 

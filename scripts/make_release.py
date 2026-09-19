@@ -33,6 +33,7 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
+from hostname import filter_capture_rows
 
 OPEN_FILES = [
     ("data/processed/dataset_url.csv", "data/dataset_url.csv"),
@@ -63,10 +64,20 @@ OPEN_FILES = [
 INFRA_FILES = [
     ("data/raw/host_infra/host_infra.csv", "data/host_infra.csv"),
     ("data/processed/infra/infra_dataset.csv", "data/infra_dataset.csv"),
+    ("data/processed/infra/hosted_stratum.csv", "data/hosted_stratum.csv"),
     ("data/processed/infra/funnel.csv", "data/funnel.csv"),
     ("data/processed/infra/accrual.csv", "data/accrual.csv"),
     ("data/processed/infra/label_audit.csv", "data/label_audit.csv"),
+    ("data/processed/infra/label_validation.csv", "data/label_validation.csv"),
+    ("data/processed/infra/label_review.csv", "data/label_review.csv"),
     ("data/processed/infra/wildcard_probe.csv", "data/wildcard_probe.csv"),
+    ("data/processed/infra/live_resolve_cache.csv", "data/live_resolve_cache.csv"),
+    ("data/interim/content_map.csv", "data/content_map.csv"),
+    ("data/processed/infra/capture_lag.csv", "data/capture_lag.csv"),
+    ("data/processed/infra/validation.csv", "data/validation.csv"),
+    ("data/processed/infra/hosting_class.csv", "data/hosting_class.csv"),
+    ("data/processed/infra/self_induced_hosts.csv", "data/self_induced_hosts.csv"),
+    ("data/processed/infra/vn_registrant_kind.csv", "data/vn_registrant_kind.csv"),
     ("data/raw/ct_benign/seen_domains.txt", "data/ct_benign_seen.txt"),
     ("data/raw/ct_benign_vn/seen_domains.txt", "data/ct_benign_vn_seen.txt"),
     ("data/docs/infra/README_infra.md", "README.md"),
@@ -214,13 +225,16 @@ def build_p4b(version, out):
     names. Draft until P4's trigger freezes v1.0.0."""
     missing = [s for s, _ in INFRA_FILES if not os.path.exists(s)]
     if missing:
-        raise SystemExit("Missing (run `make p4 p4b` first?): " + ", ".join(missing))
+        raise SystemExit("Missing (regenerate archive monitoring and `make p4b` first?): " + ", ".join(missing))
     _check_infra_guardrails(INFRA_FILES)
 
     want, seen = _infra_table_counts(), {}
     for src, arc in INFRA_FILES:
         if arc.startswith("data/"):
-            seen[arc] = _infra_rows(src)
+            # host_infra.csv is staged filtered (see below), so the count compared against the
+            # article is the count the deposit will hold, not the raw file's.
+            seen[arc] = (filter_capture_rows(src)[0] if arc == "data/host_infra.csv"
+                         else _infra_rows(src))
     drift = {k: (want[k], seen[k]) for k in want if k in seen and want[k] != seen[k]}
     if drift:
         raise SystemExit("the article and the deposit disagree on row counts "
@@ -231,18 +245,34 @@ def build_p4b(version, out):
     root = os.path.join(out, f"PhishVN-Infra_v{version}_open")
     if os.path.isdir(root):
         shutil.rmtree(root)
+    dropped_rows: list = []
     for src, arc in INFRA_FILES:
         dst = os.path.join(root, arc)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        shutil.copy2(src, dst)
+        # One file is not shipped verbatim. host_infra.csv carries rows whose domain column
+        # cannot hold a hostname -- a line torn by a collector that died mid-write, the
+        # 2026-07-20 backfill's URLs, a name split with a space -- every one of them with zero A
+        # records, so none carried infrastructure data and none can be conditioned on. The raw
+        # file keeps them because it is append-only and is the record of what was captured; the
+        # deposit is what a reader analyses, and it does not.
+        if arc == "data/host_infra.csv":
+            _, dropped_rows = filter_capture_rows(src, dst)
+        else:
+            shutil.copy2(src, dst)
 
     manifest = [f"PhishVN-Infra v{version} — MANIFEST (SHA-256)", ""]
     for _, arc in sorted(INFRA_FILES, key=lambda t: t[1]):
         f = os.path.join(root, arc)
         manifest.append(f"{_sha256(f)}  {arc}  ({os.path.getsize(f)} bytes)")
+    if dropped_rows:
+        manifest += ["", f"data/host_infra.csv omits {len(dropped_rows)} row(s) of the collector's "
+                         "append-only log whose domain column does not hold a hostname (all with "
+                         "no A record, so no infrastructure was captured for them). Source line "
+                         "numbers and values:"]
+        manifest += [f"  line {n}: {v!r}" for n, v in dropped_rows]
     if "draft" in version:
-        manifest += ["", "DRAFT: v1.0.0 freezes at the time-stamped pre-specified trigger of the companion",
-                     "study; these files are the build snapshot, not the deposit.",
+        manifest += ["", "DRAFT: these files are a review-preparation snapshot, not a public deposit.",
+                     "P4 is discontinued; its historical trigger does not authorize this release.",
                      "Written at freeze: " + ", ".join(INFRA_AT_FREEZE)]
     open(os.path.join(root, "MANIFEST.txt"), "w", encoding="utf-8").write(
         "\n".join(manifest) + "\n")

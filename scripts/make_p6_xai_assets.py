@@ -536,8 +536,10 @@ def gen_charcnn_strata():
         f"characters or more ({seeds} seeds; the same harness reproduces the tabular model's "
         f"${cell('cc_short','CatBoost'):.3f}$ and ${cell('long','CatBoost'):.3f}$). The blind spot "
         f"is therefore not an artefact of the feature schema: it survives a model that never sees "
-        f"a suffix length. What the representation buys is a smaller version of it --- pooled "
-        f"\\texttt{{.vn}} falls from ${vn_ref:.3f}$ to ${vn_cnn:.3f}$ --- bought by tripling the "
+        # No em dashes: the 2026-09 pass stripped them from the papers' prose and could not reach
+        # a generated file, which is rewritten by this script rather than edited.
+        f"a suffix length. What the representation buys is a smaller version of it, pooled "
+        f"\\texttt{{.vn}} falling from ${vn_ref:.3f}$ to ${vn_cnn:.3f}$, bought by tripling the "
         f"miss rate on the long-suffix stratum that holds most of the phishing, so it redistributes "
         f"the error rather than repairing it, which is the budget the rest of this section prices.\n")
 
@@ -754,15 +756,24 @@ def gen_drift_verdict():
     """Experiment 3's generated sentence: the recall drift and the sign+strength of the
     recall-vs-attribution co-variation, honestly labelled as descriptive (too few windows for a
     significance claim)."""
+    from itertools import permutations
     from scipy.stats import spearmanr
     d = pd.read_csv("data/processed/p6/p6_attribution_drift.csv")
     corr = pd.read_csv("data/processed/p6/p6_attribution_drift_corr.csv").set_index("feature")
     nwin = len(d)
     r0, r1 = d["recall"].iloc[0], d["recall"].iloc[-1]
     c = corr["recall_shap_spearman"]
-    # At n=6 the two-sided Spearman p cannot go below 0.0028 and needs |rho| >= 0.886 to clear 0.05,
-    # which none of these does. Printing the p-values is the honest fix.
-    p = {f: spearmanr(d.recall, d["shap_" + f]).pvalue for f in ("dot_cnt", "dash_cnt", "tld_len")}
+    # Enumerate all 6! pairings, including their multiplicities if ranks tie.
+    # These are descriptive reference p-values: temporal exchangeability is not established.
+    if nwin != 6:
+        raise ValueError("Revisit the drift permutation analysis when the window count changes")
+    p = {}
+    for f in ("dot_cnt", "dash_cnt", "tld_len"):
+        values = d["shap_" + f].to_numpy()
+        observed = abs(spearmanr(d.recall, values).statistic)
+        null = [abs(spearmanr(d.recall, pairing).statistic)
+                for pairing in permutations(values)]
+        p[f] = float(np.mean(np.asarray(null) >= observed - 1e-12))
     return (
             f"Applied forward over {nwin} equal-count time windows, the deployed detector's recall "
             f"on freshly-arrived phishing falls from ${r0:.3f}$ to ${r1:.3f}$, and the attribution "
@@ -770,9 +781,10 @@ def gen_drift_verdict():
             f"$|$SHAP$|$ is ${c['dot_cnt']:+.2f}$ for \\texttt{{dot\\_cnt}} and "
             f"${c['dash_cnt']:+.2f}$ for \\texttt{{dash\\_cnt}} (both rise as recall falls) and "
             f"${c['tld_len']:+.2f}$ for \\texttt{{tld\\_len}} (the dominant prior weakens). "
-            f"\\emph{{None of the three is significant}}: two-sided $p = {p['dot_cnt']:.3f}$, "
-            f"${p['dash_cnt']:.3f}$ and ${p['tld_len']:.3f}$ respectively, and with $n={nwin}$ "
-            f"windows no Spearman correlation below $|\\rho| = 0.886$ can reach $p<0.05$ at all. "
+            f"Two-sided reference $p$-values from all $6! = 720$ pairings are "
+            f"${p['dot_cnt']:.3f}$, ${p['dash_cnt']:.3f}$ and ${p['tld_len']:.3f}$ respectively. "
+            f"None reaches $p<0.05$ even under the exchangeability assumption; temporal "
+            f"dependence between windows is not accounted for by this reference test. "
             f"With only {nwin} windows this is a descriptive co-movement, not a powered lead/lag "
             f"test, and we report it as one: the candidate the discussion floated is not "
             f"refuted and not established, and what it earns is a powered replication in the "

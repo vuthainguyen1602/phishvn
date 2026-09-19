@@ -122,35 +122,19 @@ def main():
     gens = (sorted(df.loc[df["y"] == 1, "gen_model"].dropna().astype(str).unique())
             if "gen_model" in df else ["?"])
 
-    def pct(k):
-        v = np.asarray(res[k], float)
-        return f"{v.mean() * 100:.1f}\\,$\\pm$\\,{v.std() * 100:.1f}"
-
     n_test_ph = n_ph * 0.3
     pp_per_msg = 100.0 / n_test_ph
-    tex = f"""\\begin{{table*}}[t]
-\\caption{{\\textbf{{Preliminary}} obfuscation-robustness of the content detector on the
-LLM-generated adversarial corpus ({n_ph} simulated phishing $+$ {n_be} benign; generator
-{', '.join(gens)}); mean\\,$\\pm$\\,std over {SEEDS} stratified splits. Both contrasts are
-paired on the splits and corrected; $q$ is Benjamini--Hochberg across the two.}}
-\\label{{tab:llmrobust}}
-\\small
-\\begin{{tabular}}{{l c c}}
-\\toprule
-Test condition (content detector) & Miss rate (\\%) & vs.\\ reference \\\\
-\\midrule
-Clean phishing (held-out) & {pct('miss_clean')} & --- \\\\
-\\midrule
-Obfuscated phishing, naive detector & {pct('miss_obf')} & {verdict_cell(T['evasion'])} \\\\
-Obfuscated phishing, adversarially trained & {pct('miss_obf_adv')} & \
-{verdict_cell(T['repair'])} \\\\
-\\bottomrule
-\\end{{tabular}}
-\\end{{table*}}"""
-    os.makedirs(SEC, exist_ok=True)
-    write_generated(os.path.join(SEC, "tab_llm_robust.tex"), tex)
-
-    write_generated(os.path.join(SEC, "gen_llm_robust_verdict.tex"), verdict_sentence(res, T, n_ph))
+    # The character-obfuscation result was WITHDRAWN from the paper on 2026-08-19 (259a2db): a
+    # char-n-gram representation is near-immune to character noise, so a low miss rate under that
+    # attack is a property of the representation and not of the detector, and reporting it was
+    # claiming a contrast the design cannot lose. The commit deleted tab_llm_robust.tex and
+    # gen_llm_robust_verdict.tex from the repository but left this block writing them, so any run
+    # of this script put both back. Nothing \inputs them, and the only reader they had was a
+    # claims check keyed to a table the manuscript does not print, which made p3's check count
+    # swing 115/116 depending on who had last run the generator. Withdrawal completed 2026-09-06.
+    #
+    # What stays is everything below: the detectors D0/D1/D2 the band study needs, and the corpus
+    # counts the section opens with. Only the withdrawn table and its verdict sentence are gone.
 
     # The corpus size the SECTION opens with, generated rather than typed. It was typed, and it
     # went stale: the prose introduced the study as "73 ... 54" (the 2026-07 pilot) while the
@@ -181,45 +165,9 @@ Obfuscated phishing, adversarially trained & {pct('miss_obf_adv')} & \
           f"= {pp_per_msg:.1f} pp per message")
 
 
-def verdict_cell(t: dict) -> str:
-    """One table cell: the paired difference and its adjusted verdict, or an explicit null."""
-    mark = "" if t["reject"] else r"\,\textsuperscript{ns}"
-    return (rf"${t['mean'] * 100:+.1f}$\,pp, {fmt_p(t['p_adj'], 'q')}{mark}")
-
-
-def verdict_sentence(res: dict, T: dict, n_ph: int) -> str:
-    """The claim the tests support, written so it cannot outrun them.
-
-    Whichever way the numbers fall, the sentence has to be generated: the previous version of
-    this section argued a null from mean +/- sd alone, which is the error the rest of the paper
-    exists to avoid, and it would have been just as wrong to argue a positive that way."""
-    ev, rp = T["evasion"], T["repair"]
-    mc = np.mean(res["miss_clean"]) * 100
-    mo = np.mean(res["miss_obf"]) * 100
-    ma = np.mean(res["miss_obf_adv"]) * 100
-    per_msg = 100.0 / (n_ph * 0.3)
-
-    def one(t, name, direction):
-        if t["reject"]:
-            return (f"{name} is supported: ${t['mean'] * 100:+.1f}$\\,pp paired, "
-                    f"{t['wins']}/{t['k']} splits in the predicted direction, corrected "
-                    f"{fmt_p(t['p'])}, BH-adjusted {fmt_p(t['p_adj'], 'q')}")
-        return (f"{name} is \\emph{{not}} supported at this sample size: "
-                f"${t['mean'] * 100:+.1f}$\\,pp paired, {t['wins']}/{t['k']} splits in the "
-                f"predicted direction, corrected {fmt_p(t['p'])}, BH-adjusted "
-                f"{fmt_p(t['p_adj'], 'q')}")
-
-    return (
-        f"On the {n_ph}-source adversarial corpus the miss rate runs ${mc:.1f}\\%$ clean, "
-        f"${mo:.1f}\\%$ obfuscated and ${ma:.1f}\\%$ obfuscated against the adversarially "
-        f"trained detector, and the two time-stamped pre-specified contrasts are tested rather than read off "
-        f"those means. Evasion: {one(ev, 'obfuscation raising the miss rate', 1)}. Repair: "
-        f"{one(rp, 'adversarial training lowering it again', -1)}. Both are paired on the "
-        f"{ev['k']} splits and corrected for the resampling overlap; one misclassified message "
-        f"still moves a split's miss rate by ${per_msg:.1f}$\\,pp, so the corpus bounds what "
-        f"either verdict can be"
-    )
-
+# verdict_cell() and verdict_sentence() went with the withdrawn table on 2026-09-06: one
+# rendered its cells, the other wrote the sentence that read them, and nothing else called
+# either. The tests they formatted are still computed in tests() and still printed by main().
 
 if __name__ == "__main__":
     main()

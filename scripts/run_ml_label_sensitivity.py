@@ -205,7 +205,7 @@ per-window F1.}}
 \\small
 \\resizebox{{\\linewidth}}{{!}}{{%
 \\begin{{tabular}}{{lrrrr}}
-\\toprule Policy & Original AUTC & Corrected AUTC & $\\Delta$AUTC & Retrains \\\\
+\\toprule Policy & Original AUTC & Perturbed AUTC & $\\Delta$AUTC & Retrains \\\\
 \\midrule
 """ + "\n".join(lines) + """
 \\bottomrule

@@ -70,12 +70,25 @@ def add_basic_feats(df):
 
 
 def add_label(df):
+    # Unknown is not a negative. Respect explicit training eligibility and reject
+    # unresolved labels instead of silently converting them to benign.
+    if "training_eligible" in df:
+        eligible = df["training_eligible"].astype(str).str.lower().isin({"1", "true"})
+        if not eligible.all():
+            raise ValueError("observations excluded by the selected label policy cannot be used for training/evaluation")
     lab = df["label"]
     if lab.dtype != object:
-        df["y"] = pd.to_numeric(lab, errors="coerce").fillna(0).astype(int)
+        numeric = pd.to_numeric(lab, errors="coerce")
+        if not numeric.isin([0, 1]).all():
+            raise ValueError("labels must be known binary outcomes, not missing or unknown")
+        df["y"] = numeric.astype(int)
     else:
         pos = {"phishing", "phish", "spam", "smishing", "malicious", "1"}
-        df["y"] = lab.astype(str).str.lower().isin(pos).astype(int)
+        negative = {"benign", "legitimate", "ham", "0"}
+        normalized = lab.astype(str).str.strip().str.lower()
+        if not normalized.isin(pos | negative).all():
+            raise ValueError("unknown label cannot be silently converted to benign")
+        df["y"] = normalized.isin(pos).astype(int)
     return df
 
 
