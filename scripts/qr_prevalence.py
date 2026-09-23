@@ -115,7 +115,8 @@ def main() -> int:
     by_page: dict = {}
     for r in rd:
         pg = r.get("source_page", "")
-        ok = (r.get("payload_kind") in ("messenger",)) or r.get("same_site") == "1"
+        # str(): rows read from the CSV carry "1", rows classed just above by triage() carry 1
+        ok = (r.get("payload_kind") in ("messenger",)) or str(r.get("same_site")) == "1"
         by_page[pg] = by_page.get(pg, True) and ok
     benign = sum(1 for pg, ok in by_page.items() if pg and ok)
 
@@ -132,7 +133,9 @@ def main() -> int:
     print(f"  unique pages with a QR  {pages:>8,}   {100*pages/examined:6.2f}%  <- the prevalence")
     print(f"  unique payloads         {payloads:>8,}")
     print(f"  of those, benign        {benign:>8,}   (messenger link, or same site as the page)")
-    print(f"  quishing found          {max(0, pages - benign):>8,}")
+    # NOT a count of quishing: whether a page is quishing is the author's verdict, kept in
+    # papers/future_quishing/qr_adjudication.csv and counted by make_quishing_assets.py
+    print(f"  not benign by triage    {max(0, pages - benign):>8,}   <- to be read by hand, not 'quishing found'")
     if scans and pages and scans != pages:
         print(f"\n  Note: {scans} rows describe {pages} page(s). Reporting rows as prevalence would "
               f"overstate it by {scans/pages:.1f}x.")

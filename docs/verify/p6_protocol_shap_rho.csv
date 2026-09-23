@@ -1,0 +1,3 @@
+family,rho_between_mean,rho_between_sd,rho_within_random_mean,rho_within_random_sd,rho_within_temporal_mean,rho_within_temporal_sd,n_seeds
+CatBoost,0.9682,0.0182,0.9725,0.0158,0.9669,0.0125,5
+XGBoost,0.9678,0.0156,0.9581,0.0168,0.9843,0.0069,5

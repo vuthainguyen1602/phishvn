@@ -1,0 +1,705 @@
+#!/usr/bin/env python3
+"""
+watch_urlscan_brands.py — Live feed of Vietnamese brand-impersonation phishing, via urlscan search.
+
+Replaces the SOURCE behind watch_chongluadao.py, not the parser: its mirror (urls.txt) last moved
+2024-05-16 and the site went client-side-rendered, so ~83% of what it scans is already dead.
+Searches `page.domain:*<brand>*` — Vietnamese phishing puts the domestic brand in the hostname;
+`page.country:VN` misses almost all of it since hosting is abroad (only 2.7% is on .vn).
+Cheap because a search hit carries the scan UUID (download the existing capture: no scan quota,
+no 45 s wait) and the infra fields (ASN, server, TLS/domain age, HTTP status) come with it.
+
+Free-tier limits (verified 2026-07-26): `verdicts.overall.malicious` is NOT searchable, so every
+hit is a candidate — the official-domain filter plus downstream labelling do the rest; `page.tld`,
+`page.asnname`, `page.mimeType` return HTTP 400; `total` saturates at 10,000; search quota is
+1,000/day (~one search per token per run).
+
+THE CAPTURE BUDGET IS A QUEUE, NOT A CLIFF (2026-08-25). --max-captures bounds wall-clock, not
+quota. But a run that found more than the cap used to write the surplus straight into
+seen_domains.txt with found=0, and seen_domains is what the next run filters on, so those domains
+could never be captured again: 458 of 2,886 rows carry an identity with no page behind it. urlscan
+keeps the scan permanently, so none of that loss was necessary. Every attempt is now logged to
+captures.csv (append-only, one row per try, the ledger shape the CT capture bridge keeps), and each
+run spends whatever budget the new candidates leave on identities an earlier run missed, oldest first.
+
+detections.csv is therefore the identity record — one row per domain, at first detection, never
+rewritten — and captures.csv is where a later capture of that domain lands. Anything that wants
+page content must read BOTH; the corpus manifest builder does.
+
+RUN:
+  python scripts/watch_urlscan_brands.py --days 2 --max-captures 60
+  python scripts/watch_urlscan_brands.py --days 30 --no-capture   # backfill identities only
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import re
+import sys
+import time
+
+import requests
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(_HERE))
+try:
+    from _path import ROOT, add_script_dirs
+    add_script_dirs()
+except ImportError:  # flat public-mirror layout
+    ROOT = os.path.dirname(_HERE)
+from watch_chongluadao import clean_title, fetch_external_js
+from vn_filter import (FOREIGN_CCTLDS, FOREIGN_KEYWORDS, VN_CONTEXT_TOKENS,
+                       NON_POLICE_CONGANH, NON_PUBLIC_SERVICE_DVC)
+
+H = {"User-Agent": "Mozilla/5.0 (research; contact thaivn_ph@utc.edu.vn)"}
+SEARCH = "https://urlscan.io/api/v1/search/"
+OUTDIR = os.path.join("data", "raw", "urlscan_brands")
+SEEN_PATH = os.path.join(OUTDIR, "seen_domains.txt")
+
+# One row per capture ATTEMPT, so the retry state is derivable and the history auditable — the
+# same ledger shape ct_capture_bridge.py keeps for the CT feed.
+CAP_FIELDS = ["domain", "brand", "attempt", "attempted_at", "scan_uuid", "found",
+              "dom_file", "shot_file", "js_count", "title"]
+DET_PATH = os.path.join(OUTDIR, "detections.csv")
+DOM_DIR = os.path.join("data", "raw", "landing_live")
+SHOT_DIR = os.path.join("data", "raw", "landing_live_shots")
+JS_DIR = os.path.join("data", "raw", "landing_live_js")
+TOKENS_JSON = os.path.join("data", "processed", "brand_tokens.json")
+
+# Curated, not brand_tokens.json wholesale (1,798 tokens incl. generic place names -- noise, not
+# coverage): only Vietnamese-specific strings a foreign hostname has no innocent reason to carry.
+# `shopee`/`momo` excluded: 4,679 and 1,305 scans in 30 days, nearly all legitimate.
+DEFAULT_TOKENS = [
+    # banks & consumer finance
+    "vietcombank", "techcombank", "vietinbank", "agribank", "bidv", "sacombank", "vpbank",
+    "hdbank", "lienvietpostbank", "lpbank", "namabank", "vietabank", "pvcombank", "shinhanbank",
+    "mbbank", "baovietbank", "bacabank", "kienlongbank", "saigonbank", "dongabank", "coopbank",
+    "seabank", "msbbank", "ocbbank", "vibbank", "shbbank", "abbank", "ncbbank", "bvbank",
+    "vietbank", "scbbank", "eximbank", "pgbank", "timobank", "cakebyvpbank", "mcredit",
+    "fecredit", "homecredit", "vcbdigibank", "smartbanking",
+    # Added 2026-09-13 by the same test that excluded `momo` and `shopee`: 30-day urlscan volume
+    # for `page.domain:*token*`, which is how much legitimate traffic a token drags in. Kept below
+    # 400 scans; the number measured is beside each. Banks large enough to be worth impersonating
+    # were simply missing from the list, not decided against.
+    "tpbank",            # 232
+    "oceanbank",         # 17
+    "gpbank",            # 24
+    "cbbank",            # 214
+    "indovinabank",      # 5
+    "vietcapitalbank",   # 10
+    "hongleongbank",     # 0
+    # REJECTED by the same measurement, recorded so nobody re-adds them: acb 5,049 (three letters
+    # inside a thousand innocent words), zalo 672, ninjavan 3,374, jtexpress 2,265. `momo` 4,679
+    # and `shopee` 1,305 were already excluded above for the same reason.
+    #
+    # `publicbank` was added on 2026-09-13 and REMOVED the same day, which is the case worth
+    # recording. Its 30-day volume was a harmless 161, so the volume test passed it. Running the
+    # sweep is what caught it: `republicbankcu.co.com`, `api.republicbanklockbox.com` and
+    # `seattlepublicbanking.pages.dev`, all United States banks, because token_at_boundary exempts
+    # tokens of 9+ characters from the boundary rule and `publicbank` sits inside `republicbank`.
+    # Volume measures how much legitimate traffic a token drags in; it cannot see a token that is a
+    # substring of a larger foreign brand. A long token needs both tests.
+    # biometric & banking auth (Quyết định 2345)
+    "sinhtrachoc", "xacthuckhuonmat", "capnhatsinhtrachoc", "nfccancuoc",
+    # e-wallets, payment & fintech
+    "zalopay", "vnpay", "viettelmoney", "viettelpay", "shopeepay", "napas247",
+    # utilities: electricity & water bills (EVN)
+    "cskhevn", "dienluctphcm", "dienluchanoi", "evnquocgia", "dienluc", "evnspc", "evnnpc", "evnhcm",
+    # telecom / carriers & SIM registration / 5G
+    "viettel", "vinaphone", "mobifone", "vnpt", "fptshop", "fpttelecom",
+    "chuanhoathuebao", "khoathuebao", "nangcapsim", "sim5g", "thuebaovn",
+    # public administration, police, courts, warrants & civil identity (phường, xã, công an, căn cước)
+    "vneid", "dichvucong", "dichvucongquocgia", "dancuquocgia", "dinhdanhdientu",
+    "cancuoccongdan", "cancuoc", "bocongan", "conganxaphuong", "conganhanoi", "congantphcm",
+    "canhsatgiaothong", "chinhphu", "cucanchinangmang", "vienkiemsat", "lenhbat", "toaanhanoi", "toaanhcm",
+    # taxes, invoices & business filings
+    "thuedientu", "tongcucthue", "etaxmobile", "hoadondientu", "tracuuthue", "cucthue", "hoanthuetncn",
+    # social insurance, welfare & healthcare
+    "baohiemxahoi", "vssid", "baohiemyte", "baoviet", "baohiembaoviet", "sosuckhoedientu",
+    "trocapxahoi", "luonghuu", "baohiemthatnghiep", "ansinhxahoi",
+    # universities & major institutions
+    "daihocbachkhoa", "kinhtequocdan", "ngoaithuong", "fptedu",
+    # UTC, UTC2 (Trường Đại học Giao thông vận tải) & major universities
+    "giaothongvantai", "dhgtvt", "utc2", "utcedu", "hocviennganhang", "hocvientaichinh",
+    "daihockinhte", "daihocyduoc",
+    # online jobs, tasks, recruiting & modeling scams
+    "vieclamonline", "vieclamtainha", "congtacvien", "chotdon", "kiemtienonline", "maunhi",
+    # quick online loans & credit checks
+    "vaynhanh", "vaytienonline", "vaytinchap", "xoanoxau", "tracuucic", "hdsaison",
+    # airlines, resort & entertainment vouchers
+    "vietnamairlines", "vietjetair", "bambooairways", "vinpearl", "sunworld",
+    # stocks, trading & investment funds
+    "dautuchungkhoan", "vpschungkhoan", "ssichungkhoan", "dragoncapital", "vinacapital",
+    # traffic violations & licenses (GPLX)
+    "gplx", "tracuugplx",
+    # retail promotions, giveaways & lucky wheels
+    "dienmayxanh", "thegioididong", "vongquaymayman", "tangquatrien", "nhanquamienphi", "trungthuong",
+    # concert tickets, event booking & ticketbox scams
+    "veconcert", "ticketbox",
+    # summer camp & spiritual / retreat scams (trại hè, khóa tu)
+    "traihecongan", "khoatumuahe",
+    # logistics & retail services
+    "viettelpost", "vnpost", "giaohangtietkiem", "vietlott", "pharmacity",
+    # e-commerce & retail impersonation (grounded on RMIT VN E-Commerce Phishing dataset 2022-2024)
+    "ctvshopee", "vnshopee", "shopeevn", "shopeevip", "shopeemall", "shopeereward",
+    "lazadavn", "lazadamall", "ctvlazada", "tuyendunglazada",
+    "tikivn", "tikivip", "tikictv",
+    "sendovn", "ctvsendo", "sendomall",
+    "tiktokshopvn",
+    "shopaeon", "aeonmall", "aeshopvn",
+    "giaohangnhanh", "ghtk", "ghnexpress", "ghnvn",
+    "ahamove",           # 0, measured 2026-09-13
+    "spxvn",             # 0
+    "xanhsm",            # 0, the taxi brand a 2025 wave of fake driver-recruitment pages used
+    "payoo",             # 7
+]
+
+# A SECOND LENS, on page content: the token list is blind to e.g. `56bfrd3jrn.pages.dev` rendering
+# a bank login under a random name. Measured 7-day window 2026-07-26 (found -> surviving the
+# official-domain filter): "Ngan hang" 44->28, "Dich vu cong" 33->10, *nhanqua* 6->6.
+# `page.title:"Dang nhap"` is absent despite the highest volume: it matches every VN login page.
+CONTENT_QUERIES = [
+    ('page.title:"Ngân hàng"', "title:bank"),
+    ('page.title:"Dịch vụ công"', "title:public-service"),
+    ('page.title:"Sinh trắc học"', "title:sinhtrachoc"),
+    ('page.title:"Chuẩn hóa thông tin"', "title:sim-chuanhoa"),
+    ('page.title:"Khóa thuê bao"', "title:sim-khoa"),
+    ('page.title:"Việc làm online"', "title:vieclam"),
+    ('page.title:"Cộng tác viên"', "title:congtacvien"),
+    ('page.title:"Vay tiền nhanh"', "title:vaytien"),
+    ('page.title:"Đầu tư chứng khoán"', "title:chungkhoan"),
+    ('page.title:"Bảo hiểm xã hội"', "title:bhxh"),
+    ('page.title:"Tra cứu thuế"', "title:tax-lookup"),
+    ('page.title:"Căn cước công dân"', "title:cccd"),
+    ('page.title:"Định danh điện tử"', "title:vneid-portal"),
+    ('page.title:"Đại học Giao thông vận tải"', "title:utc"),
+    ('page.title:"Trường ĐH Giao thông vận tải"', "title:utc"),
+    ('page.title:"UTC2"', "title:utc2"),
+    ('page.title:"Phân hiệu Giao thông vận tải"', "title:utc2"),
+    ('page.title:"Viện kiểm sát"', "title:vienkiemsat"),
+    ('page.title:"Trúng thưởng"', "title:trungthuong"),
+    ('page.title:"Tri ân khách hàng"', "title:trian"),
+    ('page.title:"Vé concert"', "title:concert"),
+    ('page.title:"Khóa tu mùa hè"', "title:khoatu"),
+    ('page.title:"Trại hè"', "title:traihe"),
+    # e-commerce lure titles
+    ('page.title:"Shopee tri ân"', "title:shopee-trian"),
+    ('page.title:"Quà tặng Shopee"', "title:shopee-gift"),
+    ('page.title:"Shopee trúng thưởng"', "title:shopee-reward"),
+    ('page.title:"Lazada tri ân"', "title:lazada-trian"),
+    ('page.title:"Cộng tác viên Shopee"', "title:ctv-shopee"),
+    ('page.title:"Cộng tác viên Tiki"', "title:ctv-tiki"),
+    ('page.title:"Cộng tác viên Lazada"', "title:ctv-lazada"),
+    ('page.title:"TikTok Shop" AND (page.domain:*.vn OR page.country:VN)', "title:tiktokshop-vn"),
+    ('page.title:"Cộng tác viên TikTok"', "title:ctv-tiktok"),
+    ('page.title:"Cộng tác viên TikTok Shop"', "title:ctv-tiktokshop"),
+    ('page.title:"Nhiệm vụ TikTok"', "title:nhiemvu-tiktok"),
+    ("task.url:*xacminh*", "url:xacminh"),      # "xác minh" — verify (identity/account)
+    ("task.url:*nhanqua*", "url:nhanqua"),      # "nhận quà" — claim a gift
+    ("task.url:*dangnhap*", "url:dangnhap"),    # "đăng nhập" — log in, as a PATH not a title
+    ("task.url:*sinhtrachoc*", "url:sinhtrachoc"),
+    ("task.url:*chuanhoathuebao*", "url:chuanhoathuebao"),
+    ("task.url:*tracuuthue*", "url:tracuuthue"),# "tra cứu thuế" — tax lookup lure
+    ("task.url:*giaothongvantai*", "url:giaothongvantai"),
+    ("task.url:*utc2*", "url:utc2"),
+    ("task.url:*dhgtvt*", "url:dhgtvt"),
+    ("task.url:*vaytien*", "url:vaytien"),
+    ("task.url:*trungthuong*", "url:trungthuong"),
+    ("task.url:*tri-an*", "url:tri-an"),
+    ("task.url:*trian-khachhang*", "url:trian-khachhang"),
+    ("task.url:*veconcert*", "url:veconcert"),
+    # e-commerce lure URLs
+    ("task.url:*ctvshopee*", "url:ctvshopee"),
+    ("task.url:*tikivip*", "url:tikivip"),
+    ("task.url:*lazadavn*", "url:lazadavn"),
+    ("task.url:*shopeevn*", "url:shopeevn"),
+    ("task.url:*shopee*trian*", "url:shopee-trian"),
+    ("task.url:*shopee*nhanqua*", "url:shopee-nhanqua"),
+    ("task.url:*shopee*quatang*", "url:shopee-gift"),
+    ("task.url:*lazada*nhanqua*", "url:lazada-nhanqua"),
+    ("task.url:*tiki*khuyenmai*", "url:tiki-khuyenmai"),
+]
+
+FIELDS = ["domain", "first_detected", "brand", "scan_uuid", "task_url", "scan_time", "status",
+          "country", "asn", "asnname", "server", "domain_age_days", "tls_age_days",
+          "found", "dom_file", "shot_file", "js_count", "title"]
+
+
+def load_official() -> set[str]:
+    """Registered domains of the real organisations, so `*vietcombank*` does not report
+    vietcombank.com.vn as an impersonation. Sourced from the trusted-org registry the project
+    already builds; falls back to a minimal set if the file is absent."""
+    # Real domains the filter kept reporting: techcombank.com / viettel.com.vn (first run); vnpay.vn /
+    # chinhphu.vn (`chinhphu` alone returned 40 legitimate government subdomains, since chinhphu.vn
+    # escapes the .gov.vn suffix rule).
+    official = {"techcombank.com", "viettel.com.vn", "vnpay.vn", "chinhphu.vn", "zalopay.vn",
+                # from the content lens: the Government newspaper and a real digital bank
+                "baochinhphu.vn", "vikkibank.vn",
+                "vietcombank.com.vn", "techcombank.com.vn", "vietinbank.vn", "agribank.com.vn",
+                "bidv.com.vn", "sacombank.com.vn", "vpbank.com.vn", "tpbank.vn", "acb.com.vn",
+                "viettel.vn", "vinaphone.com.vn", "mobifone.vn", "vnpt.com.vn", "vnpt.vn",
+                "vneid.gov.vn", "vnpost.vn", "viettelpost.com.vn", "viettelmoney.vn",
+                "vietteltelecom.vn", "hdbank.com.vn", "namabank.com.vn", "pvcombank.com.vn",
+                "shinhan.com.vn", "giaohangtietkiem.vn", "fptshop.com.vn", "fpt.vn",
+                "baovietbank.com.vn", "baoviet.com.vn", "bacabank.com.vn", "kienlongbank.com",
+                "saigonbank.com.vn", "dongabank.com.vn", "co-opbank.vn", "fecredit.com.vn",
+                "homecredit.vn", "shopeepay.vn", "bocongan.gov.vn", "dichvucong.gov.vn",
+                "dancuquocgia.gov.vn", "csgt.vn", "gdt.gov.vn", "baohiemxahoi.gov.vn",
+                "hust.edu.vn", "neu.edu.vn", "ftu.edu.vn", "fpt.edu.vn", "vnu.edu.vn",
+                "utc.edu.vn", "utc2.edu.vn", "ba.edu.vn", "hvtc.edu.vn", "ueh.edu.vn", "ump.edu.vn",
+                "evn.com.vn", "evn.vn", "vietnamairlines.com", "vietjetair.com", "bambooairways.com",
+                "vinpearl.com", "sunworld.vn", "hdsaison.com.vn", "ssi.com.vn", "vndirect.com.vn",
+                "vps.com.vn", "tcbs.com.vn", "dragoncapital.com", "dienmayxanh.com", "thegioididong.com",
+                "topzone.vn", "vksndtc.gov.vn", "toaan.gov.vn",
+                # verified insurance, joint-venture banks & policy banks
+                "baolonginsurance.com.vn", "baohiembaolong.vn", "baolong.vn",
+                "vbsp.vn", "vbsp.org.vn", "vrbank.com.vn", "vrb.com.vn",
+                "sacombank-sbr.vn", "ub.com.vn", "ub.edu.vn",
+                # official commercial banks & digital banks
+                "lpbank.com.vn", "seabank.com.vn", "ocb.com.vn", "msb.com.vn",
+                "vib.com.vn", "shb.com.vn", "abbank.vn", "ncb-bank.vn",
+                "bvbank.net.vn", "bvb.com.vn", "vietbank.com.vn", "scb.com.vn",
+                "eximbank.com.vn", "pgbank.com.vn", "timo.vn", "cake.vn",
+                # consumer finance, ticketing & FPT services
+                "mcredit.com.vn", "lottefinance.vn", "miraeasset.com.vn", "shinhanfinance.com.vn",
+                "ticketbox.vn", "fpt.ai", "fpttelecom.net", "fpt.com.vn",
+                # foreign official homonyms (prevent false positive collection)
+                "agribank.com.ph", "agribank.org.uk", "ticketbox.lk",
+                # official telecom subsidiaries, provincial units & e-invoice portals
+                "vnptit.vn", "vnpt-tsc.vn", "vnptdongnai.vn", "vnpthaiphong.vn",
+                "vnpthungyen.com.vn", "vnptthanhhoa.vn", "vnpt-einvoice.com.vn", "vnpt-invoice.com.vn", "vnptigate.vn",
+                "mobifonemoney.vn", "mobiedu.vn", "evnspc.vn", "coopbank.vn",
+                # verified official e-commerce & shipping platforms
+                "shopee.vn", "lazada.vn", "tiki.vn", "sendo.vn", "aeon.com.vn", "aeon.vn",
+                "giaohangnhanh.vn", "ghn.vn", "ghn.tech", "giaohangtietkiem.vn",
+                # enterprise partners, software vendors & legitimate organisations
+                "sobanhang.com", "truedoc.vn", "siten.vn", "bluestar.com.vn",
+                "nghebanker.com", "hairbank.net", "honguyenvietnam.org", "isb.vn",
+                "jobfinance.vn", "dinhlucsoccer.vn",
+                # notary, technology & industrial compound entities
+                "dichvucongchung.com.vn", "dichvucongchung.org", "dichvucongchung.com", "dichvucongchung.info",
+                "dichvucongnghe.net", "dichvucongnghe.io.vn", "dichvucongnghiephc.vn", "dichvucongnghiepdl.com",
+                "xaydungvadichvucongnghiepvanan.com", "dichvucongtybacninh.vn"}
+    try:
+        with open(TOKENS_JSON, encoding="utf-8") as f:
+            for t in json.load(f).get("tokens", []):
+                for d in t.get("domains", []):
+                    official.add(d.lower().removeprefix("www."))
+    except (OSError, ValueError):
+        pass
+    return official
+
+
+def token_at_boundary(domain: str, tok: str) -> bool:
+    """urlscan's `*token*` is raw substring match. Require the token to start a label or follow
+    a non-letter: keeps `bidv-diem`, `vietcombank88`, `ffsandusr0vpbank`; drops `shinebri(ghtk)its`,
+    `o(tpbank)`, `charlessschwa(bbank)`. Tokens of 9+ chars are exempt — too long to land inside an
+    English word by accident; keeps run-ons like `tamtaiviet-vietcombank`."""
+    for label in re.split(r"[.\-_]", domain.lower()):
+        i = label.find(tok)
+        while i != -1:
+            if i == 0 or not label[i - 1].isalpha() or len(tok) >= 9:
+                return True
+            i = label.find(tok, i + 1)
+    return False
+
+
+# Registration under these is restricted to verified government bodies / accredited schools, so a
+# hostname there is the real organisation -- without it every provincial subdomain is a candidate.
+RESTRICTED_SUFFIXES = (".gov.vn", ".edu.vn", ".mil.vn")
+
+
+def is_official(domain: str, official: set[str]) -> bool:
+    d = domain.lower().rstrip(".")
+    if d.endswith(RESTRICTED_SUFFIXES):
+        return True
+    return any(d == o or d.endswith("." + o) for o in official)
+
+
+# --- scans this project submitted are not discoveries -------------------------------------------
+# The search runs with the project's API key, and urlscan returns a key's own unlisted scans to
+# it. Any other tool that submits with the same key therefore feeds this one: measured
+# 2026-09-19, 137 of 1,793 identities here had been "found" through a scan the project itself had
+# submitted hours earlier. Where the submitted name was a wildcard-parked typo domain, the scan
+# landed on the same name with `17.` or `ww17.` prepended, that new hostname carried the brand
+# token, it was recorded, enriched, submitted again by the downstream tool, and came back one
+# level deeper: `17.17.17.17.17.17.bidv.vercelapp.com`. One manufactured hostname per cycle.
+# The test is on PROVENANCE (whose scan is this?), never on what the page or the name looks like.
+# Which ledgers hold the project's scan ids is host-specific, so the list lives beside this file
+# in `own_scan_ledgers.local` (one CSV path per line, each with a `scan_uuid` column) and is not
+# part of the exported copy. No list, no filter -- and the run says so, every run.
+OWN_LEDGERS_FILE = os.path.join(_HERE, "own_scan_ledgers.local")
+SELF_FIELDS = ["domain", "brand", "scan_uuid", "task_url", "scan_time", "seen_at", "ledger"]
+
+
+def own_scan_ids(list_path: str = None) -> dict[str, str]:
+    """scan id -> the ledger that claims it. Empty when no ledger list is present."""
+    list_path = list_path or OWN_LEDGERS_FILE
+    own: dict[str, str] = {}
+    if not os.path.exists(list_path):
+        return own
+    with open(list_path, encoding="utf-8") as lf:
+        paths = [l.strip() for l in lf if l.strip() and not l.lstrip().startswith("#")]
+    for path in paths:
+        if not os.path.exists(path):
+            continue
+        with open(path, newline="", encoding="utf-8", errors="replace") as f:
+            for r in csv.DictReader(f):
+                u = (r.get("scan_uuid") or "").strip()
+                if u:
+                    own.setdefault(u, path)
+    return own
+
+
+SELF_REPORT = os.path.join("data", "processed", "infra", "self_induced_hosts.csv")
+_PREPENDED = re.compile(r"^(?:ww\d{0,3}|\d{1,3})\.")
+
+
+def report_self_induced(det_path: str, out_path: str = SELF_REPORT) -> tuple[int, int]:
+    """Which identities ALREADY in detections.csv were reached through one of the project's own
+    scans. The filter above only acts from the day it was deployed; the rows written before it are
+    never rewritten, so this is how a reader of the data separates them. It ships in the deposit,
+    so it carries hostnames and nothing else: not which tool made the scan, and not the scan id,
+    which would open an unlisted scan to whoever holds it."""
+    own = own_scan_ids()
+    with open(det_path, newline="", encoding="utf-8", errors="replace") as f:
+        rows = list(csv.DictReader(f))
+    hit = [r for r in rows if (r.get("scan_uuid") or "").strip() in own]
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    tmp = out_path + ".tmp"
+    with open(tmp, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=["domain", "first_detected", "prepended_label"])
+        w.writeheader()
+        for r in sorted(hit, key=lambda r: (r.get("first_detected", ""), r["domain"])):
+            w.writerow({"domain": r["domain"], "first_detected": r.get("first_detected", ""),
+                        "prepended_label": int(bool(_PREPENDED.match(r["domain"])))})
+    os.replace(tmp, out_path)
+    return len(hit), len(rows)
+
+
+def load_seen(path: str = None) -> set[str]:
+    path = path or SEEN_PATH
+    if not os.path.exists(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        # normalize here too, so legacy www.* lines still suppress their apex twin
+        return {l.strip().removeprefix("www.") for l in f if l.strip()}
+
+
+def search(query: str, days: int, key: str, size: int = 100) -> list[dict]:
+    """`query` is a full urlscan lucene expression, not just a token, so the caller can search by
+    page CONTENT as well as by hostname — see CONTENT_QUERIES."""
+    q = f"{query} AND date:>now-{days}d"
+    for attempt in range(3):
+        try:
+            r = requests.get(SEARCH, headers={**H, "API-Key": key},
+                             params={"q": q, "size": size}, timeout=30)
+        except requests.RequestException:
+            time.sleep(3)
+            continue
+        if r.status_code == 200:
+            return r.json().get("results", [])
+        if r.status_code == 429:            # search quota is per-minute as well as per-day
+            time.sleep(6 * (attempt + 1))
+            continue
+        print(f"[!] {query}: HTTP {r.status_code} {r.text[:90]}")
+        return []
+    return []
+
+
+def download_capture(uuid: str, key: str) -> dict:
+    """Pull an EXISTING scan's DOM, screenshot and external JS. Unlike the ChongLuaDao path this
+    submits nothing, so it costs `retrieve` quota (10,000/day) rather than a scan."""
+    out = {"found": 0, "dom_file": "", "shot_file": "", "js_count": 0, "title": ""}
+    try:
+        rr = requests.get(f"https://urlscan.io/api/v1/result/{uuid}/",
+                          headers={**H, "API-Key": key}, timeout=30)
+        if rr.status_code != 200:
+            return out
+        res = rr.json()
+    except (requests.RequestException, ValueError):
+        return out
+    out["found"] = 1
+    out["title"] = clean_title((res.get("page") or {}).get("title", ""))
+    try:
+        dr = requests.get(f"https://urlscan.io/dom/{uuid}/", headers={**H, "API-Key": key}, timeout=30)
+        if dr.status_code == 200 and dr.text:
+            os.makedirs(DOM_DIR, exist_ok=True)
+            out["dom_file"] = os.path.join(DOM_DIR, f"{uuid}.html")
+            open(out["dom_file"], "w", encoding="utf-8").write(dr.text)
+    except requests.RequestException:
+        pass
+    try:
+        sr = requests.get(f"https://urlscan.io/screenshots/{uuid}.png",
+                          headers={**H, "API-Key": key}, timeout=30)
+        if sr.status_code == 200 and sr.content:
+            os.makedirs(SHOT_DIR, exist_ok=True)
+            out["shot_file"] = os.path.join(SHOT_DIR, f"{uuid}.png")
+            open(out["shot_file"], "wb").write(sr.content)
+    except requests.RequestException:
+        pass
+    try:
+        _, out["js_count"] = fetch_external_js(uuid, res, key, JS_DIR)
+    except Exception:
+        pass
+    return out
+
+
+def capture_ledger(path: str) -> tuple[dict[str, int], set[str]]:
+    """Attempts per domain and the set already captured, read back from the append-only log."""
+    tries: dict[str, int] = {}
+    done: set[str] = set()
+    if not os.path.exists(path):
+        return tries, done
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            d = (r.get("domain") or "").strip().lower()
+            if not d:
+                continue
+            tries[d] = tries.get(d, 0) + 1
+            if str(r.get("found") or "").strip() == "1":
+                done.add(d)
+    return tries, done
+
+
+def pending_captures(det_path: str, tries: dict[str, int], done: set[str],
+                     max_attempts: int, skip: set[str],
+                     since: str = "") -> list[tuple[str, str, str, str]]:
+    """Identities with no page behind them yet: the run that found them ran out of budget, or the
+    retrieve failed. Oldest first -- the lure up longest is closest to going dark, and ordering is
+    the only real choice here, since the budget decides how many rather than which.
+
+    A row with no scan_uuid is skipped rather than retried forever. `skip` holds what this run has
+    already tried, without which the drain immediately re-fetches the candidate that just failed.
+
+    `since` holds the queue to identities first detected on or after that date. The backlog reaches
+    back to the day the feed started, and draining all of it puts several hundred captures into the
+    corpus at once -- a decision about the corpus, not the collector, belonging to whoever rebuilds
+    the manifest. Deferred rows stay queueable: nothing is dropped, and lifting the date drains them."""
+    out: list[tuple[str, str, str, str]] = []
+    if not os.path.exists(det_path):
+        return out
+    with open(det_path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            dom = (r.get("domain") or "").strip().lower()
+            uuid = (r.get("scan_uuid") or "").strip()
+            if not dom or not uuid or dom in done or dom in skip:
+                continue
+            if str(r.get("found") or "").strip() == "1":
+                continue
+            if tries.get(dom, 0) >= max_attempts:
+                continue
+            # string compare on ISO-8601: first_detected is written by this script as
+            # "%Y-%m-%dT%H:%M:%S", so the first ten characters sort as dates without parsing
+            if since and (r.get("first_detected") or "")[:10] < since:
+                continue
+            out.append(((r.get("first_detected") or ""), dom, (r.get("brand") or ""), uuid))
+    out.sort()
+    return out
+
+
+def log_attempt(writer, fh, dom: str, brand: str, attempt: int, when: str,
+                uuid: str, got: dict) -> None:
+    """One row per try, flushed immediately: a crash between the DOM landing on disk and the
+    ledger recording it would leave the file orphaned and the domain queued forever."""
+    writer.writerow({"domain": dom, "brand": brand, "attempt": attempt, "attempted_at": when,
+                     "scan_uuid": uuid, "found": got.get("found", 0),
+                     "dom_file": got.get("dom_file", ""), "shot_file": got.get("shot_file", ""),
+                     "js_count": got.get("js_count", 0), "title": got.get("title", "")})
+    fh.flush()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--days", type=int, default=2, help="search window; 2 suits a 6-hourly cron")
+    ap.add_argument("--tokens", nargs="+", default=DEFAULT_TOKENS)
+    ap.add_argument("--max-captures", type=int, default=60,
+                    help="cap DOM/screenshot downloads per run (wall-clock, not quota)")
+    ap.add_argument("--no-capture", action="store_true", help="record identities only")
+    ap.add_argument("--queue-since", default="", metavar="YYYY-MM-DD",
+                    help="only retry identities first detected on or after this date; older ones "
+                         "stay queued but untouched, so a backlog does not enter the corpus on a "
+                         "cron tick's say-so (empty: no limit)")
+    ap.add_argument("--max-attempts", type=int, default=3,
+                    help="give up on an identity after this many capture tries (urlscan can "
+                         "delete or unlist a scan; retrying it forever starves the queue)")
+    ap.add_argument("--no-content", action="store_true",
+                    help="hostname-token passes only, skipping the page-content queries")
+    ap.add_argument("--delay", type=float, default=1.2, help="seconds between searches")
+    ap.add_argument("--outdir", default=OUTDIR,
+                    help="where detections.csv and seen_domains.txt live; override to trial "
+                         "new queries without writing into the live feed")
+    ap.add_argument("--report-self-induced", action="store_true",
+                    help="write which recorded identities were reached through the project's own "
+                         "scans (data/processed/infra/self_induced_hosts.csv) and search nothing")
+    args = ap.parse_args()
+    det_path = os.path.join(args.outdir, "detections.csv")
+    if args.report_self_induced:
+        n, total = report_self_induced(det_path)
+        print(f"[+] {n} of {total} identities reached through the project's own scans -> {SELF_REPORT}")
+        return 0
+    seen_path = os.path.join(args.outdir, "seen_domains.txt")
+
+    key = os.environ.get("URLSCAN_API_KEY", "")
+    if not key:
+        print("[!] URLSCAN_API_KEY not set (source scripts/.env)")
+        return 1
+
+    official, seen = load_official(), load_seen(seen_path)
+    os.makedirs(args.outdir, exist_ok=True)
+    fresh = not os.path.exists(det_path)
+    own = own_scan_ids()
+    print(f"[i] own-scan filter: {len(own):,} scan ids from {len(set(own.values()))} ledger(s)" if own
+          else "[!] own-scan filter OFF: no own_scan_ledgers.local beside this script, or no ids in it")
+    self_induced: dict[tuple[str, str], dict] = {}
+
+    # collect first, capture second: one domain can match several tokens, and capturing inside the
+    # search loop would spend the capture budget on whichever token happened to be searched first
+    cand: dict[str, dict] = {}
+    passes = [(f"page.domain:*{t}*", t, t) for t in args.tokens]
+    if not args.no_content:
+        passes += [(q, label, None) for q, label in CONTENT_QUERIES]
+    for query, label, tok in passes:
+        for r in search(query, args.days, key):
+            page, task = r.get("page") or {}, r.get("task") or {}
+            # www and apex are the same site to urlscan (same scan content); keeping both
+            # double-counted every hit whose submitter used the www form
+            dom = (page.get("domain") or task.get("domain") or "").lower().removeprefix("www.")
+            if not dom or dom in seen or dom in cand or is_official(dom, official):
+                continue
+            # Screen out foreign sovereign ccTLDs (.in, .lk, .ph, .id, .br, etc.)
+            if any(dom.endswith(sfx) for sfx in FOREIGN_CCTLDS):
+                continue
+            # Screen out foreign language lure words (Indonesian, Portuguese, etc.)
+            if FOREIGN_KEYWORDS.search(dom) and not VN_CONTEXT_TOKENS.search(dom):
+                continue
+            # Screen out "Bồ Công Anh" (dandelion) falsely matching "bocongan" / "congan"
+            if NON_POLICE_CONGANH.search(dom):
+                continue
+            # Screen out non-public-service compound businesses ("dịch vụ công nghiệp/nghệ/chứng/ty") falsely matching "dichvucong"
+            if NON_PUBLIC_SERVICE_DVC.search(dom):
+                continue
+            # the boundary rule only means something for a hostname token; a content hit has no
+            # token in the name at all, which is the entire point of that pass
+            if tok is not None and not token_at_boundary(dom, tok):
+                continue
+            # Last, so that what is logged is what WOULD have been recorded. The name is not
+            # marked seen: if somebody else's scan reports it later, that is a discovery.
+            if r.get("_id", "") in own:
+                self_induced.setdefault((dom, r["_id"]), {
+                    "domain": dom, "brand": label, "scan_uuid": r["_id"],
+                    "task_url": task.get("url", ""), "scan_time": task.get("time", ""),
+                    "ledger": own[r["_id"]]})
+                continue
+            cand[dom] = {
+                "domain": dom, "brand": label, "scan_uuid": r.get("_id", ""),
+                "task_url": task.get("url", ""), "scan_time": task.get("time", ""),
+                "status": page.get("status", ""), "country": page.get("country", ""),
+                "asn": page.get("asn", ""), "asnname": page.get("asnname", ""),
+                "server": page.get("server", ""),
+                "domain_age_days": page.get("domainAgeDays", ""),
+                "tls_age_days": page.get("tlsAgeDays", ""),
+            }
+        time.sleep(args.delay)
+
+    print(f"[i] {len(args.tokens)} tokens + {0 if args.no_content else len(CONTENT_QUERIES)} content queries, window {args.days}d -> {len(cand)} new candidate domains")
+    # a name an independent scan ALSO reported this run is a candidate, not a self-induced one
+    self_rows = [v for (d, _), v in self_induced.items() if d not in cand]
+    if self_rows:
+        si_path = os.path.join(args.outdir, "self_induced.csv")
+        have = set()
+        if os.path.exists(si_path):
+            with open(si_path, newline="", encoding="utf-8") as f:
+                have = {(r["domain"], r["scan_uuid"]) for r in csv.DictReader(f)}
+        new_rows = [v for v in self_rows if (v["domain"], v["scan_uuid"]) not in have]
+        with open(si_path, "a", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=SELF_FIELDS)
+            if not have and f.tell() == 0:
+                w.writeheader()
+            for v in new_rows:
+                w.writerow({**v, "seen_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+        print(f"[i] {len({v['domain'] for v in self_rows})} name(s) reached only through scans this "
+              f"project submitted: not recorded as detections ({len(new_rows)} new row(s) in self_induced.csv)")
+
+    now = time.strftime("%Y-%m-%dT%H:%M:%S")
+    n_cap = 0
+    cap_path = os.path.join(args.outdir, "captures.csv")
+    tries, done = capture_ledger(cap_path)
+    attempted: set[str] = set()      # tried in THIS run — one try per domain per run
+    if not os.path.exists(cap_path):
+        with open(cap_path, "w", newline="", encoding="utf-8") as cf:
+            csv.DictWriter(cf, fieldnames=CAP_FIELDS).writeheader()
+
+    # New candidates go first: they are the freshest lures, so a capture spent on one is likeliest to
+    # find a page still standing. The queue below keeps the rest rather than losing them.
+    if cand:
+        with open(det_path, "a", newline="", encoding="utf-8") as f, \
+                open(seen_path, "a", encoding="utf-8") as sf, \
+                open(cap_path, "a", newline="", encoding="utf-8") as cf:
+            w = csv.DictWriter(f, fieldnames=FIELDS)
+            cw = csv.DictWriter(cf, fieldnames=CAP_FIELDS)
+            if fresh:
+                w.writeheader()
+            for dom, row in cand.items():
+                row["first_detected"] = now
+                if not args.no_capture and n_cap < args.max_captures and row["scan_uuid"]:
+                    row.update(download_capture(row["scan_uuid"], key))
+                    n_cap += 1
+                    # the ledger counts are kept current in-run: read once at startup they would
+                    # number every attempt of this run "1" and hide a repeat try from the cap
+                    tries[dom] = tries.get(dom, 0) + 1
+                    attempted.add(dom)
+                    if row.get("found"):
+                        done.add(dom)
+                    log_attempt(cw, cf, dom, row["brand"], tries[dom], now,
+                                row["scan_uuid"], row)
+                else:
+                    row.update({"found": 0, "dom_file": "", "shot_file": "", "js_count": 0,
+                                "title": ""})
+                w.writerow({k: row.get(k, "") for k in FIELDS})
+                sf.write(dom + "\n")
+                print(f"[+] {dom} ({row['brand']}) -> {'captured' if row.get('found') else 'queued'}")
+                f.flush()
+                sf.flush()
+
+    # Whatever budget the new candidates left is spent on identities an earlier run could not reach.
+    # detections.csv is NOT rewritten when one lands -- it is the identity record, and a paper built
+    # on it must not shift under a later capture. captures.csv carries the page.
+    n_retry = n_ok = 0
+    queue = ([] if args.no_capture
+             else pending_captures(det_path, tries, done, args.max_attempts, attempted,
+                                   args.queue_since))
+    # counted HERE, before the drain: the loop below adds every domain it touches to `done`, so asking
+    # afterwards returns the deferred rows only and the difference collapses to zero.
+    n_held = 0
+    if args.queue_since and not args.no_capture:
+        n_held = max(0, len(pending_captures(det_path, tries, done, args.max_attempts,
+                                             attempted)) - len(queue))
+    if queue and n_cap < args.max_captures:
+        with open(cap_path, "a", newline="", encoding="utf-8") as cf:
+            cw = csv.DictWriter(cf, fieldnames=CAP_FIELDS)
+            for first, dom, brand, uuid in queue:
+                if n_cap >= args.max_captures:
+                    break
+                got = download_capture(uuid, key)
+                n_cap += 1
+                n_retry += 1
+                n_ok += 1 if got.get("found") else 0
+                tries[dom] = tries.get(dom, 0) + 1
+                attempted.add(dom)
+                if got.get("found"):
+                    done.add(dom)
+                log_attempt(cw, cf, dom, brand, tries[dom], now, uuid, got)
+                print(f"[r] {dom} ({brand}, first seen {first[:10]}, try {tries[dom]}) -> "
+                      f"{'captured' if got.get('found') else 'missed'}")
+    left = max(0, len(queue) - n_retry)
+    held = f", {n_held} held back by --queue-since {args.queue_since}" if n_held else ""
+    print(f"Done: {len(cand)} new, {n_cap} captured "
+          f"({n_retry} from the queue, {n_ok} landed, {left} still waiting{held}) -> {det_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
