@@ -134,6 +134,12 @@ DEFAULT_TOKENS = [
     "dautuchungkhoan", "vpschungkhoan", "ssichungkhoan", "dragoncapital", "vinacapital",
     # traffic violations & licenses (GPLX)
     "gplx", "tracuugplx",
+    # traffic-fine notices (phạt nguội). Added 2026-09-26: the makefamousapp.com mini-app kit
+    # family (miniapp-thongbaophatnguoi-{vnpay,viettel,bidv}) was caught only through its bank
+    # and carrier tokens; a skin of that kit naming no brand would have passed unseen. The
+    # official lookup is csgt.vn, already on the whitelist. Mid-study note: the revisit cohort
+    # admits from this feed, so this widening carries a dated amendment in PREREG_subdomain.
+    "phatnguoi", "thongbaophatnguoi",
     # retail promotions, giveaways & lucky wheels
     "dienmayxanh", "thegioididong", "vongquaymayman", "tangquatrien", "nhanquamienphi", "trungthuong",
     # concert tickets, event booking & ticketbox scams
