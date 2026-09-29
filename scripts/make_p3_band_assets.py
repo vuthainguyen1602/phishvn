@@ -181,7 +181,15 @@ def main() -> None:
 
     def verdict(key):
         t = T[key]
-        return (f"$\\Delta = {t['mean']*100:+.1f}$\\,pp, {t['consistent']}/{SEEDS} splits in the "
+        # Corrected 95% CI (mean ± t_{.975,k-1} · corrected SE): the reviewers asked for the
+        # interval, not only the verdict, on every main paired difference.
+        ci = ""
+        if t.get("se"):
+            from scipy import stats as _st
+            half = _st.t.ppf(0.975, t["k"] - 1) * t["se"] * 100
+            ci = (f", corrected $95\\%$ CI $[{t['mean']*100 - half:+.1f}, "
+                  f"{t['mean']*100 + half:+.1f}]$\\,pp")
+        return (f"$\\Delta = {t['mean']*100:+.1f}$\\,pp{ci}, {t['consistent']}/{SEEDS} splits in the "
                 # Both symbols printed in full: stripping the label off the adjusted value
                 # produced "BH-adjusted 0.11" beside "BH-adjusted q<0.001", i.e. the same
                 # quantity rendered two ways within one sentence.
@@ -191,21 +199,22 @@ def main() -> None:
     survivors = [t for t in tests if t["reject"]]
     naive_hits = [t for t in tests if t["p_naive"] < 0.05]
 
+    fpr_cell = {d: f"{np.mean(fpr[d])*100:.1f}\\,$\\pm$\\,{np.std(fpr[d])*100:.1f}"
+                for d in ("D0", "D1", "D2")}
     tex = rf"""\begin{{table*}}[t]
-\caption{{Paraphrase evasion with \textbf{{attack strength controlled}}: all $2\times{n_ph}$
-rewrites calibrated into token-Jaccard band $[{lo_b:.2f}, {hi_b:.2f}]$; mean $\pm$ std over {SEEDS} stratified
-70/30 splits.}}
+\caption{{Paraphrase evasion, attack strength controlled: all $2\times{n_ph}$ rewrites in
+$J \in [{lo_b:.2f}, {hi_b:.2f}]$, mean $\pm$ std over {SEEDS} splits. \emph{{n/a}}: D2 under character obfuscation is outside the pre-specified design (no hypothesis concerns it) and was not computed.}}
 \label{{tab:paraphraseband}}
 \small
-\begin{{tabular}}{{l c c c}}
+\begin{{tabular}}{{l c c c c}}
 \toprule
-& \multicolumn{{3}}{{c}}{{Miss rate (\%) on held-out phishing}} \\
+& \multicolumn{{3}}{{c}}{{Miss rate (\%) on held-out phishing}} & \\
 \cmidrule(lr){{2-4}}
-Detector & Clean & Char-obfuscated & Paraphrased \\
+Detector & Clean & Char-obfuscated & Paraphrased & Benign FPR (\%) \\
 \midrule
-D0 naive & {cell('D0_A0')} & {cell('D0_A1')} & {cell('D0_A2')} \\
-D1 adv.\ trained on char.\ obfuscation & n/a & {cell('D1_A1')} & {cell('D1_A2')} \\
-D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
+D0 naive & {cell('D0_A0')} & {cell('D0_A1')} & {cell('D0_A2')} & {fpr_cell['D0']} \\
+D1 adv.\ trained on char.\ obfuscation & {cell('D1_A0')} & {cell('D1_A1')} & {cell('D1_A2')} & {fpr_cell['D1']} \\
+D2 adv.\ trained on paraphrases & {cell('D2_A0')} & n/a & {cell('D2_A2')} & {fpr_cell['D2']} \\
 \bottomrule
 \end{{tabular}}\end{{table*}}"""
     os.makedirs(SEC, exist_ok=True)
@@ -221,7 +230,7 @@ D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
     h2 = T["H2"]
     prev_h2_rejected = bool(int(prev["H2"]["reject"])) if "H2" in prev else False
     if not h2["reject"]:
-        h2_clause = "still does nothing for" if not prev_h2_rejected else "no longer moves"
+        h2_clause = "still resolves no change on" if not prev_h2_rejected else "no longer moves"
     elif h2["mean"] > 0:
         h2_clause = ("still worsens" if prev_h2_rejected else "now worsens")
     else:
@@ -230,15 +239,17 @@ D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
             if survivors else
             "Controlling the attack does not rescue the measurement.")
     prose = (
-        f"\\textbf{{{head}}} With every rewrite held in $[{lo_b:.2f}, {hi_b:.2f}]$ (achieved mean "
-        f"${j_all.mean():.3f}$ over {len(j_all)} rewrites; test-role mean ${j_test.mean():.3f}$) "
-        f"the naive detector's miss rate goes from ${mean['D0_A0']*100:.1f}\\%$ on clean held-out "
-        f"phishing to ${mean['D0_A2']*100:.1f}\\%$ on their rewrites ({verdict('H1')}), against "
-        f"${mean['D0_A1']*100:.1f}\\%$ under the character attack ({verdict('ctrl')}). "
+        f"\\textbf{{{head}}} Every rewrite is held in $[{lo_b:.2f}, {hi_b:.2f}]$ (achieved mean "
+        f"${j_all.mean():.3f}$ over {len(j_all)} rewrites; test-role mean ${j_test.mean():.3f}$). "
+        f"The naive detector's miss rate rises from ${mean['D0_A0']*100:.1f}\\%$ on clean held-out "
+        f"phishing to ${mean['D0_A2']*100:.1f}\\%$ on their rewrites ({verdict('H1')}). "
+        f"Under the character attack it is ${mean['D0_A1']*100:.1f}\\%$ (against clean: "
+        f"{verdict('ctrl')}). Paraphrase against character obfuscation: {verdict('H1b')}. "
         f"Character-level adversarial training still repairs the character attack "
-        f"(${mean['D0_A1']*100:.1f}\\% \\rightarrow {mean['D1_A1']*100:.1f}\\%$) and "
-        f"{h2_clause} the paraphrase attack (${mean['D1_A2']*100:.1f}\\%$, {verdict('H2')}); "
-        f"training on disjoint rewrites gives ${mean['D2_A2']*100:.1f}\\%$ ({verdict('H3')}). "
+        f"(${mean['D0_A1']*100:.1f}\\% \\rightarrow {mean['D1_A1']*100:.1f}\\%$), but it "
+        f"{h2_clause} the paraphrase attack (${mean['D1_A2']*100:.1f}\\%$ against D0's "
+        f"${mean['D0_A2']*100:.1f}\\%$: {verdict('H2')}). "
+        f"Training on disjoint rewrites gives ${mean['D2_A2']*100:.1f}\\%$ (against D0: {verdict('H3')}). "
         f"{len(survivors)} of the {len(tests)} contrasts survive Benjamini--Hochberg on the "
         f"corrected test, against {len(naive_hits)} that the uncorrected test would license.\n\n"
         f"The time-stamped pre-specified expectation was that H1 would \\emph{{grow}} once strength was fixed, "
@@ -253,22 +264,14 @@ D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
         + " We report that comparison descriptively and attach no test to it: the two runs share "
         "their sources, so they are not independent, and nothing about the difference was "
         "randomised.\n\n"
-        + ("What the successor buys, then, is not a $p$-value but a defensible one. The "
-           "predecessor could not distinguish a detector that survives paraphrasing from an "
-           "attack that was too gentle to test it; this design can, because the attack is now a "
-           "fixed, reported quantity rather than a label. "
+        + ("With strength fixed, the design separates a detector that survives paraphrasing "
+           "from an attack too gentle to test it. "
            if survivors else
-           "The question therefore remains open, but it is now open in a much narrower way. "
-           "The predecessor left two explanations standing: the detector really is robust, or "
-           "the attack was too gentle to tell. With strength pinned to a band at the strong end "
-           "of what the predecessor produced, the second explanation is no longer available at "
-           "this corpus size: what remains unresolved is resolution, not construct validity. ")
+           "The question therefore remains open, but the predecessor's second explanation (an "
+           "attack too gentle to test the detector) is no longer available at this corpus size. ")
         + "Per the registered stopping rule the corpus is not extended again and the band is not "
-        "adjusted; the residual limits are the ones the design cannot remove: "
-        f"{n_test_ph:.0f} held-out phishing messages per split make a single miss worth "
-        f"${100.0/n_test_ph:.1f}$\\,pp, and the rewriter is the model that authored the corpus, "
-        f"so shared style still places the attack nearer the training distribution than an "
-        f"independent attacker's would.\n")
+        "adjusted; the per-miss resolution and the shared-generator bias stated for the "
+        "uncontrolled run apply unchanged.\n")
     write_generated(os.path.join(SEC, "gen_paraphrase_band_verdict.tex"), prose)
 
     pd.DataFrame([{"key": t["key"], "label": t["label"], "mean_pp": t["mean"] * 100,

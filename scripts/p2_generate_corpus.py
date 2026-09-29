@@ -17,8 +17,9 @@ one nobody can check, and what stays withheld is the generation PROMPTING, which
 gen_llm_adversarial.py and is not exported. Rewrites are artefacts; the procedure that
 manufactures fresh ones at a chosen attack strength is not.
 
-This file's samples were authored by the model 'claude-fable-5' acting as ONE generator under the
-P2 guardrail prompt. For the leave-one-LLM-out experiment, add >=2 more generators by running
+This file's samples -- the phishing lures AND the benign controls -- were authored by the model
+'claude-fable-5' acting as ONE generator: lures under the P2 guardrail prompt, controls under a
+legitimate service-notification instruction. No message here is human-written. For the leave-one-LLM-out experiment, add >=2 more generators by running
 gen_llm_adversarial.py with an API key (or a local Ollama model); their rows merge by gen_model.
 
 RUN:  python scripts/p2_generate_corpus.py
@@ -257,13 +258,17 @@ def main():
     print(f"[+] {llm_path}: {n} simulated phishing (gen_model={GEN_MODEL})")
 
     with open(ben_path, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["channel", "label", "scenario", "collected_at", "text"])
+        # The controls are synthetic too: GEN_MODEL wrote them in the same sessions as the lures,
+        # under a service-notification instruction. gen_model records that; is_llm stays 0 here
+        # because downstream it means "watermarked simulated phishing", not "machine-written".
+        w = csv.DictWriter(f, fieldnames=["channel", "label", "scenario", "collected_at",
+                                          "gen_model", "text"])
         w.writeheader()
         m = 0
         for (ch, sc), texts in benign.items():
             for t in texts:
                 w.writerow({"channel": ch, "label": "benign", "scenario": sc,
-                            "collected_at": "", "text": t})
+                            "collected_at": "", "gen_model": GEN_MODEL, "text": t})
                 m += 1
     print(f"[+] {ben_path}: {m} benign control messages")
 

@@ -206,7 +206,7 @@ def make_content_fusion_table(text_encoder="tfidf", tag=""):
                 else f" Content encoder: \\mbox{{{text_encoder}}} (frozen embeddings).")
     tex = f"""\\begin{{table*}}[t]
 \\caption{{Content/JS modality ablation on {n_ph} phishing $+$ {n_be} benign
-Vietnamese-content pages; mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.{enc_note}}}
+Vietnamese-content pages; mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.{enc_note}{FPR_NOTE}}}
 \\label{{tab:content_fusion{tag}}}
 \\small
 \\begin{{tabular}}{{l c c c c}}
@@ -286,6 +286,9 @@ SWEEP_METRICS = (
 )
 SWEEP_DIRECTIONS = (("uc", ("content+url", "content")),   # adding URL to content
                     ("cu", ("content+url", "url")))       # adding content to URL
+# Revision R1/R2 (2026-09): every caption that reports FPR@90%rec. carries the test-curve
+# operating-point disclosure, so the optimism caveat travels with the number.
+FPR_NOTE = " FPR@90\\%rec.: test-curve operating point (Section~\\ref{sec:setup})."
 ENC_LABEL = {"tfidf": "char-$n$-gram TF-IDF", "phobert": "PhoBERT",
              "phobert-v2": "PhoBERT-v2", "visobert": "ViSoBERT", "xlm-r": "XLM-R"}
 
@@ -385,10 +388,9 @@ def make_encoder_sweep_table(encoders=("tfidf", "phobert", "phobert-v2", "visobe
             for v in verdicts)
 
     tex_a = f"""\\begin{{table*}}[t]
-\\caption{{\\textbf{{Adding the URL channel to content}}: paired (content$+$URL) $-$ (content),
-{num_word(k)} encoders, four metrics, same {n_ph}$+${n_ph} subset and {FUSION_SEEDS} splits. Benjamini--Hochberg $q$ per
-column; \\textbf{{bold}} marks an improvement at $q<0.05$. Reverse direction:
-Table~\\ref{{tab:encsweepcu}}.{note}}}
+\\caption{{\\textbf{{Adding URL features to content}}: paired (content$+$URL) $-$ (content),
+same {n_ph}$+${n_ph} pages and {FUSION_SEEDS} splits for every encoder. BH $q$ per column; \\textbf{{bold}}: improvement at $q<0.05$.
+Reverse direction: Table~\\ref{{tab:encsweepcu}}.{note}{FPR_NOTE}}}
 \\label{{tab:encsweep}}
 \\small\\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{l cc rl rl rl rl}}
@@ -405,9 +407,8 @@ Content encoder & content & fusion & {head_metrics} \\\\
                     "(" + ", ".join(f"{m} {n_win(('uc', m))}/{k}" for m, _l, _s in SWEEP_METRICS) + ")")
 
     tex_b = f"""\\begin{{table*}}[t]
-\\caption{{\\textbf{{Adding the content channel to URL features}}: paired (content$+$URL) $-$ (URL)
-against the encoder-independent URL-only row of Table~\\ref{{tab:content_fusion}}; subset, splits,
-columns, correction and bolding as in Table~\\ref{{tab:encsweep}}.}}
+\\caption{{\\textbf{{Adding content to URL features}}: paired (content$+$URL) $-$ (URL); layout
+and correction as in Table~\\ref{{tab:encsweep}}.}}
 \\label{{tab:encsweepcu}}
 \\small\\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{l c rl rl rl rl}}
@@ -443,9 +444,9 @@ Content encoder & fusion & {head_metrics} \\\\
     uc_rank = uc["PR-AUC"] + uc["ROC-AUC"]
     uc_thr = uc["F1"] + uc["FPR@R0.90"]
     if uc_thr == 0 and uc_rank == 0:
-        closing = ("on this subset the URL channel improves neither the operating point nor the "
-                   "ranking for any encoder, so no measurable contribution of its own survives "
-                   "once content is present")
+        closing = ("on this subset no URL-channel improvement to either the operating point or "
+                   "the ranking is statistically resolved for any encoder once content is present, "
+                   "which is not evidence that the contribution is zero")
     elif uc_thr == 0:
         closing = ("on this subset the URL channel moves no operating point for any encoder, and "
                    "what survives of its own contribution is a ranking gain confined to "
@@ -456,13 +457,14 @@ Content encoder & fusion & {head_metrics} \\\\
         closing = ("the URL channel's own contribution is confined to the "
                    f"{uc_thr} threshold and {uc_rank} ranking separations the table bolds")
     sent = (
-        f"Across all {k} content encoders on the identical subset and splits, the ablation is "
-        f"asymmetric. Both directions are reported on all four metrics the experiment records "
+        f"Across all {k} content encoders on the identical subset and splits, the two directions "
+        f"of the ablation resolve differently (a contrast in verdicts, not itself a tested "
+        f"difference). Both directions are reported on all four metrics the experiment records "
         f"(F1 and FPR@90\\%rec.\\ at the decision threshold, PR-AUC and ROC-AUC for the ranking) "
-        f"because a claim that a channel adds nothing is a claim over every metric that could show "
-        f"that it does. Because each question is asked of every encoder, we control the "
+        f"because a claim that no contribution from a channel was resolved is a claim over every "
+        f"metric that could resolve one. Because each question is asked of every encoder, we control the "
         f"false-discovery rate within each column~\\cite{{benjaminihochberg}} and report "
-        f"$q$-values: of the {n_tests} comparisons, {n_naive} reach $p<0.05$ under the ordinary "
+        f"BH-adjusted $p$-values, written $q$: of the {n_tests} comparisons, {n_naive} reach $p<0.05$ under the ordinary "
         f"paired $t$, {n_raw} still do once the variance of overlapping resamples is corrected "
         f"for, and {n_adj} survive false-discovery control on top of that.{strict_note} "
         f"Adding the URL channel to content helps {phrase(uc['F1'])} at the decision threshold "
@@ -472,8 +474,7 @@ Content encoder & fusion & {head_metrics} \\\\
         f"contrast, helps {phrase(cu['F1'])} on the thresholded decision itself and "
         f"{phrase(cu['FPR@R0.90'])} on the false-positive rate, and improves the ranking for "
         f"{phrase(cu['PR-AUC'])} on PR-AUC and {phrase(cu['ROC-AUC'])} on ROC-AUC. "
-        f"Content is doing the work "
-        f"the fusion is credited with; " + closing)
+        f"The resolved gains come from adding content; " + closing)
     write_generated(os.path.join(SEC, "gen_encoder_sweep.tex"), sent.rstrip(". ") + ".\n")
 
     # The operating-point ordering the discussion reads off this sweep. It used to be typed, and the
@@ -490,8 +491,35 @@ Content encoder & fusion & {head_metrics} \\\\
         os.path.join(SEC, "gen_encoder_operating.tex"),
         f"the lowest false-positive rate at $90\\%$ recall of any fusion in the sweep belongs to "
         f"the {family.get(best_e, '')} {ENC_LABEL.get(best_e, best_e)} (${best_v:.3f}$){ml_txt}, "
-        f"and the five fusions span ${fprs[0][0]:.3f}$--${fprs[-1][0]:.3f}$\n",
+        f"and the five fusions span ${fprs[0][0]:.3f}$--${fprs[-1][0]:.3f}$ "
+        f"(absolute values per encoder: Table~\\ref{{tab:encfpr}})\n",
         f"(best {best_e} {best_v:.3f})")
+
+    # Revision R3 (2026-09): the discussion quotes absolute FPR@90%rec. values the delta tables
+    # never printed; this table is where every quoted absolute value now lives.
+    def _fpr_cell(enc_scores, cfg):
+        vals = np.asarray(enc_scores[cfg]["FPR@R0.90"], float)
+        return f"{np.mean(vals):.3f}\\,$\\pm$\\,{np.std(vals):.3f}"
+
+    url_cell = _fpr_cell(scores[verdicts[0]["enc"]], "url")
+    fpr_rows = "\n".join(
+        f"{ENC_LABEL.get(v['enc'], v['enc'])} & {_fpr_cell(scores[v['enc']], 'content')} & "
+        f"{_fpr_cell(scores[v['enc']], 'content+url')} \\\\" for v in verdicts)
+    tex_fpr = f"""\\begin{{table}}[t]
+\\caption{{Absolute FPR@90\\%rec.\\ per content encoder, mean\\,$\\pm$\\,std over {FUSION_SEEDS} splits
+(URL-only: {url_cell}).{FPR_NOTE}}}
+\\label{{tab:encfpr}}
+\\small
+\\begin{{tabular}}{{l c c}}
+\\toprule
+Content encoder & content & content$+$URL \\\\
+\\midrule
+{fpr_rows}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table}}"""
+    write_generated(os.path.join(SEC, "tab_encoder_fpr.tex"), tex_fpr,
+                    f"(url {url_cell.split()[0]})")
 
     for v in verdicts:
         print(f"[i] {v['enc']:11s} content={v['mean']['content']['F1']:.3f} "
@@ -518,7 +546,7 @@ def make_hybrid_head_table(rows, agg_lin, text_encoder="xlm-r", tag="_xgb"):
     tex = f"""\\begin{{table*}}[t]
 \\caption{{Hybrid transformer$\\to$boosted-trees stack: Table~\\ref{{tab:content_fusion_xlmr}} with the
 linear fusion head replaced by XGBoost, same subset, splits and \\mbox{{{text_encoder}}} embeddings;
-mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.}}
+mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.{FPR_NOTE}}}
 \\label{{tab:content_fusion{tag}}}
 \\small
 \\begin{{tabular}}{{l c c c c}}

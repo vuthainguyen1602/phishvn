@@ -35,7 +35,9 @@ from paired_eval import corrected_paired_t, bh_adjust, fmt_p
 
 URL_RE = re.compile(r"https?://\S+|\bsim\.example\.vn\S*", re.I)
 SEEDS = 20
-CELLS = ("D0_A0", "D0_A1", "D0_A2", "D1_A1", "D1_A2", "D2_A2")
+# D1_A0/D2_A0 (clean-text misses of the trained defences) are descriptive extras added at the
+# reviewers' request; no pre-specified contrast reads them and COMPARISONS is unchanged.
+CELLS = ("D0_A0", "D0_A1", "D0_A2", "D1_A0", "D1_A1", "D1_A2", "D2_A0", "D2_A2")
 
 
 def strip_url(s: str) -> str:
@@ -113,8 +115,10 @@ def run(df: pd.DataFrame):
         per_seed["D0_A0"].append(miss(clf0, v0, clean_ph, y_ph))
         per_seed["D0_A1"].append(miss(clf0, v0, obf_ph, y_ph))
         per_seed["D0_A2"].append(miss(clf0, v0, para_ph, y_ph))
+        per_seed["D1_A0"].append(miss(clf1, v1, clean_ph, y_ph))
         per_seed["D1_A1"].append(miss(clf1, v1, obf_ph, y_ph))
         per_seed["D1_A2"].append(miss(clf1, v1, para_ph, y_ph))
+        per_seed["D2_A0"].append(miss(clf2, v2, clean_ph, y_ph))
         per_seed["D2_A2"].append(miss(clf2, v2, para_ph, y_ph))
         for name, (c, v) in (("D0", (clf0, v0)), ("D1", (clf1, v1)), ("D2", (clf2, v2))):
             fpr[name].append(float(np.mean(c.predict(v.transform(txt[be_te])) == 1)))
@@ -191,20 +195,22 @@ def main() -> None:
     def cell(c):
         return f"{mean[c]*100:.1f}\\,$\\pm$\\,{sd[c]*100:.1f}"
 
+    fpr_cell = {d: f"{np.mean(fpr[d])*100:.1f}\\,$\\pm$\\,{np.std(fpr[d])*100:.1f}"
+                for d in ("D0", "D1", "D2")}
     tex = rf"""\begin{{table*}}[t]
-\caption{{Paraphrase evasion of the content detector, attack strength uncontrolled:
-{n_ph} simulated lures against {int((df.y == 0).sum())} benign controls, mean $\pm$ std over {SEEDS} stratified 70/30 splits.}}
+\caption{{Paraphrase evasion, attack strength uncontrolled: {n_ph} lures against
+{int((df.y == 0).sum())} benign controls, mean $\pm$ std over {SEEDS} splits. \emph{{n/a}}: D2 under character obfuscation is outside the pre-specified design (no hypothesis concerns it) and was not computed.}}
 \label{{tab:paraphrase}}
 \small
-\begin{{tabular}}{{l c c c}}
+\begin{{tabular}}{{l c c c c}}
 \toprule
-& \multicolumn{{3}}{{c}}{{Miss rate (\%) on held-out phishing}} \\
+& \multicolumn{{3}}{{c}}{{Miss rate (\%) on held-out phishing}} & \\
 \cmidrule(lr){{2-4}}
-Detector & Clean & Char-obfuscated & Paraphrased \\
+Detector & Clean & Char-obfuscated & Paraphrased & Benign FPR (\%) \\
 \midrule
-D0 naive & {cell('D0_A0')} & {cell('D0_A1')} & {cell('D0_A2')} \\
-D1 adv.\ trained on char.\ obfuscation & n/a & {cell('D1_A1')} & {cell('D1_A2')} \\
-D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
+D0 naive & {cell('D0_A0')} & {cell('D0_A1')} & {cell('D0_A2')} & {fpr_cell['D0']} \\
+D1 adv.\ trained on char.\ obfuscation & {cell('D1_A0')} & {cell('D1_A1')} & {cell('D1_A2')} & {fpr_cell['D1']} \\
+D2 adv.\ trained on paraphrases & {cell('D2_A0')} & n/a & {cell('D2_A2')} & {fpr_cell['D2']} \\
 \bottomrule
 \end{{tabular}}\end{{table*}}"""
     os.makedirs(SEC, exist_ok=True)
@@ -212,7 +218,15 @@ D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
 
     def verdict(key):
         t = T[key]
-        return (f"$\\Delta = {t['mean']*100:+.1f}$\\,pp, {t['consistent']}/{SEEDS} splits in the "
+        # Corrected 95% CI (mean ± t_{.975,k-1} · corrected SE): the reviewers asked for the
+        # interval, not only the verdict, on every main paired difference.
+        ci = ""
+        if t.get("se"):
+            from scipy import stats as _st
+            half = _st.t.ppf(0.975, t["k"] - 1) * t["se"] * 100
+            ci = (f", corrected $95\\%$ CI $[{t['mean']*100 - half:+.1f}, "
+                  f"{t['mean']*100 + half:+.1f}]$\\,pp")
+        return (f"$\\Delta = {t['mean']*100:+.1f}$\\,pp{ci}, {t['consistent']}/{SEEDS} splits in the "
                 # Both symbols printed in full: stripping the label off the adjusted value
                 # produced "BH-adjusted 0.11" beside "BH-adjusted q<0.001", i.e. the same
                 # quantity rendered two ways within one sentence.
@@ -229,46 +243,33 @@ D2 adv.\ trained on paraphrases & n/a & n/a & {cell('D2_A2')} \\
         f"The time-stamped pre-specified directions all appear, and none of them survives the corrected test. "
         f"Against the naive detector the miss rate rises from ${mean['D0_A0']*100:.1f}\\%$ on clean "
         f"held-out phishing to ${mean['D0_A2']*100:.1f}\\%$ when the same messages are replaced by "
-        f"their rewrites ({verdict('H1')}), against ${mean['D0_A1']*100:.1f}\\%$ for the "
-        f"character attack that trains D1 ({verdict('ctrl')}). Adversarial training on character obfuscation "
-        f"repairs the character attack (${mean['D0_A1']*100:.1f}\\% \\rightarrow "
-        f"{mean['D1_A1']*100:.1f}\\%$) but does nothing for the paraphrase attack "
-        f"(${mean['D1_A2']*100:.1f}\\%$, {verdict('H2')}), while training on \\emph{{disjoint}} "
-        f"rewrites moves it to ${mean['D2_A2']*100:.1f}\\%$ ({verdict('H3')}) at a benign "
+        f"their rewrites ({verdict('H1')}). The character attack that trains D1 gives "
+        f"${mean['D0_A1']*100:.1f}\\%$ (against clean: {verdict('ctrl')}). Adversarial training "
+        f"on character obfuscation repairs the character attack (${mean['D0_A1']*100:.1f}\\% "
+        f"\\rightarrow {mean['D1_A1']*100:.1f}\\%$) and its effect on the "
+        f"paraphrase attack is not resolved (${mean['D1_A2']*100:.1f}\\%$ against D0's "
+        f"${mean['D0_A2']*100:.1f}\\%$: {verdict('H2')}). Training on \\emph{{disjoint}} "
+        f"rewrites moves it to ${mean['D2_A2']*100:.1f}\\%$ (against D0: {verdict('H3')}), at a benign "
         f"false-positive cost of ${(np.mean(fpr['D2']) - np.mean(fpr['D0']))*100:+.1f}$\\,pp. "
         f"The ordinary paired $t$-test would have licensed {len(naive_hits)} of the "
-        f"{len(tests)} contrasts at $p \\leq {max_naive_hit:.3f}$; the correction for overlapping "
-        f"resamples (the same correction that reshaped this paper's fusion results) widens "
-        f"every interval past significance.\n\n"
-        # Trimmed 2026-08-19 for length: the "our power projection was wrong and instructively
-        # so" lesson was told here, again in Section 6's paraphrase subsection, and again in the
-        # conclusion. Section 6 keeps the full telling; this paragraph is reduced to the facts
-        # that exist nowhere else -- the underpowered disclosure, the two-batch Jaccard
-        # diagnostic, the corpus multiple, and the two standing limits.
-        f"\\textbf{{This is the second and final measurement; like the first it is underpowered "
-        f"and it did not resolve the question either.}} The study first ran on "
-        f"{jac['pilot'][1]} lures; when it resolved nothing, the corpus was extended to "
-        f"{n_ph} at the sample size that run's own power projection called for, under a "
-        f"rule fixed before the new lures were written and committing us to a single re-run "
-        f"(\\texttt{{PARAPHRASE\\_PROTOCOL.md}}). The leading effect roughly halved instead, and "
-        f"the diagnostic is in the data: the extension's rewrites "
-        f"retain a mean token Jaccard of ${j_ext:.2f}$ with their sources against ${j_pilot:.2f}$ "
-        f"for the original ones, so the larger corpus is also a \\emph{{gentler attack}}. Sample "
-        f"size and attack strength moved together, and we do not attempt to separate them post "
-        f"hoc; the time-stamped pre-specified commitment was one re-run, and extending the corpus again in "
-        f"pursuit of a $p$-value is the failure mode that commitment exists to prevent. Two "
-        f"things must therefore be fixed in advance for this question to be answerable at all: "
-        f"the corpus must be larger (on the present estimates "
-        f"the leading contrast needs about ${need_h1:.1f}\\times$ these {n_ph} lures, a figure we "
-        f"report with visible distrust), and "
-        f"the attack must be a \\emph{{controlled quantity}}, paraphrase strength being not a "
-        f"property of the word ``paraphrase'' but of how far the rewrite actually travels, which "
-        f"drifted by ${j_ext - j_pilot:+.2f}$ Jaccard between two batches written to the same "
-        f"instructions by the same author. Two further "
-        f"limits stand unchanged: {n_test_ph:.0f} held-out phishing messages per split make a "
-        f"single miss worth ${pp:.1f}$\\,pp, and the paraphraser is the model that authored the "
-        f"corpus, so shared style places the rewrites nearer the training distribution than an "
-        f"independent attacker's would, biasing the measured attack downward throughout.\n")
+        f"{len(tests)} contrasts at $p \\leq {max_naive_hit:.3f}$. The correction for overlapping "
+        f"resamples, the same one applied to the fusion results, widens every interval past "
+        f"significance.\n\n"
+        # Trimmed again 2026-09-29: the run history (pilot, one pre-committed extension, gentler
+        # second batch) is told in full once, here; Section 6 and the conclusion only point to it.
+        f"\\textbf{{This is the second and final measurement of the uncontrolled design, and it "
+        f"is underpowered.}} The study first ran on {jac['pilot'][1]} lures; under a rule fixed "
+        f"before any new lure was written, the corpus was extended once, to {n_ph}, the size "
+        f"that run's power projection called for (\\texttt{{PARAPHRASE\\_PROTOCOL.md}}). The "
+        f"leading effect roughly halved, and the data show why: the extension's rewrites share a "
+        f"mean token Jaccard of ${j_ext:.2f}$ with their sources against ${j_pilot:.2f}$ for the "
+        f"pilot's (a lower $J$ means stronger rewriting), so the larger corpus is also a "
+        f"\\emph{{gentler attack}}. On the present estimates the leading contrast would need "
+        f"about ${need_h1:.1f}\\times$ these {n_ph} lures; per the rule the corpus is not "
+        f"extended again, and the next subsection fixes attack strength instead. With "
+        f"{n_test_ph:.0f} held-out phishing messages per split a single miss is worth "
+        f"${pp:.1f}$\\,pp, and the paraphraser is the model that wrote the corpus, which biases "
+        f"the measured attack downward.\n")
     write_generated(os.path.join(SEC, "gen_paraphrase_verdict.tex"), prose)
 
     # Machine-readable record so check_paper_claims.py can enforce the invariant that matters

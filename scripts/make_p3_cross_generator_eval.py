@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 """
+WITHDRAWN 2026-09-28 — READ BEFORE USE. The "Gemini" arm this script evaluates was produced by
+p3_gemini_generator.py, a local template script that calls no language model; it is not Gemini
+output. The P3 cross-generator analysis was withdrawn from the manuscript at revision for that
+reason. Kept, unchanged below, as the record of what ran.
+
 make_p3_cross_generator_eval.py — Leave-one-LLM-out evaluation (Claude vs. Gemini).
 
 Evaluates the two leave-one-generator-out directions explicitly:

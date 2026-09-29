@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 """
+WITHDRAWN 2026-09-28 — READ BEFORE USE. Despite its name, this script does not call Gemini or
+any language model. It maps keywords in each source lure to hard-coded Vietnamese sentences and
+then assembles "{fixed prefix}: {source tokens} {filler tokens}. {call to action}" strings until
+the token Jaccard lands in [0.20, 0.30]. Its output (data/raw/author/p3_gemini_rewrites.tsv,
+344/386 rows carry one of two fixed prefixes) is a template-based synthetic set, NOT Gemini
+rewrites. The P3 cross-generator ("leave-one-LLM-out") analysis built on it was withdrawn from
+the manuscript at revision for that reason. Kept, unchanged below, as the record of what ran.
+
 p3_gemini_generator.py — Gemini generator for P3's Leave-One-LLM-Out study.
 
 For each of the 193 PhishVN lures, generates variant 'a' (training augmentation) and

@@ -153,11 +153,23 @@ def evaluate(df: pd.DataFrame):
     rows = []
     oof_true, oof_pred = [], []
 
+    error_rows = []
     for fold_no, (scenario, train, test) in enumerate(scenario_folds(df)):
         pred = _fit_predict(text, y, train, test)
         metric = _metrics(y[test], pred)
         oof_true.extend(y[test])
         oof_pred.extend(pred)
+        # Revision R2.10: keep the misclassified rows themselves, so the error analysis is a
+        # reading of this exact run rather than a re-run. Deterministic (random_state=0), so
+        # dumping them changes no published number.
+        for idx, (yt, yp) in zip(test, zip(y[test], pred)):
+            if yt != yp:
+                error_rows.append({
+                    "scenario": scenario,
+                    "error": "benign_fp" if yt == 0 else "phishing_miss",
+                    "id": df.iloc[idx]["id"],
+                    "text": df.iloc[idx]["clean_text"],
+                })
 
         n_benign = int(np.sum(y[test] == 0))
         n_phishing = int(np.sum(y[test] == 1))
@@ -205,17 +217,16 @@ def evaluate(df: pd.DataFrame):
             }
         ]
     )
-    return per, summary
+    return per, summary, pd.DataFrame(error_rows)
 
 
 def _table(per: pd.DataFrame, summary: pd.DataFrame) -> str:
     s = summary.iloc[0]
     lines = [
         r"\begin{table*}[t]",
-        r"\caption{Leave-one-scenario-out evaluation of the character-$n$-gram text detector. "
-        r"Each row holds out every benign and phishing message in the named scenario; the "
-        r"vocabulary and classifier are fitted on the other six scenarios. The matched ID "
-        r"column is the mean of 20 class- and size-matched stratified random splits.}",
+        r"\caption{Leave-one-scenario-out evaluation of the char-$n$-gram detector: each row "
+        r"holds out one scenario (both classes). ID: mean of 20 class- and size-matched random "
+        r"splits.}",
         r"\label{tab:scenarioood}",
         r"\small",
         r"\centering",
@@ -258,16 +269,52 @@ def _verdict(summary: pd.DataFrame) -> str:
     )
 
 
+def _error_fragment(errors: pd.DataFrame) -> str:
+    """Revision R2.10: a descriptive reading of the benign false positives of this exact run."""
+    fp = errors[errors["error"] == "benign_fp"]
+    by_scn = fp.groupby("scenario").size().sort_values(ascending=False, kind="stable")
+    breakdown = ", ".join(f"{s} ({n})" for s, n in by_scn.items())
+    # Whole-word request marker. The first version counted lure cue words as SUBSTRINGS, and
+    # "han" (deadline) matched "ban", "nhan", "thanh", "hanh": 15/26 "imperative" messages that
+    # were mostly friend-request and balance notices. An explicit "vui long" request is the one
+    # marker that reads the same in every scenario and cannot hit inside another word.
+    low = fp["text"].str.lower()
+    n_req = int(low.str.contains(r"\bvui long\b", regex=True).sum())
+    n_link = int(low.str.contains(r"\[link\]|https?://", regex=True).sum())
+    # One example from each of the three scenarios with the most false positives.
+    picks = [fp[fp["scenario"] == s_]["text"].iloc[0] for s_ in by_scn.index[:3]]
+    examples = "; ".join(
+        "\\emph{``" + t.replace("&", "\\&").replace("%", "\\%").replace("_", "\\_")[:110]
+        + ("\\dots''}" if len(t) > 110 else "''}")
+        for t in picks)
+    return (
+        f"The benign false positives concentrate where the table says they do: of the "
+        f"{len(fp)} benign messages misclassified across the seven folds, the split by held-out "
+        f"scenario is {breakdown}. The texts themselves are released as "
+        f"\\texttt{{p3\\_loso\\_errors.csv}}. They are not benign messages written in the lures' "
+        f"call-to-action register: only {n_req} of {len(fp)} ask the reader to do anything (an "
+        f"explicit \\emph{{vui long}} request), {'none' if n_link == 0 else n_link} carries a link, and the rest are short "
+        f"informational notices (balances, reminders, friend requests, maintenance windows). "
+        f"One example from each of the three scenarios with the most errors: {examples}. The "
+        f"errors are consistent with a benign boundary learned from the other scenarios' "
+        f"vocabulary rather than from the absence of a request; this is a descriptive reading "
+        f"of this run's errors, not a further test%"
+    )
+
+
 def main():
     df = load_corpus()
-    per, summary = evaluate(df)
+    per, summary, errors = evaluate(df)
     os.makedirs(OUT_DIR, exist_ok=True)
     per_path = os.path.join(OUT_DIR, "p3_leave_one_scenario_out.csv")
     summary_path = os.path.join(OUT_DIR, "p3_leave_one_scenario_out_summary.csv")
+    errors_path = os.path.join(OUT_DIR, "p3_loso_errors.csv")
     per.to_csv(per_path, index=False)
     summary.to_csv(summary_path, index=False)
+    errors.to_csv(errors_path, index=False)
     write_generated(os.path.join(SEC, "tab_scenario_ood.tex"), _table(per, summary))
     write_generated(os.path.join(SEC, "gen_scenario_ood_verdict.tex"), _verdict(summary))
+    write_generated(os.path.join(SEC, "gen_scenario_ood_errors.tex"), _error_fragment(errors))
 
     print(per[["scenario", "n_benign", "n_phishing", "macro_f1", "matched_id_macro_f1_mean", "phishing_miss", "benign_fpr"]].to_string(index=False))
     print("\n", summary.to_string(index=False))

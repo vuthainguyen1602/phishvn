@@ -246,7 +246,8 @@ def load_text_csv(path, source, channel, is_llm=0) -> list[dict]:
                        "human" if source == "author" else "auto")
         row["text"] = text
         row["msg_len"] = len(text)
-        # carry gen_model for leave-one-LLM-out (empty for human/benign rows)
+        # carry gen_model (the P3 corpus sets it on its synthetic benign controls too; empty only
+        # where the text really has no generator)
         row["gen_model"] = str(r.get("gen_model", "") or "")
         row["has_url"] = 1 if re.search(
             r"https?://|\b[a-z0-9-]+\.(?:com|net|org|top|xyz|cc|vn|info|online|shop|vip|icu|click|buzz)\b",
