@@ -336,7 +336,7 @@ def make_tex(s: dict, p4: tuple[int, int] | None, probe_date: str) -> None:
             f"That is a factor of ${tex_int(round(100.0 * p4[0] / p4[1] / max(reg_share, 1e-9)))}$, "
             f"or ${math.log10((100.0 * p4[0] / p4[1]) / max(reg_share, 1e-9)):.1f}$ orders of magnitude, "
             "between these descriptive percentages. The denominators and selection differ: this study counts "
-            "historical indicators under answering suffixes, whereas the companion removes "
+            "historical indicators under answering suffixes, whereas that collection removes "
             "current candidates whose addresses match a probe. This ratio is not a relative "
             "contamination rate and does not isolate feed-generation practices as its cause."
         )

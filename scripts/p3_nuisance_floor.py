@@ -2,11 +2,12 @@
 """
 p3_nuisance_floor.py — how much of the paraphrase result could a nuisance shortcut explain?
 
-A pre-submission review objected that the simulated corpus confounds the class label with
-authorship: all 193 phishing messages are model-written, all 143 benign controls human-written. If
-the detector partly separates machine text from human text, an LLM rewriting machine text could
-move it off that shortcut, and the headline 3.2% -> 17.9% miss rate would measure the shortcut
-rather than phishing evasion. This bounds how much of the effect that could be.
+The simulated corpus confounds the class label with the register each class was written in. One
+model (claude-fable-5) wrote all 193 phishing messages under a lure instruction and all 143 benign
+controls under a service-notification instruction; no message is human-written. If the detector
+partly separates those registers rather than phishing intent, a rewrite that softens the lure
+register could move a message off that shortcut, and the headline 3.2% -> 17.9% miss rate would
+measure the shortcut rather than phishing evasion. This bounds how much of the effect that could be.
 
 RUN: python scripts/p3_nuisance_floor.py
 Which parts of the objection survive contact with the pipeline, and the floor's construction:
