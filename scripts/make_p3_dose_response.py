@@ -486,7 +486,7 @@ def main() -> None:
         f"null.\n")
 
     notes = (
-        f"\\section{{How the dose--response curve of Section~\\ref{{ssec:paraphraseband}} "
+        f"\\section{{How the dose--response curve of Section~\\ref{{ssec:authorship}} "
         f"is fitted, and what it says about the predecessor's null}}\n\\label{{sec:dosenote}}\n"
         f"Across the middle of the corpus the naive detector's fitted miss rate goes from "
         f"${at_q_lo*100:.1f}\\%$ at the $10$th percentile of $J$ ($J={q_lo:.2f}$) to "
