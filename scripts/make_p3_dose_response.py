@@ -454,8 +454,9 @@ def main() -> None:
     # Trimmed 2026-08-19 for length. The body paragraph keeps the finding, its hedge, the
     # registered band's placement and the width of the interval that stops it being a result;
     # the fitting/bootstrap asides and the batch-level arithmetic that diagnoses the
-    # predecessor's null move to a generated appendix note, so nothing is lost and nothing is
-    # hand-typed. Both files are written here; sections/10_appendix.tex inputs the second.
+    # predecessor's null move to a generated supplementary note, so nothing is lost and nothing is
+    # hand-typed. Both files are written here; the Supplementary Material (sections/supp_body.tex)
+    # inputs the second since 2026-10-02, when the appendix left the article.
     prose = (
         f"\\textbf{{Attack strength behaves like a dose, weakly.}} The two studies report pooled "
         f"miss rates. Neither shows how miss rate varies \\emph{{with}} $J$. Re-running the "
@@ -480,13 +481,13 @@ def main() -> None:
         f"band was fixed before any of this was computed but not blind to outcome "
         f"(Section~\\ref{{ssec:paraphraseband}}), the curve is fitted post hoc on the same "
         f"observations, and the interval at the band's midpoint (${mid_est*100:.1f}\\%$, "
-        f"${mid_lo*100:.1f}$--${mid_hi*100:.1f}\\%$) is wide. Appendix~\\ref{{sec:appendix}} "
+        f"${mid_lo*100:.1f}$--${mid_hi*100:.1f}\\%$) is wide. Supplementary Note~\\SuppRef{{sec:dosenote}} "
         f"carries the fit's caveats and the batch-level arithmetic behind the predecessor's "
         f"null.\n")
 
     notes = (
-        f"\\subsection*{{Note: how the dose--response curve of Section~\\ref{{ssec:paraphraseband}} "
-        f"is fitted, and what it says about the predecessor's null}}\n"
+        f"\\section{{How the dose--response curve of Section~\\ref{{ssec:paraphraseband}} "
+        f"is fitted, and what it says about the predecessor's null}}\n\\label{{sec:dosenote}}\n"
         f"Across the middle of the corpus the naive detector's fitted miss rate goes from "
         f"${at_q_lo*100:.1f}\\%$ at the $10$th percentile of $J$ ($J={q_lo:.2f}$) to "
         f"${at_q_hi*100:.1f}\\%$ at the $90$th ($J={q_hi:.2f}$). We quote the deciles rather than the "
