@@ -100,7 +100,7 @@ def p2(df):
     tex = """\\begin{table*}[t]
 \\centering
 \\caption{Tier-stratified sensitivity on the same dated rows as the P2 protocol contrast.
-Overall is F1; tier columns are positive-class recall, mean$\\pm$sd over five shared benign
+Overall is F1. Tier columns are positive-class recall, mean$\\pm$sd over five shared benign
 splits. Tier is label provenance and is confounded with source/time; these are diagnostics,
 not causal tier effects.}
 \\label{tab:tier-sensitivity}

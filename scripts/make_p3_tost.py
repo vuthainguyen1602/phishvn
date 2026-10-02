@@ -87,7 +87,7 @@ def main():
     n = len(rows)
     frag = (
         "Because a difference in significance is not a significant difference, the unresolved "
-        "direction is also tested for equivalence (post hoc; margins declared, not derived). "
+        "direction is also tested for equivalence (post hoc, with margins declared and not derived). "
         "The test is a two-one-sided corrected resampled $t$ (TOST) on the paired F1 difference "
         "(content$+$URL) $-$ (content), each side at $\\alpha=0.05$ with the same Nadeau--Bengio "
         "variance as every other test here. "
