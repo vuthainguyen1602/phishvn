@@ -188,6 +188,9 @@ def prevalence() -> int:
         print(f"  [!] {buckets['unadjudicated']} page(s) with a code have no verdict in {ADJUDICATION}: "
               "the paper cannot state a quishing count until they do", file=sys.stderr)
     adjudicated_on = max((r.get("adjudicated_on") or "" for r in rows(ADJUDICATION)), default="")
+    # How many hand verdicts rest on the screenshot as well as the payload. The prose once typed
+    # "the six" while the file held ten.
+    hand_screenshot = sum("screenshot" in (r.get("basis") or "") for r in rows(ADJUDICATION))
 
     rate = 100 * hits / examined if examined else 0.0
     # the search arm's own wrong division (its pages over its scans); the submitting arm has no scans
@@ -249,6 +252,7 @@ def prevalence() -> int:
            + m("InertLure", buckets["inert_lure"]) + m("Quishing", buckets["quishing"])
            + m("Unadjudicated", buckets["unadjudicated"])
            + m("HandRead", hits - buckets["benign_auto"])
+           + m("HandScreenshot", hand_screenshot)
            + (m("AdjudicatedOn", dt.date.fromisoformat(adjudicated_on).strftime("%-d %B %Y"))
               if adjudicated_on else "")
            # The searchable pool, no longer typed into the prose by hand.

@@ -1,0 +1,22 @@
+source_page,verdict,basis,adjudicated_on,note
+https://dichvuconghoso.me,phishing_inert_qr,screenshot+payload,2026-09-20,"fake public-service login; the QR is a JWT issued 2025-11-26 with a 60 s lifetime, frozen in a saved copy of the genuine page: displayed, delivers nothing"
+https://1xbet-vnpt.top,abuse_app_download,screenshot+payload,2026-09-20,Russian-language betting affiliate; QR sideloads an APK; the carrier's name in the domain is a token coincidence
+https://top1vietnam.vn,benign_payment,screenshot+payload,2026-09-20,CRC-valid VietQR donation code on the site's own page
+https://simi55k.net,off_target_app_download,screenshot+payload,2026-09-20,Chinese-language adult site; app-download code
+https://744bcw.net,off_target_app_download,screenshot+payload,2026-09-20,Chinese-language lottery/casino site; app-download code
+https://dwp0kerways.net,off_target_app_download,screenshot+payload,2026-09-20,Indonesian poker brand; Android download code
+https://kiemlinhcmn.vn,benign,payload,2026-09-20,onelink.to app-store redirect
+https://maskforyou.vn,benign,payload,2026-09-20,onelink.to app-store redirect
+https://banddcntphcm.vn,benign,payload,2026-09-20,Google Play and App Store listings of the site's own app
+https://jucha.vn,benign,payload,2026-09-20,link to Wikipedia
+https://bozemancarrentals.com,benign,payload,2026-09-20,"bare number, not a URL"
+https://youyinongsh.com,benign,payload,2026-09-20,"bare number, not a URL"
+https://getcheckwriter.com,benign,payload,2026-09-20,"bare number, not a URL"
+https://studbudd.com,benign,payload,2026-09-20,LINE contact link (lin.ee)
+https://abogadoselegido.com,benign,payload,2026-09-20,home page of an unrelated law-firm directory
+https://danhbongsan.vn,benign,payload,2026-09-20,home page of another Vietnamese business
+https://meetryanmcgrew.com,benign,payload,2026-09-20,a loan officer's staff page at the employer's site
+https://justhint.me,benign,screenshot+payload,2026-09-25,"GoDaddy parking page (""est parque gratuitement, avec la permission de GoDaddy.com"") with Yahoo related-search boxes; no QR is rendered anywhere on it. The stored decode is the bare string 606053, six digits and not a URL, so it is a spurious decode off page furniture rather than a code a visitor could scan"
+https://stms.viettelpost.vn,benign,screenshot+payload,2026-09-25,"Viettel Post's own Smart TMS logistics console; the code sits under the heading ""Quet ma QR dang nhap he thong"" beside instructions to open the operator's VTman app, and decodes to {""action"":""LOGIN"",""key"":...} - a first-party scan-to-log-in handshake, not a link"
+https://bidvsalekit.tingee.vn,benign,screenshot+payload,2026-09-25,"Tingee's own documentation site, page ""Tingee Box | BIDV Salekit"" - a price sheet for the payment-notification speaker sold to BIDV's merchants. Both codes are the operator's own: tingee.page.link/download (Tingee's app) and zalo.me/1839044937471013548 (the Zalo OA the page's support panel names, TINGEE by HENO). The bidv token is a partner sales kit, not an impersonated identity"
+https://xanhsm.com,benign,screenshot+payload,2026-09-25,"Green SM's own site; the code sits in the ""Trai nghiem Green SM ngay"" panel beside Google Play and App Store badges and decodes to vn.greensm.com/3eCA/8li1xfm7?af_qr=c, an AppsFlyer OneLink to the operator's own app. greensm.com is the same operator's international brand"
