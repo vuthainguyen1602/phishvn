@@ -197,7 +197,7 @@ def make_content_fusion_table(text_encoder="tfidf", tag=""):
     verdict = (f"under the corrected resampled $t$, {f1_claim}, "
                f"{pr_claim}. {ro_claim} Both content-bearing "
                f"configurations beat URL features alone (fusion $-$ URL ${d_ru:+.3f}$ F1, "
-               f"{w_ru}/{n} splits, ${_p(p_ru)}$); the fusion also holds FPR@90\\%rec.\\ at ${fpr}$")
+               f"{w_ru}/{n} splits, ${_p(p_ru)}$). The fusion also holds FPR@90\\%rec.\\ at ${fpr}$")
 
     # Name the default encoder too: the headline finding is that fusion is encoder-dependent, and
     # a blank note left the claim-carrying table not saying which encoder it used.
@@ -467,13 +467,13 @@ Content encoder & fusion & {head_metrics} \\\\
         f"paired $t$, {n_raw} still do once the variance of overlapping resamples is corrected "
         f"for, and {n_adj} survive false-discovery control on top of that.{strict_note} "
         f"Adding the URL channel to content helps {phrase(uc['F1'])} at the decision threshold "
-        f"and {phrase(uc['FPR@R0.90'])} on the false-positive rate at $90\\%$ recall; it improves "
+        f"and {phrase(uc['FPR@R0.90'])} on the false-positive rate at $90\\%$ recall. It improves "
         f"the ranking for {phrase(uc['PR-AUC'])} on PR-AUC and {phrase(uc['ROC-AUC'])} on "
         f"ROC-AUC{detail(('uc', 'ROC-AUC'))}. Adding the content channel to URL features, by "
         f"contrast, helps {phrase(cu['F1'])} on the thresholded decision itself and "
         f"{phrase(cu['FPR@R0.90'])} on the false-positive rate, and improves the ranking for "
         f"{phrase(cu['PR-AUC'])} on PR-AUC and {phrase(cu['ROC-AUC'])} on ROC-AUC. "
-        f"The resolved gains come from adding content; " + closing)
+        f"The resolved gains come from adding content. " + closing[0].upper() + closing[1:])
     write_generated(os.path.join(SEC, "gen_encoder_sweep.tex"), sent.rstrip(". ") + ".\n")
 
     # The operating-point ordering the discussion reads off this sweep. It used to be typed, and the
@@ -596,8 +596,8 @@ Configuration & F1 & PR-AUC & ROC-AUC & FPR@90\\%rec. \\\\
         dil += f" ({stats}; PR-AUC ${d_dpr:+.3f}$, ${_p(p_dpr)}$)"
     fpr = f"{np.mean(agg['content+url']['FPR@R0.90']):.3f}"
     verdict = (f"Paired on the same {n} splits under the corrected resampled $t$, "
-               f"{head_claim('content+url', 'content$+$URL')}; "
-               f"{head_claim('content', 'content alone')}. Within the boosted head, {dil}. "
+               f"{head_claim('content+url', 'content$+$URL')}. "
+               f"{head_claim('content', 'content alone').capitalize()[:1] + head_claim('content', 'content alone')[1:]}. Within the boosted head, {dil}. "
                f"The hybrid's content$+$URL FPR@90\\%rec.\\ is ${fpr}$ (linear head: "
                f"${np.mean(agg_lin['content+url']['FPR@R0.90']):.3f}$)")
     write_generated(os.path.join(SEC, "gen_hybrid_verdict.tex"), verdict.rstrip(". ") + ".\n")

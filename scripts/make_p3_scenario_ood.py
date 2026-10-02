@@ -263,7 +263,7 @@ def _verdict(summary: pd.DataFrame) -> str:
         f"${s.scenario_bootstrap_ci_low:.3f}$--${s.scenario_bootstrap_ci_high:.3f}$), "
         f"against ${s.matched_id_macro_f1:.3f}$ for the class- and size-matched random-split "
         f"comparator, a gap of ${s.macro_f1_gap:+.3f}$. Pooled out-of-fold Macro-F1 is "
-        f"${s.pooled_oof_macro_f1:.3f}$; scenario-balanced phishing miss rate and benign "
+        f"${s.pooled_oof_macro_f1:.3f}$. Scenario-balanced phishing miss rate and benign "
         f"false-positive rate are ${100 * s.scenario_balanced_phishing_miss:.1f}\\%$ and "
         f"${100 * s.scenario_balanced_benign_fpr:.1f}\\%$, respectively%"
     )
@@ -297,7 +297,7 @@ def _error_fragment(errors: pd.DataFrame) -> str:
         f"informational notices (balances, reminders, friend requests, maintenance windows). "
         f"One example from each of the three scenarios with the most errors: {examples}. The "
         f"errors are consistent with a benign boundary learned from the other scenarios' "
-        f"vocabulary rather than from the absence of a request; this is a descriptive reading "
+        f"vocabulary rather than from the absence of a request. This is a descriptive reading "
         f"of this run's errors, not a further test%"
     )
 

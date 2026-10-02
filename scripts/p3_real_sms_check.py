@@ -143,7 +143,7 @@ def main():
         "Vietnamese SMS~\\cite{vietsmsdata} (CC BY 4.0). "
         f"After collapsing exact duplicates it holds {len(real_x):,} distinct messages "
         f"({int(real_y.sum()):,} labelled spam/scam, {int((real_y == 0).sum()):,} ham). Links are "
-        "removed and diacritics stripped so that orthography cannot separate the classes; the "
+        "removed and diacritics stripped so that orthography cannot separate the classes. The "
         "source's redaction tokens are left as released. At the fixed threshold, "
         + ". ".join(cells) +
         ". For reference, the same architecture trained on the real corpus's own training split "

@@ -270,7 +270,7 @@ D2 adv.\ trained on paraphrases & {cell('D2_A0')} & n/a & {cell('D2_A2')} & {fpr
            "The question therefore remains open, but the predecessor's second explanation (an "
            "attack too gentle to test the detector) is no longer available at this corpus size. ")
         + "Per the registered stopping rule the corpus is not extended again and the band is not "
-        "adjusted; the per-miss resolution and the shared-generator bias stated for the "
+        "adjusted. The per-miss resolution and the shared-generator bias stated for the "
         "uncontrolled run apply unchanged.\n")
     write_generated(os.path.join(SEC, "gen_paraphrase_band_verdict.tex"), prose)
 

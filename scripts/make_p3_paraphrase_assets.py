@@ -258,14 +258,14 @@ D2 adv.\ trained on paraphrases & {cell('D2_A0')} & n/a & {cell('D2_A2')} & {fpr
         # Trimmed again 2026-09-29: the run history (pilot, one pre-committed extension, gentler
         # second batch) is told in full once, here; Section 6 and the conclusion only point to it.
         f"\\textbf{{This is the second and final measurement of the uncontrolled design, and it "
-        f"is underpowered.}} The study first ran on {jac['pilot'][1]} lures; under a rule fixed "
+        f"is underpowered.}} The study first ran on {jac['pilot'][1]} lures. Under a rule fixed "
         f"before any new lure was written, the corpus was extended once, to {n_ph}, the size "
         f"that run's power projection called for (\\texttt{{PARAPHRASE\\_PROTOCOL.md}}). The "
         f"leading effect roughly halved, and the data show why: the extension's rewrites share a "
         f"mean token Jaccard of ${j_ext:.2f}$ with their sources against ${j_pilot:.2f}$ for the "
         f"pilot's (a lower $J$ means stronger rewriting), so the larger corpus is also a "
         f"\\emph{{gentler attack}}. On the present estimates the leading contrast would need "
-        f"about ${need_h1:.1f}\\times$ these {n_ph} lures; per the rule the corpus is not "
+        f"about ${need_h1:.1f}\\times$ these {n_ph} lures. Per the rule the corpus is not "
         f"extended again, and the next subsection fixes attack strength instead. With "
         f"{n_test_ph:.0f} held-out phishing messages per split a single miss is worth "
         f"${pp:.1f}$\\,pp, and the paraphraser is the model that wrote the corpus, which biases "

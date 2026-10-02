@@ -458,7 +458,7 @@ def main() -> None:
     # hand-typed. Both files are written here; sections/10_appendix.tex inputs the second.
     prose = (
         f"\\textbf{{Attack strength behaves like a dose, weakly.}} The two studies report pooled "
-        f"miss rates; neither shows how miss rate varies \\emph{{with}} $J$. Re-running the "
+        f"miss rates. Neither shows how miss rate varies \\emph{{with}} $J$. Re-running the "
         f"uncontrolled study's own splits with per-rewrite logging (same seeds, detectors and "
         f"held-out phishing) gives {tex_int(n_obs)} scored rewrites over {n_src} sources. An "
         f"isotonic fit of miss rate on $J$, with the direction read off the data, gives the same "
@@ -489,7 +489,7 @@ def main() -> None:
         f"is fitted, and what it says about the predecessor's null}}\n"
         f"Across the middle of the corpus the naive detector's fitted miss rate goes from "
         f"${at_q_lo*100:.1f}\\%$ at the $10$th percentile of $J$ ($J={q_lo:.2f}$) to "
-        f"${at_q_hi*100:.1f}\\%$ at the $90$th ($J={q_hi:.2f}$); the deciles rather than the "
+        f"${at_q_hi*100:.1f}\\%$ at the $90$th ($J={q_hi:.2f}$). We quote the deciles rather than the "
         f"extremes, because isotonic regression pins its end blocks to single sources. "
         f"Confidence bands are a cluster bootstrap over \\emph{{sources}}, not rewrites: each "
         f"source contributes several scored observations that share one $J$, and resampling those "
@@ -500,10 +500,10 @@ def main() -> None:
         f"source lures, so the plotted point and the band around it are clustered on the same "
         f"sources that both bootstraps resample. Read the marker against the curve as a "
         f"consistency check, not as external replication.\n\n"
-        f"The curve is also what the predecessor's null looks like from the inside. Pooling its "
+        f"The curve also explains the predecessor's null. Pooling its "
         f"rewrites gave one number, ${pooled*100:.1f}\\%$ for the naive detector, for a quantity "
         f"that moves by {abs(at_q_hi - at_q_lo)*100:.0f}\\,pp between the corpus's own deciles"
-        + (f"; its pilot batch sat at mean $J={j_pilot:.2f}$ and its extension at "
+        + (f". Its pilot batch sat at mean $J={j_pilot:.2f}$ and its extension at "
            f"$J={j_ext:.2f}$, and the curve integrated over each batch's $J$ distribution implies "
            f"${stratum['pilot']['implied']*100:.1f}\\%$ against "
            f"${stratum['extension']['implied']*100:.1f}\\%$, against measured "
@@ -512,7 +512,7 @@ def main() -> None:
            f"moved the corpus up the $J$ axis, so the effect it halved was measured at a gentler "
            f"dose than the effect it was sized to detect"
            if stratum else "")
-        + ". This diagnoses the null and does not repair it.\n")
+        + ".\n")
     write_generated(os.path.join(SEC, "gen_dose_response_notes.tex"), notes)
     write_generated(os.path.join(SEC, "gen_dose_response.tex"), prose)
 
