@@ -133,3 +133,41 @@ retroactively become confirmatory evidence.
 
 The source card defines label 1 as **spam/scam**, not phishing alone. The manuscript now uses the
 publisher's broader label semantics and does not claim smishing-specific sensitivity or prevalence.
+
+## Deviation record, 2026-10-03 (post hoc)
+
+Written after the manuscript was audited against this file. Nothing above is changed; this
+section records where the paper now departs from what was registered, and why.
+
+- **Temporal-split replication (registered diagnostic, "train ≤ 2026-07-15, test after, all
+  three arms").** Registered; the outcome record above says "Not run" and gives no reason. The
+  paper now states, in §2 and in its limitations, that the replication was not run and that its
+  three retrospective checks (`audit_sms_temporal.py`, one linear probe, one seed) are post-hoc
+  substitutes and not the registered replication. For the record, 634 of the 798 positive-labelled
+  messages are dated after 2026-07-15 and the last positive-labelled message is dated 2026-07-25,
+  so the registered split would have placed most of the positive class on the test side. That is
+  a description of the corpus, not a reason the run was skipped: no reason was recorded at the
+  time and none is supplied now.
+- **Confusion counts at the operating point (registered diagnostic).** `train_sms_fusion.py`
+  stores per-arm F1, precision and recall averaged over seeds and did not retain the counts. The
+  paper states that they are not reported. The temporal checks store theirs
+  (`temporal_audit.json`).
+- **Duplicate-text rate within each split (registered diagnostic).** Now reported in §2 from
+  `make_smishing_assets.py`: 308 duplicate rows of 2,425 in train (12.7%), 54 of 566 in test (9.5%).
+- **Benjamini–Hochberg, m = 2.** The seed-level test it was to correct is withdrawn (audit of
+  2026-09-02 above), so no p-value exists to correct. The paper now says so where T1 and T2 are
+  reported, instead of leaving the family unmentioned.
+- **Has-URL subgroup scores: 0.686 / 0.919 in the outcome record against 0.809 / 0.924 in the
+  paper.** The outcome record was written from the 2026-08-30 run, whose subgroup diagnostics
+  used the predictions of the first seed only (`preds.setdefault(name, p)`). Commit f2103bff
+  (2026-09-02) changed the diagnostics to the mean over all ten seeds' predictions, and the paper
+  prints that mean. The whole-test arm scores (0.607 / 0.929 / 0.927) did not move. The record
+  above is left as written; the paper's numbers are the ten-seed means.
+- **[TB] / [QC] tokens.** The paper's earlier text called these redaction marks. They are the
+  prefixes Vietnamese regulation requires on brand-name SMS (thông báo, quảng cáo) and are
+  content a deployed detector sees. The shallow-cue floor (0.621 tokens alone, 0.708 with
+  diacritics and length) is unchanged in value; its reading now says that it mixes release
+  artefact with a genuine sender-register signal, in shares the probe does not separate.
+- **Class term.** The paper now uses "positive class" / "positive-labelled" throughout for
+  label 1, following the card's "spam/scam"; the word "phishing" in this file's own text and in
+  field and macro names is left as written.

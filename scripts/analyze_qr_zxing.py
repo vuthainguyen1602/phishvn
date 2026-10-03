@@ -64,12 +64,19 @@ def main() -> int:
             better.append(t)
         elif v > max(others):
             worse.append(t)
-    reg_overall = {d: sum(three[t][d] for t in three) / len(three) for d in reg["decoders"]}
+    # ONE pooling. ZXing's overall figure is render-weighted (every row of the grid counts
+    # once), so the registered three are quoted the same way, from the registered snapshot's
+    # per-decoder correct share. Until 2026-10-03 this took an unweighted mean of the nine
+    # per-transform rows instead, which put 57.9/58.2/39.7 beside the 63.1/43.4 the results
+    # section prints for the same decoders -- two "overall DFRs" for one sweep, and the one
+    # here was the wrong basis for a comparison with ZXing's 50.1.
+    reg_overall = {d: 100.0 - reg["failure_kind"][d]["correct_pct"] for d in reg["decoders"]}
 
     snap = {"rows": tot, "overall_dfr": round(overall, 2),
             "by_transform": {t: round(v, 2) for t, v in sorted(dfr.items())},
             "beats_all_three": sorted(better), "worse_than_all_three": sorted(worse),
-            "registered_mean_by_decoder": {d: round(v, 2) for d, v in reg_overall.items()},
+            "registered_overall_by_decoder": {d: round(v, 2) for d, v in reg_overall.items()},
+            "pooling": "render-weighted over all rows of the grid, ZXing and the registered three alike",
             "note": "post-hoc; the registered tests were computed over three decoders"}
     json.dump(snap, open(OUT_SNAP, "w", encoding="utf-8"), indent=2, sort_keys=True)
 

@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Generate high-resolution visual demonstration figures for the Smishing paper.
+"""Figure 1 of the smishing paper: four rows quoted from the corpus, as message cards.
 
-Figures generated:
-1. papers/future_smishing/figures/fig_sms_examples.pdf
-   - Multi-panel visual comparison of real Vietnamese SMS messages (phishing smishing
-     lures with malicious disposable domains vs. legitimate brand/telecom messages).
+Every message on the figure is a row of data/raw/sms_hf_full/full_dataset.csv, quoted verbatim
+(wrapped, and cut with an ellipsis when it runs past the card). Nothing is paraphrased and no
+sender field is drawn: the published file carries no sender, so a card that printed one would be
+inventing it. Rows are chosen by the host they carry, the same hosts as Table 1, plus one
+ham-labelled telecom template that opens with the regulated [TB] prefix.
+
+Writes papers/future_smishing/figures/fig_sms_examples.pdf
 
 RUN:
     python3 scripts/make_sms_visual_assets.py
 """
 from __future__ import annotations
-import os, sys
+import csv, os, sys, textwrap
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -23,7 +26,38 @@ except ImportError:
     ROOT = os.path.dirname(_HERE)
 from figstyle import ORANGE, BLUE  # noqa: E402
 FIG_DIR = os.path.join(ROOT, "papers", "future_smishing", "figures")
+SRC = os.path.join(ROOT, "data", "raw", "sms_hf_full", "full_dataset.csv")
 os.makedirs(FIG_DIR, exist_ok=True)
+
+# (panel letter, host the row must carry, label the row must have, text the row must start with)
+PANELS = (("a", "vietcombank.vn-gll.top", "1", ""),
+          ("b", "acb.i-pay.vip", "1", ""),
+          ("c", "techcombank.huy-the-visa-vn.com", "1", ""),
+          ("d", "viettel.vn", "0", "[TB]"))
+WRAP = 48      # characters per line on a card
+LINES = 6      # lines a card can hold before the ellipsis
+
+
+def pick_rows():
+    with open(SRC, newline="", encoding="utf-8-sig") as f:
+        rows = list(csv.DictReader(f))
+    out = []
+    for letter, host, label, prefix in PANELS:
+        hit = next((r for r in rows if host in (r["message"] or "").lower()
+                    and r["label"] == label and (r["message"] or "").lstrip().startswith(prefix)),
+                   None)
+        if hit is None:
+            raise SystemExit(f"[!] no label-{label} row carries {host}; the figure must change")
+        out.append((letter, host, hit))
+    return out
+
+
+def card_lines(text: str):
+    lines = textwrap.wrap(" ".join((text or "").split()), WRAP)
+    if len(lines) > LINES:
+        lines = lines[:LINES]
+        lines[-1] = lines[-1].rstrip(" ,.;:-") + " …"
+    return "\n".join(lines)
 
 
 def build_sms_examples_figure(out_path: str) -> None:
@@ -34,117 +68,43 @@ def build_sms_examples_figure(out_path: str) -> None:
         "ps.fonttype": 42,
         "font.size": 8.5,
     })
+    # The class colours come from scripts/figstyle.py, which every other figure in this
+    # paper uses: ORANGE is the positive (spam/scam) side, BLUE the legitimate one.
+    COL = {"1": ORANGE, "0": BLUE}
+    BADGE_BG = {"1": "#fdf0eb", "0": "#eaf1fb"}
+    BADGE = {"1": "SPAM/SCAM (1)", "0": "LEGITIMATE (0)"}
+    COL_NAVY = "#1c5491"
 
     fig, axes = plt.subplots(2, 2, figsize=(7.6, 4.6), dpi=300)
     plt.subplots_adjust(wspace=0.18, hspace=0.28, left=0.03, right=0.97, top=0.94, bottom=0.03)
 
-    # The class colours come from scripts/figstyle.py, which every other figure in this paper
-    # already uses: ORANGE is the phishing side, BLUE the legitimate one. They were a hand-rolled
-    # red/green pair, described in a comment as the repo's standard tokens although the repo has
-    # no such tokens. That cost two things. It taught the reader a second encoding for one binary,
-    # in the FIRST figure of the paper, after four others had taught orange/blue; and red against
-    # green is the one pair in this paper that a red-green colour blindness cannot separate, which
-    # is roughly one man in twelve.
-    COL_PHISH = ORANGE
-    COL_HAM = BLUE
-    # Navy and its pale box stay: they carry the card title and the URL on ALL FOUR cards, so they
-    # encode no class, and a URL that is not link-coloured stops reading as a URL.
-    COL_NAVY = "#1c5491"
-    COL_URL = "#1c5491"
-    COL_MUTED = "#5f6368"
-
-    cards = [
-        {
-            "ax_idx": (0, 0),
-            "label": "SMISHING",
-            "accent_col": COL_PHISH,
-            "badge_bg": "#fdf0eb",
-            "sender": "Sender: +8491... (Spoofed ID)",
-            "title": "(a) Account Lockout Alert",
-            "body": "Tai khoan cua ban dang duoc dang nhap\ntren thiet bi khac, neu khong phai ban\nvui long truy cap:",
-            "link": "https://vietcombank.vn-gll.top",
-            "tail": "de doi mat khau hoac thoat thiet bi.",
-            "meta": "Target: Vietcombank  |  Suffix: .top (Disposable)"
-        },
-        {
-            "ax_idx": (0, 1),
-            "label": "SMISHING",
-            "accent_col": COL_PHISH,
-            "badge_bg": "#fdf0eb",
-            "sender": "Sender: (ACB) Security",
-            "title": "(b) Foreign Transaction Panic",
-            "body": "(ACB) Phat hien tai khoan cua ban dang\ntieu dung o nuoc ngoai, neu khong phai\nban vui long vao:",
-            "link": "https://acb.i-pay.vip",
-            "tail": "de huy giao dich tranh mat tien.",
-            "meta": "Target: ACB  |  Suffix: .vip (Combosquatting)"
-        },
-        {
-            "ax_idx": (1, 0),
-            "label": "SMISHING",
-            "accent_col": COL_PHISH,
-            "badge_bg": "#fdf0eb",
-            "sender": "Sender: Techcombank_CSKH",
-            "title": "(c) Points / Card Expiry",
-            "body": "[Techcombank] Uu dai co thoi han!\n12.000 diem thuong het han hom nay.\nNhan qua tai:",
-            "link": "https://techcombank.huy-the-visa-vn.com",
-            "tail": "qua han diem se bi huy bo.",
-            "meta": "Target: Techcombank  |  Suffix: .com (Hyphen Squat)"
-        },
-        {
-            "ax_idx": (1, 1),
-            "label": "HAM (LEGIT)",
-            "accent_col": COL_HAM,
-            "badge_bg": "#eaf1fb",
-            "sender": "Sender: VIETTEL_TB",
-            "title": "(d) Official Promotion",
-            "body": "[TB] Viettel khuyen mai 20% gia tri\nthe nap ngay 31/08. Giam them 2.5%\nkhi nap the tai:",
-            "link": "https://viettel.vn/pay/tt",
-            "tail": "hoac https://myvt.page.link/km . LH: 198.",
-            "meta": "Sender: Viettel Telecom  |  Suffix: .vn / page.link"
-        }
-    ]
-
-    for item in cards:
-        r, c = item["ax_idx"]
-        ax = axes[r, c]
+    for ax, (letter, host, r) in zip(axes.flat, pick_rows()):
         ax.set_xlim(0, 100)
         ax.set_ylim(0, 100)
         ax.axis("off")
+        accent = COL[r["label"]]
 
-        accent = item["accent_col"]
-
-        # Outer card container
-        card_rect = patches.FancyBboxPatch((1, 2), 98, 96, boxstyle="round,pad=0.5,rounding_size=3",
-                                          facecolor="#f8fafc", edgecolor="#cbd5e1", linewidth=0.85)
-        ax.add_patch(card_rect)
-
-        # Header bar with top accent stroke
-        header_rect = patches.FancyBboxPatch((1, 74), 98, 24, boxstyle="round,pad=0.5,rounding_size=3",
-                                            facecolor="#ffffff", edgecolor="#e2e8f0", linewidth=0.75)
-        ax.add_patch(header_rect)
-
-        # Accent line at very top
+        ax.add_patch(patches.FancyBboxPatch((1, 2), 98, 96, boxstyle="round,pad=0.5,rounding_size=3",
+                                            facecolor="#f8fafc", edgecolor="#cbd5e1", linewidth=0.85))
+        ax.add_patch(patches.FancyBboxPatch((1, 78), 98, 20, boxstyle="round,pad=0.5,rounding_size=3",
+                                            facecolor="#ffffff", edgecolor="#e2e8f0", linewidth=0.75))
         ax.plot([3, 97], [97.5, 97.5], color=accent, lw=2.2, solid_capstyle="round")
 
-        # Header Title & Badge
-        ax.text(4.5, 86.5, item["title"], fontsize=8.0, fontweight="bold", color=COL_NAVY, va="center")
-        ax.text(95.5, 86.5, item["label"], fontsize=6.6, fontweight="bold", color=accent, ha="right", va="center",
-                bbox=dict(boxstyle="round,pad=0.25", facecolor=item["badge_bg"], edgecolor=accent, lw=0.6))
-        ax.text(4.5, 78, item["sender"], fontsize=6.8, color=COL_MUTED, style="italic", va="center")
+        ax.text(4.5, 88, f"({letter}) {r['message_id']}, {r['date'] or 'undated'}",
+                fontsize=7.2, fontweight="bold", color=COL_NAVY, va="center")
+        ax.text(95.5, 88, BADGE[r["label"]], fontsize=6.0, fontweight="bold", color=accent,
+                ha="right", va="center",
+                bbox=dict(boxstyle="round,pad=0.25", facecolor=BADGE_BG[r["label"]],
+                          edgecolor=accent, lw=0.6))
 
-        # Body Message Bubble
-        bubble_rect = patches.FancyBboxPatch((3.5, 17), 93, 54, boxstyle="round,pad=0.5,rounding_size=2.5",
-                                            facecolor="#ffffff", edgecolor="#e2e8f0", linewidth=0.75)
-        ax.add_patch(bubble_rect)
+        ax.add_patch(patches.FancyBboxPatch((3.5, 17), 93, 57, boxstyle="round,pad=0.5,rounding_size=2.5",
+                                            facecolor="#ffffff", edgecolor="#e2e8f0", linewidth=0.75))
+        ax.text(5.5, 70, card_lines(r["message"]), fontsize=6.9, color="#1e293b", va="top",
+                linespacing=1.3)
 
-        # Body text & Link
-        ax.text(5.5, 66, item["body"], fontsize=7.1, color="#1e293b", va="top", linespacing=1.25)
-        ax.text(5.5, 36, item["link"], fontsize=7.1, fontweight="bold", color=COL_URL, va="top",
-                bbox=dict(boxstyle="round,pad=0.15", facecolor="#eff6ff", edgecolor="#bfdbfe", lw=0.5))
-        ax.text(5.5, 27, item["tail"], fontsize=6.8, color="#334155", va="top")
-
-        # Meta footer
-        ax.text(4.5, 8.5, item["meta"], fontsize=6.4, fontweight="bold", color="#475569", va="center")
+        suffix = host.rsplit(".", 1)[-1]
+        ax.text(4.5, 8.5, f"embedded host: {host}   |   suffix .{suffix}", fontsize=6.4,
+                fontweight="bold", color="#475569", va="center")
 
     plt.savefig(out_path, format="pdf", bbox_inches="tight")
     plt.close()
@@ -152,8 +112,7 @@ def build_sms_examples_figure(out_path: str) -> None:
 
 
 def main() -> int:
-    out_pdf = os.path.join(FIG_DIR, "fig_sms_examples.pdf")
-    build_sms_examples_figure(out_pdf)
+    build_sms_examples_figure(os.path.join(FIG_DIR, "fig_sms_examples.pdf"))
     return 0
 
 

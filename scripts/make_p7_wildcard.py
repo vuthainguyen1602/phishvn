@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import collections
 import csv
+import datetime
 import io
 import math
 import os
@@ -37,7 +38,7 @@ except ImportError:  # flat public-mirror layout
 from genfile import write_generated
 # The probe is the one the infrastructure study registered, imported rather than reimplemented:
 # two papers reporting the same screen must not be running two versions of it.
-from audit_capture_labels import _EXTRACT, wildcard_ips
+from audit_capture_labels import _EXTRACT, _WILDCARD_PROBE_LABEL, wildcard_ips
 from psl import apex
 
 SEC = os.path.join(ROOT, "papers", "P7_cti", "sections")
@@ -164,7 +165,7 @@ def make_hosting_tex(rows: list[dict], total_hosts: int, tier1_platform_hosts: i
         f"hosts finds {len(rows)} with at least {PLATFORM_MIN_HOSTS} of them "
         f"(covering {sum(int(r['phishing_hosts']) for r in rows):,} of the "
         f"{total_hosts:,} phishing hosts), and the same unlikely label partitions their probe responses. "
-        f"{len(ans)} answer the wildcard label, so their subdomains are delegated under one "
+        f"Of these, {len(ans)} answer the wildcard label, so their subdomains are delegated under one "
         f"registration rather than registered one by one ({ans_hosts} hosts under {len(ans)} "
         f"registrable domains, not {ans_hosts} registrations): {names}. Answering says only that "
         f"the domain carries a wildcard record; it does not say the registrant is a hosting "
@@ -300,7 +301,9 @@ def make_figure(s: dict, p4: tuple[int, int] | None) -> str:
     # (which is what pinning the aspect first did). "candidates" is carried by the bar
     # annotations, which read "9 of 36,706".
     ax2.set_ylabel("never-registered (%, log)")
-    ax2.set_title("the artefact is a property of the method", fontsize=10)
+    # Descriptive, not causal: the prose beside this panel says the ratio does not isolate
+    # feed-generation practice as the cause, so the title cannot assert what the text declines.
+    ax2.set_title("the same screen on two collections", fontsize=10)
     ax2.grid(axis="y", alpha=0.6)
 
     ax2.set_box_aspect(1.25)          # two bars; without this it becomes a sliver 5 in tall
@@ -325,11 +328,16 @@ def make_tex(s: dict, p4: tuple[int, int] | None, probe_date: str) -> None:
     reg_names = ", ".join(f"\\texttt{{.{r['suffix']}}}" for r in s["by"]["registry"])
     p4_txt = ""
     if p4:
+        # The companion funnel is regenerated as its collection runs, so the sentence dates
+        # the snapshot it read rather than printing a moving number as if it were fixed.
+        funnel_date = datetime.date.fromtimestamp(os.path.getmtime(P4_FUNNEL)).isoformat()
         p4_txt = (
-            f" The comparison that gives the number meaning is a separate collection "
-            f"that compares candidate addresses with probe answers in a brand-token "
-            f"submission and removes ${tex_int(p4[0])}$ of ${tex_int(p4[1])}$ candidates "
-            f"(${100.0 * p4[0] / p4[1]:.1f}\\%$) as registry answers. "
+            f" The comparison that gives the number meaning is a separate prospective "
+            f"collection of candidate names generated from brand tokens, screened by the same "
+            f"label: a candidate whose resolved addresses matched the probe's answer for its "
+            f"suffix was removed as a registry answer, which removed ${tex_int(p4[0])}$ of "
+            f"${tex_int(p4[1])}$ candidates (${100.0 * p4[0] / p4[1]:.1f}\\%$) in that "
+            f"collection's funnel as of {funnel_date}. "
             # Computed, not asserted. This read "Four orders of magnitude" as a literal while the
             # ratio was 3,046x -- 3.5 decades. Four orders would need the companion to remove more
             # than 100% of its candidates, so the claim was not merely stale but unreachable.
@@ -343,9 +351,11 @@ def make_tex(s: dict, p4: tuple[int, int] | None, probe_date: str) -> None:
     body = (
         "Registries that answer for every name under their TLD can manufacture indicators out of "
         "nothing, so before reading anything into this corpus's suffix distribution we asked how "
-        f"exposed it is (Figure~\\ref{{fig:wildcard}}). Probing each of the ${s['suffixes']}$ "
-        "distinct public suffixes its phishing indicators occupy with a fixed unlikely "
-        f"label (probe of {probe_date}), ${s['answering']}$ answer. Almost all of them are "
+        f"exposed it is (Figure~\\ref{{fig:wildcard}}). The probe is one address lookup per "
+        f"suffix of the fixed label \\texttt{{{_WILDCARD_PROBE_LABEL}}}, through the analysis "
+        f"machine's system resolver, and a suffix answers when any address comes back. Probing "
+        f"each of the ${s['suffixes']}$ distinct public suffixes the phishing arm occupies this "
+        f"way (probe of {probe_date}), ${s['answering']}$ answer. Almost all of them are "
         f"hosting platforms rather than registries: ${s['platform_s']}$ suffixes covering "
         f"${tex_int(s['platform_n'])}$ indicators (${plat_share:.2f}\\%$), where a resolving "
         "answer does not establish abuse or individual tenant existence. Registry-level probe "

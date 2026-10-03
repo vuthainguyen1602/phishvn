@@ -56,6 +56,49 @@ V2_ARMS = {
 }
 SEC = os.path.join("papers", "future_quishing", "sections")
 OUT_TEX = os.path.join(SEC, "gen_prevalence.tex")
+PREREG = os.path.join("papers", "future_quishing", "PREREG_quishing.md")
+PREREG_RESTORE = os.path.join("papers", "future_quishing", "PREREG_restore.md")
+GEN_SCRIPT = os.path.join(_HERE, "gen_synthetic_qr.py")
+TRAIN_SCRIPT = os.path.join(_HERE, "train_qr_restore.py")
+RESTORE_SET = os.path.join("data", "raw", "qr_restore_v2", "index.csv")
+RESTORE_V1_DFR = os.path.join("data", "processed", "qr", "qr_restore_arms_dfr.csv")
+ENVIRONMENT = os.path.join("data", "processed", "environment.json")
+# The decoder builds the sweep and the restoration arms were decoded with. Read on 2026-10-03 on
+# the second Jetson (the host every decode ran on: `pip3 show`, and the package directories are
+# dated 2026-08-30, the day the sweep ran, so the builds have not moved since), and on the
+# workstation for zxing-cpp, which is where the post-hoc ZXing arm ran (PREREG_quishing.md,
+# addendum of 2026-09-03). Recorded here rather than re-queried because the paper's numbers are
+# pinned and a generator that re-read a live machine could print a build the sweep never used.
+DECODER_VERSIONS = {"opencv": "5.0.0.93", "pyzbar": "0.1.9", "zbar": "0.23.92",
+                    "zxing": "3.1.1", "qrcode": "8.2"}
+
+
+def _wilson(k: int, n: int, z: float = 1.96) -> tuple:
+    """Wilson score interval, as a percentage pair. The same formula check_paper_claims.wilson
+    mirrors for P1, so a generator that changed method would be caught there."""
+    import math
+    if not n:
+        return (float("nan"), float("nan"))
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
+    return (100 * max(0.0, c - h), 100 * min(1.0, c + h))
+
+
+def _grep(path: str, pattern: str, default: str = "") -> str:
+    """One regex over one file; the first group, or the default. Used for constants the paper
+    states that live in a script's argparse defaults or in a registration record, so they are
+    read from where they are bound rather than typed into prose."""
+    import re
+    if not os.path.isfile(path):
+        return default
+    m = re.search(pattern, open(path, encoding="utf-8").read())
+    return m.group(1) if m else default
+
+
+def _long_date(iso: str) -> str:
+    return dt.date.fromisoformat(iso[:10]).strftime("%-d %B %Y")
 
 # The order the tables print transforms in. Worst first per the pooled sweep, so a reader meets the
 # saturated pair before the ones with a usable gradient; `clean` last because it is the control.
@@ -190,7 +233,20 @@ def prevalence() -> int:
     adjudicated_on = max((r.get("adjudicated_on") or "" for r in rows(ADJUDICATION)), default="")
     # How many hand verdicts rest on the screenshot as well as the payload. The prose once typed
     # "the six" while the file held ten.
-    hand_screenshot = sum("screenshot" in (r.get("basis") or "") for r in rows(ADJUDICATION))
+    adj_rows = rows(ADJUDICATION)
+    hand_screenshot = sum("screenshot" in (r.get("basis") or "") for r in adj_rows)
+    # What a counted page IS: a decoder returned a string from the stored screenshot or payload.
+    # That is not the same as a code a visitor could see. One page (justhint.me) was read from
+    # its screenshot on 2026-10-02 and carries no rendered code at all; the stored decode is a
+    # spurious six-digit string off page furniture. It stays in the pinned 27, because the pin
+    # counts decoder returns, and the paper now reports the two counts side by side. These are
+    # derived from the adjudication file, which is frozen with the manuscript, and NOT from the
+    # pin, so no re-pin was needed to print them. A note that says a code is not rendered is the
+    # marker; a verdict column would be cleaner, but the file's rows are on record as written.
+    no_render = sum("no qr is rendered" in (r.get("note") or "").lower() for r in adj_rows)
+    import re as _re
+    bare_numbers = sum(bool(_re.search(r"bare (number|string)", (r.get("note") or ""), _re.I))
+                       for r in adj_rows)
 
     rate = 100 * hits / examined if examined else 0.0
     # the search arm's own wrong division (its pages over its scans); the submitting arm has no scans
@@ -230,7 +286,29 @@ def prevalence() -> int:
     def m(name, val):
         return "\\newcommand{\\Qr%s}{%s}\n" % (name, val)
 
+    # The population the audit was registered on, and when the submitting arm started. Both come
+    # from records rather than prose: the registration's own header for the 616 pages and its
+    # date, the submission ledger for the arm's first attempt. The registration counted the
+    # search arm alone; the submitting arm had started that morning and was folded into the
+    # denominator the same afternoon, after registration, with no amendment on file. The paper
+    # says so and the registration carries a post-hoc deviation record dated 2026-10-03.
+    registered_pages = _grep(PREREG, r"in-the-wild arm at ([\d,]+) pages examined", "")
+    registered_on = _grep(PREREG, r"\*\*Registered:\*\* (\d{4}-\d{2}-\d{2})", "")
+    submit_start = min((r.get("attempted_at") or "" for r in rows(SUBMIT) if r.get("attempted_at")),
+                       default="")
+    lo, hi = _wilson(hits, examined)
+
     tex = (m("SnapDate", dt.date.fromisoformat(today).strftime("%-d %B %Y"))
+           + m("PrevalenceLo", f"{lo:.2f}") + m("PrevalenceHi", f"{hi:.2f}")
+           + m("NoRenderedQr", no_render) + m("EyeConfirmed", hand_screenshot - no_render)
+           + m("RenderedUpper", hits - no_render) + m("NotEyeChecked", hits - hand_screenshot)
+           + m("BareNumbers", bare_numbers)
+           + m("SubmittedShare", "%.1f" % (100 * len(sub) / examined) if examined else "0.0")
+           + (m("RegisteredPages", registered_pages) if registered_pages else "")
+           + (m("RegisteredOn", _long_date(registered_on)) if registered_on else "")
+           + (m("SubmitStart", _long_date(submit_start)) if submit_start else "")
+           + (m("PoolUnreached", f"{snap['tag_quishing'] + snap['tag_vn_phishing'] - scans:,}")
+              if "tag_quishing" in snap else "")
            + m("Scans", f"{scans:,}") + m("CrawledPages", f"{crawled:,}")
            + m("SubmittedPages", f"{len(sub):,}") + m("Overlap", f"{overlap:,}")
            + m("PagesExamined", f"{examined:,}") + m("PagesWithQr", f"{hits:,}")
@@ -507,6 +585,14 @@ def v2_assets() -> None:
                 m += "\\newcommand{\\QrVTwo%s%s}{%+.1f}\n" % (
                     tag, key, by[k]["control"] - by[k]["restored"])
     cg = v["guard"]["conv"]["opencv"]
+    # Parameter ratios against arm A: the paper reads the logo gain as consistent with the
+    # receptive-field account, and these say what else differed between the arms.
+    conv_params = v.get("budget", {}).get("conv", {}).get("params", 0)
+    for arch, tag in NAME.items():
+        p_arch = v.get("budget", {}).get(arch, {}).get("params", 0)
+        if conv_params and p_arch:
+            m += "\\newcommand{\\QrVTwo%sParamRatio}{%.1f}\n" % (tag, p_arch / conv_params)
+    m += "\\newcommand{\\QrVTwoConvParams}{%s}\n" % f"{conv_params:,}"
     m += "\\newcommand{\\QrVTwoConvBreak}{%.1f}\n" % cg["destroyed_pct_of_correct"]
     m += "\\newcommand{\\QrVTwoConvLogo}{%+.1f}\n" % (
         v["by_transform"]["conv"]["opencv/logo"]["control"]
@@ -538,25 +624,30 @@ def v2_assets() -> None:
         body += ("%s & %s & %s & %s & %s & %s%s \\\\\n"
                  % (tag, f"{b.get('params', 0):,}", t1, t2,
                     f"{g['rescued']:,}", f"{g['destroyed_pct_of_correct']:.1f}\\%", flag))
+    # The caption is short on purpose. A one-line caption that ends in a \texttt{} file name
+    # cannot be hyphenated, and the justified line set it with word gaps a centimetre wide; the
+    # file is named in the note below instead.
     write_generated(os.path.join(SEC, "tab_qr_v2.tex"), r"""\begin{table}[htbp]
 \centering\small
-\caption{The architecture comparison, registered in \texttt{PREREG\_restore\_v2.md}.}
+\caption{The architecture comparison.}
 \label{tab:qr_v2}
-\setlength{\tabcolsep}{5pt}\footnotesize
+\setlength{\tabcolsep}{3pt}\footnotesize
 \begin{tabular}{lrrrrr}
 \toprule
-Arm & params & T1: \texttt{logo} vs A & T2: vs raw+WeChat & resc. & broke \\
+Arm & params & T1-arch: \texttt{logo} vs A & T2-arch: vs raw+WeChat & resc. & broke \\
 \midrule
 """ + body + r"""\bottomrule
 \end{tabular}
 \\[4pt]
 \begin{minipage}{0.94\linewidth}\footnotesize
-Percentage points of OpenCV DFR on \QrVTwoUrls{} held-out URLs, positive when the arm is ahead;
-Benjamini--Hochberg over $m=4$. T1's bar is $+\QrVTwoBarOne$\,pp and T2's is $+\QrVTwoBarTwo$\,pp,
-both fixed at registration. Arm A's T2 figure is the first study's and is shown for comparison, not
-re-tested. \emph{broke} is the share of renders the control arm decoded and the restored arm did
-not: $^{\ddagger}$~exceeds the registered $\QrVTwoGuard\%$ guard, which is reported whatever T1 and
-T2 say.
+Registered in \texttt{PREREG\_restore\_v2.md}. Percentage points of OpenCV DFR on \QrVTwoUrls{}
+held-out URLs, positive when the arm is ahead. Each cell is a two-sided Wilcoxon signed-rank test on
+the per-URL differences, Benjamini--Hochberg over $m=4$ (two tests, two new arms). T1-arch's bar is
+$+\QrVTwoBarOne$\,pp and T2-arch's is $+\QrVTwoBarTwo$\,pp, both fixed at registration. Arm A's
+T2-arch figure is the first study's T1-restore and is shown for comparison, not re-tested.
+\emph{broke} is the share of renders the control arm decoded and the restored arm did not:
+$^{\ddagger}$~exceeds the registered $\QrVTwoGuard\%$ guard, which is reported whatever T1-arch and
+T2-arch say.
 \end{minipage}
 \end{table}
 """)
@@ -588,8 +679,74 @@ def results() -> int:
     ec_logo = d["by_ec"]["logo"]
     ec_gain = {k: v["L"] - v["H"] for k, v in d["by_ec"].items()}
     wrong = max(v["wrong_payload_pct"] for v in d["failure_kind"].values())
+    # The cascade's gain outside perspective, so the prose cannot say "everywhere else the
+    # strongest decoder is a superset" when logo, rotate and salt-and-pepper each gain a little.
+    casc_other = max(v["gain_vs_best_pp"] for t, v in d["cascade"]["per_transform"].items()
+                     if t != "perspective")
+    # Restoration configuration, read from where it is bound: the training script's argparse
+    # defaults (the registered run used them, PREREG_restore.md), the set's own index, and the
+    # registration's command line for the set's seed.
+    cfg = {k: _grep(TRAIN_SCRIPT, r'"--%s", type=\w+, default=([\d.e-]+)' % k)
+           for k in ("epochs", "batch", "crop", "holdout", "seed", "eval-limit")}
+    cfg["lr"] = _grep(TRAIN_SCRIPT, r"lr=([\d.e-]+)")
+    cfg["channels"] = _grep(TRAIN_SCRIPT, r"ch: int = (\d+)")
+    sweep_seed = _grep(GEN_SCRIPT, r'"--seed", type=int, default=(\d+)')
+    set_seed = _grep(PREREG_RESTORE, r"--seed (\d+)")
+    set_urls = train_urls = test_urls = heldout = canvas = 0
+    if os.path.isfile(RESTORE_SET):
+        from train_qr_restore import split_key
+        idx = rows(RESTORE_SET)
+        urls_all = {r["url_sha1"] for r in idx}
+        test = {u for u in urls_all if split_key(u, float(cfg["holdout"] or 0.25)) == "test"}
+        set_urls, test_urls, train_urls = len(urls_all), len(test), len(urls_all) - len(test)
+        heldout = sum(1 for r in idx if r["url_sha1"] in test and r["transform"] != "clean")
+        raster = (max(int(r["modules"]) for r in idx) + 8) * int(idx[0]["box_size"])
+        canvas = raster + (-raster) % 8
+    # Per-URL improvement counts behind Table 5's p column. At n = 115 the two-sided Wilcoxon
+    # normal approximation bottoms out near 1.3e-20 once every URL improves, so the p-values in
+    # that column are a floor and the count is the informative figure.
+    improved = {}
+    if os.path.isfile(RESTORE_V1_DFR):
+        per: dict = {}
+        for row in rows(RESTORE_V1_DFR):
+            sid, _, arm = row["sample_id"].rpartition("__")
+            k = (arm, row["decoder"], sid[:16])
+            per.setdefault(k, [0, 0])
+            per[k][0] += 1
+            per[k][1] += int(row["correct"])
+        urls = sorted({k[2] for k in per})
+        for dec in DEC:
+            diff = [(1 - per[("restored", dec, u)][1] / per[("restored", dec, u)][0])
+                    - (1 - per[("control", dec, u)][1] / per[("control", dec, u)][0])
+                    for u in urls if ("restored", dec, u) in per and ("control", dec, u) in per]
+            improved[dec] = {"n": len(diff), "better": sum(x < 0 for x in diff),
+                             "worse": sum(x > 0 for x in diff)}
+    env = json.load(open(ENVIRONMENT, encoding="utf-8")) if os.path.isfile(ENVIRONMENT) else {}
 
     tex = (m("Rows", f"{d['rows']:,}") + m("Urls", f"{d['urls']:,}")
+           # overall DFR per registered decoder, render-weighted over the whole grid: the one
+           # pooling every overall figure in the paper uses (the ZXing macros match it)
+           + "".join(m("Dfr" + dec.capitalize(), "%.1f" % (100 - v["correct_pct"]))
+                     for dec, v in d["failure_kind"].items())
+           + m("TOnePBH", _p(d["bh"]["T1"]["p_bh"])) + m("TTwoPBH", _p(d["bh"]["T2"]["p_bh"]))
+           + "".join(m("EcGain" + t.capitalize(), "%.1f" % g) for t, g in ec_gain.items())
+           + m("CascadeOtherMax", "%.1f" % casc_other)
+           + m("Seed", sweep_seed)
+           + "".join(m("Ver" + k.capitalize(), v) for k, v in DECODER_VERSIONS.items())
+           + (m("VerTorch", env["libraries"]["torch"]) if env.get("libraries", {}).get("torch") else "")
+           + m("ResEpochs", cfg["epochs"]) + m("ResBatch", cfg["batch"]) + m("ResCrop", cfg["crop"])
+           + m("ResHoldout", "%.0f" % (100 * float(cfg["holdout"] or 0)))
+           + m("ResSeed", cfg["seed"]) + m("ResLr", cfg["lr"]) + m("ResChannels", cfg["channels"])
+           + m("ResEvalLimit", f"{int(cfg['eval-limit'] or 0):,}")
+           + (m("ResSetSeed", set_seed) if set_seed else "")
+           + (m("ResSetUrls", f"{set_urls:,}") + m("ResTrainUrls", f"{train_urls:,}")
+              + m("ResTestUrls", f"{test_urls:,}") + m("ResHeldOutRenders", f"{heldout:,}")
+              + m("ResCanvas", canvas)
+              + m("ResThinStep", "%.2f" % (heldout / int(cfg["eval-limit"] or 1)))
+              if set_urls else "")
+           + "".join(m("ResImproved" + dec.capitalize(), f"{v['better']:,}")
+                     + m("ResWorse" + dec.capitalize(), f"{v['worse']:,}")
+                     for dec, v in improved.items())
            + m("Renders", f"{d['rows'] // len(d['decoders']):,}")
            + m("GridComplete", "complete" if d["grid_complete"] else "INCOMPLETE")
            # T1 — render scale
@@ -681,8 +838,9 @@ Transformation & OpenCV & PyZbar & WeChat & \emph{all 3} & OpenCV & PyZbar & WeC
 \end{tabular}
 \\[4pt]
 \begin{minipage}{0.94\linewidth}\footnotesize
-Pooled over all four error-correction levels, all three module sizes and all four strengths
-(\QrRenders{} renders, each decoded by all three libraries). The right-hand block gives the
+Pooled over all four error-correction levels, all three module sizes and all four strengths,
+render-weighted: every one of the \QrRenders{} renders counts once, each decoded by all three
+libraries. The same pooling gives the overall figures quoted in the text. The right-hand block gives the
 strength at which DFR crosses 50\%, or \texttt{--} where it never does. \emph{all three} is
 a cascade: the render counts as read if any library reads it, and it is post-hoc rather than
 registered.
@@ -747,21 +905,25 @@ universal defence.
     for dec in DEC:
         a = r["by_arm"][dec]
         p = r["paired"][dec]
-        body += ("%s & %.1f & %.1f & %.1f & %s & %s & %s \\\\\n"
+        imp = improved.get(dec, {})
+        body += ("%s & %.1f & %.1f & %.1f & %s & %s & %s & $%s$ \\\\\n"
                  % (DEC_TEX[dec], a["raw"], a["control"], a["restored"],
                     _ppm(a["raw"] - a["control"]),
-                    _ppm(p["mean_pp"]), "$%s$" % _p(p["p"])))
+                    _ppm(p["mean_pp"]),
+                    ("%d/%d" % (imp["better"], imp["n"])) if imp else "--",
+                    _p(p["p"])))
     fig_strength(d, os.path.join(os.path.dirname(SEC), "figures", "fig_qr_strength.pdf"))
     v2_assets()
     write_generated(os.path.join(SEC, "tab_qr_restore.tex"), r"""\begin{table}[htbp]
 \centering\small
 \caption{The restoration arms, on the held-out URLs.}
 \label{tab:qr_restore}
-\begin{tabular}{lrrrrrr}
+\setlength{\tabcolsep}{4pt}\footnotesize
+\begin{tabular}{lrrrrrcr}
 \toprule
-& \multicolumn{3}{c}{DFR (\%)} & polarity & network & \\
+& \multicolumn{3}{c}{DFR (\%)} & polarity & network & URLs & \\
 \cmidrule(lr){2-4}
-Decoder & raw & control & restored & (pp) & (pp) & $p$ \\
+Decoder & raw & control & restored & (pp) & (pp) & better & $p$ \\
 \midrule
 """ + body + r"""\bottomrule
 \end{tabular}
@@ -769,8 +931,13 @@ Decoder & raw & control & restored & (pp) & (pp) & $p$ \\
 \begin{minipage}{0.94\linewidth}\footnotesize
 \QrResUrls{} URLs, \QrResRenders{} renders per arm, all three decoders decoded in one invocation on
 one machine. \emph{control} is the raw image with the polarity line alone; \emph{restored} adds the
-network on top of that control, so the two right-hand columns separate one line of preprocessing
-from the network that follows it. Paired per URL, two-sided Wilcoxon.
+network on top of that control, so the \emph{polarity} and \emph{network} columns separate one line
+of preprocessing from the network that follows it. \emph{URLs better} counts held-out URLs whose
+DFR fell from control to restored. $p$ is a two-sided Wilcoxon signed-rank test on the
+\QrResUrls{} per-URL differences, control against restored, one test per decoder. These three tests
+are descriptive and outside the registered family (T1-restore and T2-restore), so they carry no
+multiplicity correction. When every URL improves, the test's normal approximation sits at its
+floor near $10^{-20}$ whatever the effect size, so the count is the informative column.
 \end{minipage}
 \end{table}
 """)

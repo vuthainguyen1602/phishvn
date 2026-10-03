@@ -8,7 +8,7 @@ a literal inside a figure is the one place a stale number survives a data change
 RUN:  python3 scripts/make_smishing_assets.py   (after sms_corpus_import.py)
 """
 from __future__ import annotations
-import collections, csv, datetime as dt, io, json, os, sys
+import collections, csv, datetime as dt, io, json, os, re, sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
@@ -33,7 +33,10 @@ ROB = os.path.join(ROOT, "data", "processed", "sms", "split_robustness.json")
 FIG = os.path.join(ROOT, "papers", "future_smishing", "figures")
 SEC = os.path.join(ROOT, "papers", "future_smishing", "sections")
 
-LAB = {"0": "ham", "1": "phishing"}
+# The publisher defines label 1 as spam/scam, not phishing; every legend says so.
+LAB = {"0": "ham", "1": "spam/scam"}
+SRC = os.path.join(ROOT, "data", "raw", "sms_hf_full", "full_dataset.csv")
+EMB_META = os.path.join(ROOT, "data", "processed", "sms", "phobert_emb.npy.meta.json")
 
 
 def read(path):
@@ -63,7 +66,7 @@ def fig_timeline(msgs, out):
     fig, ax = plt.subplots(figsize=(5.6, 3.2))
     x = np.arange(len(months))
     w = 0.38
-    ax.bar(x - w / 2, ph, w, color=ORANGE, edgecolor=INK, label="phishing")
+    ax.bar(x - w / 2, ph, w, color=ORANGE, edgecolor=INK, label=LAB["1"])
     ax.bar(x + w / 2, ham, w, color=FILL_B, edgecolor=INK, hatch="///", label="ham")
     for i, v in enumerate(ph):
         ax.text(i - w / 2, v + 12, str(v), ha="center", fontsize=7, color=INK)
@@ -110,7 +113,7 @@ def fig_tld(urls, out, top=8):
     h = 0.38
     tot = {lab: max(sum(per[lab].values()), 1) for lab in per}
     ax.barh(y + h / 2, [100 * per["1"][t] / tot["1"] for t in names], h,
-            color=ORANGE, edgecolor=INK, label="phishing")
+            color=ORANGE, edgecolor=INK, label=LAB["1"])
     ax.barh(y - h / 2, [100 * per["0"][t] / tot["0"] for t in names], h,
             color=FILL_B, edgecolor=INK, hatch="///", label="ham")
     ax.set_yticks(y, [f".{t}" for t in names])
@@ -161,7 +164,7 @@ def fig_deltas(r, boot, why, out):
     hi = max(ci[1] for _l, _m, ci in rows)
     pad = (hi - lo) * 0.10
     ax.set_xlim(lo - pad, hi + (hi - lo) * 1.15)
-    ax.set_xlabel("difference in phishing-class F1")
+    ax.set_xlabel("difference in positive-class F1")
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
     fig.tight_layout()
@@ -210,7 +213,7 @@ def fig_robust(cues, fus, out):
         ax.set_title(title, fontsize=8, color=INK, pad=4)
         ax.set_xlim(0, 1.20)
         ax.set_xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.set_xlabel("phishing-class F1", fontsize=8)
+        ax.set_xlabel("positive-class F1", fontsize=8)
         ax.spines[["top", "right"]].set_visible(False)
     axes[0].set_yticks(y, labels, fontsize=8)
     # The two lines are the whole point of the panel and were unlabelled.
@@ -218,7 +221,7 @@ def fig_robust(cues, fus, out):
     fig.legend(handles=[Line2D([], [], color=GRAY, ls="--", lw=1.0,
                                label="shallow-cue floor (diacritics + length + tokens)"),
                         Line2D([], [], color=GRAY, ls=":", lw=1.2,
-                               label="redaction tokens alone")],
+                               label="bracketed tokens alone")],
                loc="lower center", ncol=2, fontsize=7.2, frameon=False,
                bbox_to_anchor=(0.5, -0.015))
     fig.tight_layout(rect=(0, 0.10, 1, 1))
@@ -306,6 +309,10 @@ def emit_results():
            + "\\newcommand{\\SmsPostCI}{[%+.3f,%+.3f]}\n" % tuple(boot.get("posthoc_fusion_minus_text", {}).get("ci95", [float("nan"), float("nan")]))
            + "\\newcommand{\\SmsBootClusters}{%d}\n" % boot.get("T1_fusion_minus_url", {}).get("clusters", 0)
            + "\\newcommand{\\SmsTestN}{%d}\n" % r["n_test"])
+    if os.path.exists(EMB_META):
+        em = json.load(open(EMB_META, encoding="utf-8"))
+        mac += ("\\newcommand{\\SmsEmbMaxLen}{%d}\n" % em["max_length"]
+                + "\\newcommand{\\SmsEmbPooling}{%s}\n" % em["pooling"])
     if os.path.exists(WHY):
         w = json.load(open(WHY, encoding="utf-8"))
         mac += ("\\newcommand{\\SmsMaskedScore}{%.3f}\n" % w["text_masked"]
@@ -352,6 +359,12 @@ def _d(v: float) -> str:
     return "0.000" if abs(v) < 0.0005 else "%+.3f" % v
 
 
+def _sci(v: float) -> str:
+    """A learning rate as math-mode scientific notation: 2e-05 -> $2\\times10^{-5}$."""
+    m, e = f"{v:.0e}".split("e")
+    return "$%s\\times10^{%d}$" % (m, int(e))
+
+
 def _ci(d, key):
     c = d.get(key, {}).get("ci95")
     return "[%+.3f,%+.3f]" % tuple(c) if c else "[not run]"
@@ -371,7 +384,11 @@ def predecision_macros() -> str:
               + "\\newcommand{\\SmsSegScore}{%.3f}\n" % r["arms"]["text_seg"]["f1"]
               + "\\newcommand{\\SmsFtSeeds}{%d}\n" % r["seeds"]
               + "\\newcommand{\\SmsFtEpochs}{%d}\n" % r["finetune"]["epochs"]
-              + "\\newcommand{\\SmsSegDelta}{%+.3f}\n" % b["seg_minus_text"]["mean"]
+              + "\\newcommand{\\SmsFtModel}{%s}\n" % r["finetune"]["model"].replace("_", "\\_")
+              + "\\newcommand{\\SmsFtLr}{%s}\n" % _sci(r["finetune"]["lr"])
+              + "\\newcommand{\\SmsFtBatch}{%d}\n" % r["finetune"]["batch"]
+              + "\\newcommand{\\SmsFtMaxLen}{%d}\n" % r["finetune"]["max_len"]
+              + "\\newcommand{\\SmsSegDelta}{%s}\n" % _d(b["seg_minus_text"]["mean"])
               + "\\newcommand{\\SmsSegCI}{%s}\n" % _ci(b, "seg_minus_text")
               + "\\newcommand{\\SmsFtDelta}{%+.3f}\n" % b["ft_minus_text"]["mean"]
               + "\\newcommand{\\SmsFtCI}{%s}\n" % _ci(b, "ft_minus_text")
@@ -417,7 +434,7 @@ def fig_ladder(cues, fus, out):
     # orange, so the picture ranked them opposite to their numbers and put a text model in the URL
     # arm's hue. Fusion stays pale because it is the arm that buys nothing.
     arms = [("URL only\n(CompPhish-21)", fus["arms"]["url"]["f1"], BLUE),
-            ("redaction tokens\n(not language)", cues["baselines"]["tokens"]["f1"], GRAY),
+            ("bracketed tokens\n(not language)", cues["baselines"]["tokens"]["f1"], GRAY),
             ("diacritics + length\n+ tokens", floor, GRAY),
             ("word TF-IDF\n(linear)", cues.get("language", {}).get("tfidf", {}).get("word", 0.0),
              ORANGE),
@@ -432,7 +449,7 @@ def fig_ladder(cues, fus, out):
         ax.text(v + 0.012, yy, f"{v:.3f}", va="center", ha="left", fontsize=8, color=INK)
     ax.axvline(floor, color=GRAY, ls="--", lw=0.9, zorder=0)
     ax.set_yticks(y, [a[0] for a in arms], fontsize=8)
-    ax.set_xlabel("phishing-class F1")
+    ax.set_xlabel("positive-class F1")
     ax.set_xlim(0, 1.06)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
@@ -462,9 +479,9 @@ def tab_logodds(cues, out):
     buf.write("\\begin{table}[htbp]\n\\centering\\small\n"
               "\\caption{What the wording is, per class.}\n\\label{tab:sms_logodds}\n"
               "\\begin{tabular}{lrrr@{\\qquad}lrrr}\n\\toprule\n"
-              "\\multicolumn{4}{c}{marks phishing} & \\multicolumn{4}{c}{marks ham} \\\\\n"
+              "\\multicolumn{4}{c}{marks the positive class} & \\multicolumn{4}{c}{marks ham} \\\\\n"
               "\\cmidrule(lr){1-4}\\cmidrule(lr){5-8}\n"
-              "term & $z$ & ph. & ham & term & $z$ & ph. & ham \\\\\n\\midrule\n")
+              "term & $z$ & pos. & ham & term & $z$ & pos. & ham \\\\\n\\midrule\n")
     for a, b in zip(ph, ha):
         buf.write("%s & %.1f & %d & %d & %s & %.1f & %d & %d \\\\\n"
                   % (cell(a), a["z"], a["phish"], a["ham"],
@@ -472,10 +489,11 @@ def tab_logodds(cues, out):
     buf.write("\\bottomrule\n\\end{tabular}\n"
               "\\\\[4pt]\n\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Log-odds ratio with an informative Dirichlet prior, over the whole corpus; $z$ is the\n"
-              "prior-regularised score and the two count columns are raw occurrences. The phishing\n"
-              "column is Vietnamese written with diacritics; the ham column is the same language\n"
-              "written without them, plus carrier boilerplate (\\texttt{tb}, \\texttt{lh},\n"
-              "\\texttt{viettel}) and the redactor's tokens. Post-hoc and unregistered.\n"
+              "prior-regularised score and the two count columns are raw occurrences. The positive\n"
+              "column is Vietnamese written with diacritics. The ham column is the same language\n"
+              "written without them, plus carrier boilerplate (\\texttt{lh}, \\texttt{viettel}),\n"
+              "the regulated brand-SMS prefix \\texttt{[TB]} (\\texttt{tb}) and the publisher's\n"
+              "redaction tokens (\\texttt{time}). Post-hoc and unregistered.\n"
               "\\end{minipage}\n\\end{table}\n")
     write_generated(out, buf.getvalue())
     return out
@@ -541,6 +559,124 @@ def cues_macros(cues) -> str:
         m += "\\newcommand{\\SmsTok%sPhish}{%.1f}\n" % (name, p["1"])
     return m
 
+WORDS = {3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
+REG_CUTOFF = dt.date(2026, 7, 15)   # the temporal-split cutoff PREREG_smishing.md registered
+PREFIX_RX = re.compile(r"^\s*\[(TB|QC)\]")
+
+
+def read_raw():
+    """The publisher's rows, with their text: the processed CSV carries hashes, not messages."""
+    with open(SRC, newline="", encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+
+
+def _n(v: int) -> str:
+    return f"{v:,}".replace(",", "{,}")
+
+
+def split_and_date_macros(msgs, raw) -> str:
+    """Rows and distinct texts per split side and label, undated rows, the registered temporal
+    cutoff's class counts, and the regulated [TB]/[QC] prefixes. All counts, no fitting."""
+    by_id = {r["message_id"]: r for r in raw}
+    rows = collections.Counter((m["split"], m["label"]) for m in msgs)
+    texts = {s: len({m["text_sha1"] for m in msgs if m["split"] == s}) for s in ("train", "test")}
+    n = {s: sum(v for (ss, _l), v in rows.items() if ss == s) for s in ("train", "test")}
+    dup = {s: n[s] - texts[s] for s in n}
+    undated = collections.Counter(m["label"] for m in msgs if parse_date(m["date"]) is None)
+    dated = [(parse_date(m["date"]), m["label"]) for m in msgs if parse_date(m["date"])]
+    after = collections.Counter(l for d, l in dated if d > REG_CUTOFF)
+    last_ph = max(d for d, l in dated if l == "1")
+    pre = collections.Counter(m["label"] for m in msgs
+                              if PREFIX_RX.match(by_id.get(m["message_id"], {}).get("message", "")))
+    pre_any = sum(1 for m in msgs
+                  if re.search(r"\[(TB|QC)\]", by_id.get(m["message_id"], {}).get("message", "")))
+    return (f"\\newcommand{{\\SmsTrainRows}}{{{_n(n['train'])}}}\n"
+            f"\\newcommand{{\\SmsTestRows}}{{{_n(n['test'])}}}\n"
+            f"\\newcommand{{\\SmsTrainHamRows}}{{{_n(rows[('train', '0')])}}}\n"
+            f"\\newcommand{{\\SmsTrainPhishRows}}{{{_n(rows[('train', '1')])}}}\n"
+            f"\\newcommand{{\\SmsTestHamRows}}{{{_n(rows[('test', '0')])}}}\n"
+            f"\\newcommand{{\\SmsTestPhishRows}}{{{_n(rows[('test', '1')])}}}\n"
+            f"\\newcommand{{\\SmsTrainTexts}}{{{_n(texts['train'])}}}\n"
+            f"\\newcommand{{\\SmsTestTexts}}{{{_n(texts['test'])}}}\n"
+            f"\\newcommand{{\\SmsTrainDupRows}}{{{_n(dup['train'])}}}\n"
+            f"\\newcommand{{\\SmsTestDupRows}}{{{_n(dup['test'])}}}\n"
+            f"\\newcommand{{\\SmsTrainDupPct}}{{{100 * dup['train'] / n['train']:.1f}}}\n"
+            f"\\newcommand{{\\SmsTestDupPct}}{{{100 * dup['test'] / n['test']:.1f}}}\n"
+            f"\\newcommand{{\\SmsUndated}}{{{_n(sum(undated.values()))}}}\n"
+            f"\\newcommand{{\\SmsUndatedHam}}{{{_n(undated['0'])}}}\n"
+            f"\\newcommand{{\\SmsUndatedPhish}}{{{_n(undated['1'])}}}\n"
+            f"\\newcommand{{\\SmsRegCutoff}}{{{REG_CUTOFF.isoformat()}}}\n"
+            f"\\newcommand{{\\SmsPhishAfterCutoff}}{{{_n(after['1'])}}}\n"
+            f"\\newcommand{{\\SmsHamAfterCutoff}}{{{_n(after['0'])}}}\n"
+            f"\\newcommand{{\\SmsLastPhishDate}}{{{last_ph.isoformat()}}}\n"
+            f"\\newcommand{{\\SmsPrefixMsgs}}{{{_n(pre_any)}}}\n"
+            f"\\newcommand{{\\SmsPrefixStartMsgs}}{{{_n(sum(pre.values()))}}}\n"
+            f"\\newcommand{{\\SmsPrefixStartHam}}{{{_n(pre['0'])}}}\n"
+            f"\\newcommand{{\\SmsPrefixStartPhish}}{{{_n(pre['1'])}}}\n")
+
+
+# Table 1: positive-labelled rows quoted from the corpus, chosen by the host they carry. The
+# pretext column is the author's one-line gloss; the message and host are the publisher's.
+EXAMPLE_HOSTS = (("Unauthorised login", "vietcombank.vn-gll.top"),
+                 ("Foreign charge", "acb.i-pay.vip"),
+                 ("Reward expiry", "techcombank.huy-the-visa-vn.com"),
+                 ("Service charge", "shb.com.vn-zy.top"),
+                 ("App reactivation", "vietcombank.vn-nng.top"))
+QUOTE_CHARS = 60
+TEX_SPECIAL = {"&": "\\&", "%": "\\%", "$": "\\$", "#": "\\#", "_": "\\_", "{": "\\{",
+               "}": "\\}", "~": "\\textasciitilde{}", "^": "\\textasciicircum{}", "\\": "\\textbackslash{}"}
+
+
+def tex_escape(t: str) -> str:
+    return "".join(TEX_SPECIAL.get(c, c) for c in t)
+
+
+def quote_row(text: str, limit: int = QUOTE_CHARS) -> str:
+    """The first `limit` characters, cut back to a word boundary so no token is split, TeX-escaped,
+    with an ellipsis appended AFTER escaping so the ellipsis macro survives."""
+    t = " ".join((text or "").split())
+    if len(t) <= limit:
+        return tex_escape(t)
+    cut = t[:limit + 1].rsplit(" ", 1)[0]
+    return tex_escape(cut.rstrip(" ,.;:-")) + "\\ldots"
+
+
+def example_rows(raw, msgs, hosts=EXAMPLE_HOSTS):
+    """For each host, the first positive-labelled row in file order that carries it."""
+    label = {m["message_id"]: m["label"] for m in msgs}
+    out = []
+    for gloss, host in hosts:
+        hit = next((r for r in raw if host in (r["message"] or "").lower()
+                    and label.get(r["message_id"]) == "1"), None)
+        if hit is None:
+            raise SystemExit(f"[!] no positive-labelled row carries {host}; the table must change")
+        out.append((gloss, host, hit))
+    return out
+
+
+def tab_examples(raw, msgs, out):
+    buf = io.StringIO()
+    buf.write("%% generated by scripts/make_smishing_assets.py from "
+              "full_dataset.csv; do not edit\n")
+    buf.write("\\begin{table*}[t]\n\\centering\n"
+              "\\caption{Positive-labelled rows quoted from the corpus.}\n"
+              "\\label{tab:sms_examples}\n\\footnotesize\n\\setlength{\\tabcolsep}{3pt}\n"
+              "\\begin{tabular}{p{26mm}p{20mm}p{72mm}p{46mm}}\n\\toprule\n"
+              "Pretext (gloss) & Row & Message, first %d characters & Embedded host \\\\\n\\midrule\n"
+              % QUOTE_CHARS)
+    for gloss, host, r in example_rows(raw, msgs):
+        buf.write("%s & \\texttt{%s} & \\vntext{%s} & \\path{%s} \\\\\n"
+                  % (gloss, tex_escape(r["message_id"]), quote_row(r["message"]), host))
+    buf.write("\\bottomrule\n\\end{tabular}\n\\\\[4pt]\n"
+              "\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
+              "Each row is the first positive-labelled message in the published file that carries\n"
+              "the host in the last column, quoted verbatim and cut at a word boundary. Bracketed\n"
+              "tokens are the publisher's. The pretext is the author's gloss. The table illustrates\n"
+              "measured corpus properties and does not estimate pretext frequency.\n"
+              "\\end{minipage}\n\\end{table*}\n")
+    write_generated(out, buf.getvalue())
+    return out
+
 
 def main() -> int:
     for p in (MSG, URLS, SNAP):
@@ -548,33 +684,47 @@ def main() -> int:
             print(f"[!] {p} missing — run scripts/sms_corpus_import.py", file=sys.stderr)
             return 1
     msgs, urls = read(MSG), read(URLS)
+    raw = read_raw()
     os.makedirs(FIG, exist_ok=True)
 
     months, ham, ph = fig_timeline(msgs, os.path.join(FIG, "sms_timeline.pdf"))
     fig_hosts(urls, os.path.join(FIG, "sms_hosts.pdf"))
-    per_tld = fig_tld(urls, os.path.join(FIG, "sms_tld.pdf"))
+    TLD_TABLE_N, TLD_FIG_N = 5, 8    # Table 2 ranks five suffixes, Figure 3 draws eight
+    per_tld = fig_tld(urls, os.path.join(FIG, "sms_tld.pdf"), top=TLD_FIG_N)
     short = fig_shortener(urls, os.path.join(FIG, "sms_shortener.pdf"))
 
     # the temporal confound, as a number the prose can cite
     dead = [m for m, h_, p_ in zip(months, ham, ph) if p_ == 0]
-    top_ph = per_tld["1"].most_common(5)
+    top_ph = per_tld["1"].most_common(TLD_TABLE_N)
     tot_ph = max(sum(per_tld["1"].values()), 1)
     tot_ham = max(sum(per_tld["0"].values()), 1)
 
     buf = io.StringIO()
     buf.write("\\begin{table}[t]\n\\centering\\small\n")
-    buf.write("\\caption{Where each class registers, on the five suffixes phishing uses most.}\n"
-              "\\label{tab:sms_tld}\n")
-    buf.write("\\begin{tabular}{lrr}\n\\toprule\nSuffix & Phishing & Ham \\\\\n\\midrule\n")
+    buf.write("\\caption{Where each class registers, on the %s suffixes the positive class uses "
+              "most.}\n\\label{tab:sms_tld}\n" % WORDS[TLD_TABLE_N])
+    buf.write("\\begin{tabular}{lrr}\n\\toprule\nSuffix & Positive class & Ham \\\\\n\\midrule\n")
     for t, n in top_ph:
         buf.write(f"\\texttt{{.{t}}} & {100*n/tot_ph:.1f}\\% & "
                   f"{100*per_tld['0'][t]/tot_ham:.1f}\\% \\\\\n")
     buf.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
     write_generated(os.path.join(SEC, "tab_sms_tld.tex"), buf.getvalue())
 
+    # The suffix list the prose quotes, in the table's own order, so the sentence cannot name
+    # suffixes the table does not rank (it once listed .online while .com led the table).
+    suffix_list = [f"\\texttt{{.{t}}}" for t, _ in top_ph]
+    suffix_words = ", ".join(suffix_list[:-1]) + " and " + suffix_list[-1]
+    ham_on_ph = max(100 * per_tld["0"][t] / tot_ham for t, _ in top_ph)
     macros = (
         "%% generated by scripts/make_smishing_assets.py; do not edit\n"
-        f"\\newcommand{{\\SmsMonths}}{{{len(months)}}}\n"
+        f"\\newcommand{{\\SmsTldTableN}}{{{WORDS[TLD_TABLE_N]}}}\n"
+        f"\\newcommand{{\\SmsTldFigN}}{{{WORDS[TLD_FIG_N]}}}\n"
+        f"\\newcommand{{\\SmsPhishTopSuffixes}}{{{suffix_words}}}\n"
+        f"\\newcommand{{\\SmsPhishTopSuffix}}{{\\texttt{{.{top_ph[0][0]}}}}}\n"
+        f"\\newcommand{{\\SmsPhishTopSuffixPct}}{{{100 * top_ph[0][1] / tot_ph:.1f}}}\n"
+        f"\\newcommand{{\\SmsHamMaxOnPhishSuffixPct}}{{{ham_on_ph:.1f}}}\n"
+        + split_and_date_macros(msgs, raw)
+        + f"\\newcommand{{\\SmsMonths}}{{{len(months)}}}\n"
         f"\\newcommand{{\\SmsSpanStart}}{{{months[0]}}}\n"
         f"\\newcommand{{\\SmsSpanEnd}}{{{months[-1]}}}\n"
         f"\\newcommand{{\\SmsDeadMonths}}{{{len(dead)}}}\n"
@@ -583,6 +733,7 @@ def main() -> int:
         .replace(",", "{,}").replace("{,} ", ", ")
     )
     write_generated(os.path.join(SEC, "gen_sms_figs.tex"), macros)
+    tab_examples(raw, msgs, os.path.join(SEC, "tab_sms_examples.tex"))
 
     emit_results()
 

@@ -465,7 +465,7 @@ def common_window_sensitivity(df: pd.DataFrame):
                 float_format="%.6f")
     a, c = rows.iloc[0], rows.iloc[1]
     body = "\n".join([
-        (f"All retrievable rows & {int(a.chongluadao_hosts):,} & "
+        (f"All retrievable (unaligned) & {int(a.chongluadao_hosts):,} & "
          f"{int(a.tinnhiemmang_hosts):,} & {int(a.overlap_hosts):,} & "
          f"{100*a.jaccard:.2f}\\% & {100*a.share_of_smaller:.2f}\\% " + r"\\"),
         (f"Common dated window & {int(c.chongluadao_hosts):,} & "
@@ -474,9 +474,11 @@ def common_window_sensitivity(df: pd.DataFrame):
     ])
     tex = f"""\\begin{{table}}[t]
 \\centering
-\\caption{{Feed-overlap sensitivity on the two archives with per-indicator dates. The common
-window is {start.date()}--{end.date()}; OpenPhish is ineligible because none of its 296 snapshot
-rows has a first-seen date. `smaller' is TinNhiemMang in both rows.}}
+\\caption{{Feed-overlap sensitivity on the two archives with per-indicator dates. Every count
+is of distinct \\texttt{{www.}}-collapsed hosts. The common window is
+{start.date()}--{end.date()}; OpenPhish is ineligible because none of its 296 snapshot rows has
+a first-seen date. Jaccard is the shared hosts over the union of the two host sets, and
+`smaller' is TinNhiemMang in both rows.}}
 \\label{{tab:common_window}}
 \\small
 \\begin{{tabular}}{{lrrrrr}}
@@ -519,6 +521,15 @@ def tier_sensitivity(df: pd.DataFrame):
     ]
     rows = []
     for name, g in groups:
+        # The e-commerce-minus-banking gap within the slice, with the same host bootstrap the
+        # sector table uses (one row per host, so clusters are singletons). Without it the
+        # "ordering" in bronze was a 0.2 pp point difference quoted as if it were a result.
+        one = pd.DataFrame({"n": 1.0,
+                            "ecom": g.scenario.eq("ecommerce").astype(float),
+                            "bank": g.scenario.eq("bank").astype(float)}).to_numpy(float)
+        dr = cluster_bootstrap(one)
+        gap = 100 * (dr[:, 1] - dr[:, 2]) / dr[:, 0]
+        lo, hi = boot_ci(gap)
         rows.append({
             "tier": name, "n_hosts": len(g),
             "vn_pct": 100 * g.tld.astype(str).eq("vn").mean(),
@@ -526,6 +537,9 @@ def tier_sensitivity(df: pd.DataFrame):
             "sector_tagged_pct": 100 * g.scenario.ne("other").mean(),
             "bank_pct": 100 * g.scenario.eq("bank").mean(),
             "ecommerce_pct": 100 * g.scenario.eq("ecommerce").mean(),
+            "ecom_minus_bank_pp": 100 * (g.scenario.eq("ecommerce").mean()
+                                         - g.scenario.eq("bank").mean()),
+            "ecom_minus_bank_ci_lo": lo, "ecom_minus_bank_ci_hi": hi,
             "sources": ";".join(sorted(g.source.astype(str).unique())),
         })
     out = pd.DataFrame(rows)
@@ -556,19 +570,41 @@ Evidence slice & Hosts & \\texttt{{.vn}} & watchlist TLD & tagged & bank & e-com
     write_generated(os.path.join(SEC, "tab_tier_sensitivity.tex"), tex)
     b = out.set_index("tier").loc["bronze"]
     v = out.set_index("tier").loc["verified"]
+    # The bronze sentence is decided by the interval, not by the point estimate: an interval
+    # that straddles zero means the slice does not order the two sectors, and the prose must
+    # not call a 0.2 pp difference a "flip".
+    b_unresolved = b.ecom_minus_bank_ci_lo <= 0 <= b.ecom_minus_bank_ci_hi
+    v_resolved = v.ecom_minus_bank_ci_hi < 0
+    if b_unresolved:
+        bronze_txt = (
+            f"Bronze does not resolve the order: e-commerce {b.ecommerce_pct:.1f}\\% against "
+            f"banking {b.bank_pct:.1f}\\% of bronze hosts, a gap of "
+            f"{b.ecom_minus_bank_pp:+.2f}~pp whose host-bootstrap interval "
+            f"$[{b.ecom_minus_bank_ci_lo:+.2f}, {b.ecom_minus_bank_ci_hi:+.2f}]$ contains zero")
+    else:
+        bronze_txt = (
+            f"Bronze orders e-commerce first ({b.ecommerce_pct:.1f}\\% against "
+            f"{b.bank_pct:.1f}\\%, gap {b.ecom_minus_bank_pp:+.2f}~pp, interval "
+            f"$[{b.ecom_minus_bank_ci_lo:+.2f}, {b.ecom_minus_bank_ci_hi:+.2f}]$)")
+    verified_txt = (
+        f"the silver+gold slice orders banking first ({v.bank_pct:.1f}\\% against "
+        f"{v.ecommerce_pct:.1f}\\%, gap {v.ecom_minus_bank_pp:+.2f}~pp, interval "
+        f"$[{v.ecom_minus_bank_ci_lo:+.2f}, {v.ecom_minus_bank_ci_hi:+.2f}]$"
+        + (")" if v_resolved else ", which also contains zero)"))
     gen = (
-        f"the namespace and abused-TLD directions survive the evidence restriction: "
+        f"The namespace and abused-TLD directions survive the evidence restriction: "
         f"\\texttt{{.vn}} remains below 5\\% in every tier ({out.vn_pct.min():.1f}--"
         f"{out.vn_pct.max():.1f}\\%), and watchlist TLDs range from "
         f"{out.suspicious_tld_pct.min():.1f}\\% to {out.suspicious_tld_pct.max():.1f}\\%, "
         f"still far above the benign-host reference. The sector reading does not: only "
         f"{b.sector_tagged_pct:.1f}\\% of bronze hosts are tagged against "
-        f"{v.sector_tagged_pct:.1f}\\% of silver+gold, and e-commerce exceeds banking in bronze "
-        f"({b.ecommerce_pct:.1f}\\% vs. {b.bank_pct:.1f}\\%) while banking dominates the "
-        f"verified slice ({v.bank_pct:.1f}\\% vs. {v.ecommerce_pct:.1f}\\%)"
+        f"{v.sector_tagged_pct:.1f}\\% of silver+gold. {bronze_txt}, whereas {verified_txt}. "
+        f"The two intervals are descriptive, from the same seeded host bootstrap as "
+        f"Table~\\ref{{tab:brand_dist}}, with no family-wise correction"
     )
     write_generated(os.path.join(SEC, "gen_tier_sensitivity.tex"), gen.rstrip() + "%")
     STATS["tier_sensitivity"] = out.to_dict("records")
+    STATS["bronze_order_unresolved"] = bool(b_unresolved)
 
 
 def gen_vnframe(df: pd.DataFrame):
@@ -820,7 +856,9 @@ def gen_dating(df: pd.DataFrame):
         f"{ov['iqr_days'][1]:.0f}); that spread bounds the recovery error from above, since it "
         f"also contains genuine inter-feed detection lag. Against a downstream mirror that can "
         f"only lag the database it copies, \\textbf{{{100 * mc['violation_rate']:.1f}\\%}} of "
-        f"{mc['n']:,} comparable entries violate the ordering and are therefore definite "
+        f"{mc['n']:,} comparable entries (those with a recovered database-identifier date that "
+        f"also appear in the AdGuard-format mirror's git history after its first commit, "
+        f"left-censored entries excluded) violate the ordering and are therefore definite "
         f"recovery errors, {100 * mc['violation_share_within_30d']:.1f}\\% of them by less than "
         f"30~days (maximum {mc['violation_max_days']:.0f}). We use the recovered dates as a "
         f"month-scale first-seen estimate with that error attached, never as an exact insertion "
@@ -878,7 +916,9 @@ def fig_feed_lifespan(df: pd.DataFrame):
                      xytext=(0, 0 if right else 7), textcoords="offset points",
                      ha="left" if right else "right")
     ax1.set_yticks(range(len(lanes)))
-    ax1.set_yticklabels([f"{r.source} ({r.label}, {r.n:,})" for r in lanes.itertuples()],
+    # The count is DATED ROWS in that lane, and the label says so: an unlabelled 17,048 beside
+    # "chongluadao" reads as a host count two tables away.
+    ax1.set_yticklabels([f"{r.source} ({r.label}, {r.n:,} dated rows)" for r in lanes.itertuples()],
                         fontsize=7.5)
     ax1.set_ylim(-0.7, len(lanes) - 0.3)
     ax1.set_xlim(*dated_span(df))
@@ -1060,8 +1100,8 @@ def tab_infra(df: pd.DataFrame):
     STATS["susp_tld_benign"] = round(float(susp_be), 1)
     tex = f"""\\begin{{table}}[t]
 \\centering
-\\caption{{Top {topN} of the {int(df.tld.nunique())} observed TLDs by host volume. Phishing is
-given as rows and as hosts; the phishing share is computed on hosts.}}
+\\caption{{Top {topN} of the {int(df.tld.nunique())} TLDs observed over both classes, by host
+volume. Phishing is given as rows and as hosts; the phishing share is computed on hosts.}}
 \\label{{tab:infra}}
 \\small
 \\begin{{tabular}}{{l r r r r}}

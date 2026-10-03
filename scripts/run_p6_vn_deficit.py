@@ -68,13 +68,75 @@ def neutralised_margin(model, X: np.ndarray, j: int, value: float) -> np.ndarray
     return margin_of(model, Xc)
 
 
+def _train_nonvn_mode(df: pd.DataFrame, seed: int) -> float:
+    """The neutral value of the counterfactual: the fit window's non-.vn mode of `tld_len`.
+    Re-derived from the split alone (no model) so the from-CSV path pins the same value the
+    fitted run used; the split is run_p6_vn_reading.split_fit's, minus the fit."""
+    ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)
+    be = df[df.y == 0].reset_index(drop=True)
+    cut = int(len(ph) * 0.70)
+    rng = np.random.RandomState(seed)
+    bmask = rng.rand(len(be)) < 0.70
+    tr = pd.concat([ph.iloc[:cut], be[bmask]])
+    tr_ot = tr[~tr["tld"].astype(str).str.lower().str.endswith("vn")]
+    return float(tr_ot[FEATURE].mode().iloc[0])
+
+
+def rebuild_from_csv(family: str, seed: int, thr: float) -> None:
+    """Figure and both .tex fragments from the committed CSVs, without a fit. Every statistic
+    make_tex prints is a function of the per-row CSV, the sweep CSV and the group-threshold CSV,
+    so re-wording a caption or re-titling the figure does not refit the model."""
+    fn = pd.read_csv(os.path.join(PROC, "p6", "p6_vn_deficit.csv"))
+    sweep = pd.read_csv(os.path.join(PROC, "p6", "p6_vn_deficit_sweep.csv"))
+    df = load()
+    neutral = _train_nonvn_mode(df, seed)
+    # the sweep row at the neutral value must reproduce the per-row crossing count, or the
+    # neutral value re-derived here is not the one the CSV was built with
+    at_neutral = sweep[np.isclose(sweep.tld_len, neutral)]
+    if not len(at_neutral) or int(at_neutral.crossed.iloc[0]) != int(fn.crossed.sum()):
+        raise SystemExit(f"neutral value {neutral:g} does not reproduce the CSV's crossings")
+    tld = pd.read_csv(os.path.join(PROC, "p6", "p6_tld_shap.csv"))
+    n_vn = int(tld[tld.tld.str.contains(r"\(")].n_phish.iloc[0])
+    n = len(fn)
+    k_sig = int(fn.covered_signed.sum())
+    k_abs = int(fn.covered_abs.sum())
+    k_cr = int(fn.crossed.sum())
+    n_benign_ward = int((fn.phi_tld_len < 0).sum())
+    lo_s, hi_s = wilson(k_sig, n)
+    lo_c, hi_c = wilson(k_cr, n)
+    rho = float(pd.Series(-fn.phi_tld_len.to_numpy()).corr(
+        pd.Series(fn.delta_margin.to_numpy()), method="spearman"))
+    sec = None
+    if os.path.exists(GROUPTHR_CSV):
+        g = pd.read_csv(GROUPTHR_CSV)
+        g = g[g.condition == "per-group"]
+        if len(g):
+            thr2 = float(g.thr_vn.mean())
+            if 0 < thr2 < 1:
+                still = fn[fn.margin < logit(thr2)].copy()
+                still["deficit2"] = logit(thr2) - still["margin"]
+                cov2 = int((-still.phi_tld_len >= still.deficit2).sum())
+                cr2 = int((still.margin_neutral >= logit(thr2)).sum())
+                sec = (thr2, len(still), cov2, cr2)
+    make_figure(fn, sweep, neutral, thr, family)
+    make_tex(fn, sweep, dict(n=n, k_sig=k_sig, k_abs=k_abs, k_cr=k_cr, neutral=neutral,
+                             n_benign_ward=n_benign_ward, lo_s=lo_s, hi_s=hi_s, lo_c=lo_c,
+                             hi_c=hi_c, rho=rho, thr=thr, sec=sec, n_vn=n_vn, family=family))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--family", default="CatBoost")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--thr", type=float, default=0.5,
                     help="the deployed decision threshold the deficit is measured against")
+    ap.add_argument("--from-csv", action="store_true",
+                    help="skip the fit; rebuild figure and .tex from the committed CSVs")
     args = ap.parse_args()
+
+    if args.from_csv:
+        rebuild_from_csv(args.family, args.seed, args.thr)
+        return
 
     df = load()
     feats = [c for c in COMPPHISH if c in df.columns]
@@ -297,7 +359,7 @@ def make_tex(fn: pd.DataFrame, sweep: pd.DataFrame, s: dict):
     # that keeps the notes column is the full width (checked by compiling the fragment).
     tex = f"""\\begin{{table*}}[t]
 \\centering
-\\caption{{Deficit attribution for the $141/156$ missed \\texttt{{.vn}} phishing rows, in
+\\caption{{Deficit attribution for the ${n}/{s['n_vn']}$ missed \\texttt{{.vn}} phishing rows, in
 margin (log-odds) units ({s['family']}, phishing-temporal test; \\texttt{{tld\\_len}} pinned to
 ${s['neutral']:g}$ in the counterfactual).}}
 \\label{{tab:vndeficit}}

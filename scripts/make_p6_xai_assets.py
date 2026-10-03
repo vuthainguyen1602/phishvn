@@ -69,7 +69,8 @@ def tab_shap_contrast():
         # XGBoost exception live in gen_rho.tex and the prose of Section ssec:rho.
         "\\caption{Global attribution (mean $|$SHAP$|$ over "
         f"{int(r0.n_seeds)} independently-masked seeds) of the CatBoost detector under the"
-        " random and phishing-temporal protocols, top-10 features by temporal attribution;"
+        " random and phishing-temporal protocols, top-10 features by phishing-temporal"
+        " attribution;"
         f" between-protocol Spearman $\\rho = {r0.rho_between_mean:.3f}"
         f"\\pm{r0.rho_between_sd:.3f}$ (mean\\,$\\pm$\\,sd, all 21 features).}}",
         "\\label{tab:shapcontrast}",
@@ -169,12 +170,20 @@ def tab_tld():
     df = df[df.n_phish >= MIN_PHISH].dropna(subset=["fnr_phish@0.5"])
     df = df.sort_values(["fnr_phish@0.5", "n_phish"], ascending=[False, False])
     n_grp = len(df)
+    # The CSV carries no per-suffix false-positive rate, and most groups could not support one:
+    # the benign side of a group is n minus ph., and it is below the phishing floor for a large
+    # share of the printed groups. Say so in the caption, with the count, rather than print a
+    # column of rates on four benign rows.
+    few_benign = int(((df.n - df.n_phish) < MIN_PHISH).sum())
     lines = [
         "\\begin{table*}[t]\\centering",
         "\\caption{Per-suffix decomposition, phishing-temporal test, single seed-0 split:"
         f" \\emph{{all}} {n_grp} groups with at least {MIN_PHISH} phishing rows, by miss rate"
         " (left block, then right). `ph.': phishing count; `SHAP': mean \\emph{signed}"
-        " \\texttt{tld\\_len} contribution; FNR at threshold 0.5.}",
+        " \\texttt{tld\\_len} contribution; FNR at threshold 0.5. No per-suffix false-positive"
+        f" rate is printed: the benign count is $n$ minus ph., and it is below {MIN_PHISH} for"
+        f" {few_benign} of the {n_grp} groups, so false-positive rates are reported per stratum"
+        " in Table~\\ref{tab:suffix}.}",
         "\\label{tab:tld}",
         "\\footnotesize\\setlength{\\tabcolsep}{3pt}",
         # Two blocks side by side rather than one 28-row column: printing every group is the
@@ -230,7 +239,10 @@ def tab_suffix():
         # ssec:suffixprior, not here; the caption only says which column is which population.
         "\\caption{The blind spot by public-suffix length (CatBoost, phishing-temporal test):"
         " $n$, phish., FNR, FPR and ROC area (mean\\,$\\pm$\\,sd) over 5 independently-masked"
-        " seeds at threshold $0.5$; FNR$_1$ on the single seed-0 split of Table~\\ref{tab:tld}.}",
+        " seeds at threshold $0.5$; FNR$_1$ on the single seed-0 split of Table~\\ref{tab:tld}."
+        " $n$ is a five-seed mean: the benign mask is redrawn per seed, so the benign counts"
+        " differ from the seed-0 split of Table~\\ref{tab:tld}, while the phishing rows are"
+        " the same on every seed.}",
         "\\label{tab:suffix}",
         "\\footnotesize\\setlength{\\tabcolsep}{3.5pt}",
         "\\begin{tabular}{l r r r r r c}\\toprule",
@@ -252,7 +264,8 @@ def gen_model_strata():
     d = pd.read_csv("data/processed/p6/p6_suffix_strata_stackcblr.csv")
     m = d.groupby("stratum").mean(numeric_only=True)
     return (
-        f"the stack's FNR / within-stratum ROC area is "
+        f"the stacked ensemble Stack[CB+LR] of Section~\\ref{{sec:data}} gives an FNR /"
+        f" within-stratum ROC area of "
         f"${m.loc['vn_short', 'fnr']:.3f}/{m.loc['vn_short', 'auc']:.3f}$ on bare "
         f"\\texttt{{.vn}}, ${m.loc['cc_short', 'fnr']:.3f}/{m.loc['cc_short', 'auc']:.3f}$ on "
         f"the other two-character ccTLDs, "
@@ -337,8 +350,15 @@ def tab_rules():
     return "\n".join(lines)
 
 
-def gen_missshare():
-    """The reframing's headline: who the misses actually belong to, and which group is worst."""
+def _missshare_parts() -> dict:
+    """The miss decomposition on the seed-0 split, in both groupings.
+
+    The per-suffix CSV pools the two .vn lengths into one `.vn(+2LD)` row, so the registry
+    grouping is read from it directly. The LENGTH grouping needs the two .vn strata apart, which
+    only the strata CSV carries: its seed-0 column `fnr_single` is read on the same split, and the
+    phishing rows are fixed across seeds, so the counts are the same rows the CSV above counts.
+    The two readings are cross-checked here (the pooled .vn misses must equal bare + compound)
+    rather than trusted to agree."""
     df = pd.read_csv("data/processed/p6/p6_tld_shap.csv")
     df = df[(df.n_phish > 0)].dropna(subset=["fnr_phish@0.5"]).copy()
     df["miss"] = (df["fnr_phish@0.5"] * df.n_phish).round().astype(int)
@@ -347,30 +367,201 @@ def gen_missshare():
     cc = df[(df.L == 2) & (~df.tld.str.contains("vn"))]
     rest = df[(df.L != 2) & (~df.tld.str.contains("vn"))]
     tot = int(df.miss.sum())
-
-    def part(sub):
-        k, n = int(sub.miss.sum()), int(sub.n_phish.sum())
-        return k, n, 100.0 * k / tot, k / n
-
-    kv, nv, sv, fv = part(vn)
-    kc, nc, sc, fc = part(cc)
-    kr, nr, sr, fr = part(rest)
     big = df[df.n_phish >= MIN_PHISH].sort_values("fnr_phish@0.5", ascending=False)
-    w = big.iloc[0]
+    out = {"tot": tot, "n_all": int(df.n_phish.sum()), "worst": big.iloc[0]}
+    for key, sub in (("vn", vn), ("cc", cc), ("rest", rest)):
+        k, n = int(sub.miss.sum()), int(sub.n_phish.sum())
+        out[key] = (k, n, 100.0 * k / tot, k / n)
+    st = pd.read_csv("data/processed/p6/p6_suffix_strata.csv")
+    st = st[st.seed == 0].set_index("stratum")
+    for key in ("vn_short", "vn_compound"):
+        n = int(st.loc[key, "n_phish"])
+        k = int(round(float(st.loc[key, "fnr_single"]) * n))
+        out[key] = (k, n, 100.0 * k / tot, k / n)
+    if out["vn_short"][0] + out["vn_compound"][0] != out["vn"][0]:
+        raise ValueError("the two .vn strata do not add up to the pooled .vn(+2LD) misses: "
+                         f"{out['vn_short'][0]} + {out['vn_compound'][0]} != {out['vn'][0]}")
+    k2 = out["vn_short"][0] + out["cc"][0]
+    n2 = out["vn_short"][1] + out["cc"][1]
+    out["two"] = (k2, n2, 100.0 * k2 / tot, 100.0 * n2 / out["n_all"])
+    return out
+
+
+def gen_missshare():
+    """The reframing's headline: who the misses belong to, read by suffix LENGTH (the variable
+    the paper says the model keys on) first, and by registry only where the sentence says so."""
+    p = _missshare_parts()
+    kv, nv, sv, fv = p["vn"]
+    kc, nc, sc, fc = p["cc"]
+    kr, nr, sr, fr = p["rest"]
+    kb, nb, sb, fb = p["vn_short"]
+    kp, npp, sp, fp = p["vn_compound"]
+    k2, n2, s2, share2 = p["two"]
+    w = p["worst"]
+    tot = p["tot"]
     lo_c, hi_c = wilson(kc, nc)
     return (
-        f"of the ${tot}$ phishing rows the deployed detector misses on the phishing-temporal test"
-        f" set, \\texttt{{.vn(+2LD)}} accounts for ${kv}$ (${sv:.1f}\\%$, FNR ${fv:.3f}$ on"
-        f" $n={nv}$), \\emph{{other}} two-letter ccTLDs for ${kc}$ (${sc:.1f}\\%$, FNR"
-        f" ${fc:.3f}$, Wilson 95\\% CI ${lo_c:.3f}$--${hi_c:.3f}$, $n={nc}$), and every other suffix"
-        f" of three characters or more (the \\texttt{{.vn}} registry excluded) for the remaining ${kr}$ (${sr:.1f}\\%$, FNR"
-        f" ${fr:.3f}$, $n={num(nr)}$). The worst-hit group is not \\texttt{{.vn}} but"
+        f"of the ${tot}$ phishing rows the detector (CatBoost at threshold $0.5$) misses on the"
+        f" seed-0 phishing-temporal test split, the two-character strata account for ${k2}$"
+        f" (${s2:.1f}\\%$): bare \\texttt{{.vn}} for ${kb}$ (FNR ${fb:.3f}$, $n={nb}$) and"
+        f" \\emph{{other}} two-letter ccTLDs for ${kc}$ (${sc:.1f}\\%$, FNR"
+        f" ${fc:.3f}$, Wilson 95\\% CI ${lo_c:.3f}$--${hi_c:.3f}$, $n={nc}$). The"
+        f" \\texttt{{.com.vn}} family (length 6) holds ${kp}$ (FNR ${fp:.3f}$, $n={npp}$), and"
+        f" every other suffix of three characters or more the remaining ${kr}$ (${sr:.1f}\\%$, FNR"
+        f" ${fr:.3f}$, $n={num(nr)}$). Two-character suffixes thus hold ${num(n2)}$ of the"
+        f" test split's ${num(p['n_all'])}$ phishing rows (${share2:.1f}\\%$) and ${s2:.1f}\\%$"
+        f" of its misses. The worst-hit group is not \\texttt{{.vn}} but"
         f" \\texttt{{{esc(w.tld)}}}, at FNR ${w['fnr_phish@0.5']:.3f}$"
-        f" (${int(round(w['fnr_phish@0.5'] * w.n_phish))}$ of ${int(w.n_phish)}$). Taken"
-        f" together the \\texttt{{.vn}} registry and the other two-letter ccTLDs hold"
-        f" ${num(nv + nc)}$ of the test set's ${num(nv + nc + nr)}$ phishing rows"
-        f" (${100 * (nv + nc) / (nv + nc + nr):.1f}\\%$) and account for"
-        f" ${100 * (kv + kc) / tot:.1f}\\%$ of everything it misses")
+        f" (${int(round(w['fnr_phish@0.5'] * w.n_phish))}$ of ${int(w.n_phish)}$). Grouped by"
+        f" registry instead, \\texttt{{.vn(+2LD)}} accounts for ${kv}$ (${sv:.1f}\\%$, FNR"
+        f" ${fv:.3f}$ on $n={nv}$), and the \\texttt{{.vn}} registry with the other two-letter"
+        f" ccTLDs holds ${num(nv + nc)}$ phishing rows"
+        f" (${100 * (nv + nc) / p['n_all']:.1f}\\%$) and ${100 * (kv + kc) / tot:.1f}\\%$ of"
+        f" the misses, a registry reading that pools two suffix lengths")
+
+
+def _benign_vn_provenance() -> dict:
+    """Benign .vn rows by source, from the corpus itself: the registry strata, the .vn-filtered
+    Tranco slice, and the unfiltered global Tranco sample. Section 3 and limitation (x) quote
+    these, and a first draft said every .vn benign row came from a Vietnamese-selected source
+    when seventeen did not."""
+    from psl import registered_domain
+    b = pd.read_csv("data/processed/dataset_url.csv", dtype=str, low_memory=False,
+                    usecols=["label", "source", "domain"])
+    b = b[b.label == "benign"].copy()
+    b["_vn"] = b.domain.astype(str).str.lower().map(registered_domain).astype(str).str.endswith(".vn")
+    vn = b[b._vn]
+    by = vn.source.value_counts()
+    registry = int(by.get("tinnhiem_web", 0) + by.get("tinnhiem_org", 0))
+    tranco_vn = int(by.get("tranco_vn", 0))
+    glob_ = int(by.get("tranco", 0))
+    if registry + tranco_vn + glob_ != len(vn):
+        raise ValueError(f"benign .vn sources do not partition: {dict(by)}")
+    return {"benign": int(len(b)), "vn": int(len(vn)), "registry": registry,
+            "tranco_vn": tranco_vn, "global": glob_, "selected": registry + tranco_vn}
+
+
+def _hyperparameters() -> dict:
+    """The fitted families' settings, read from the code that fits them rather than retyped:
+    the booster factory's defaults and the character-CNN module's constants."""
+    import inspect
+    import re as _re
+    from run_p2_benchmark import make_any_model
+    import run_p2_charcnn as cnn
+    cb = make_any_model("CatBoost", 0).get_params()
+    xgb = make_any_model("XGBoost", 0).get_params()
+    src = open(os.path.join(_HERE, "run_p6_charcnn_strata.py"), encoding="utf-8").read()
+    epochs = int(_re.search(r'"--epochs",\s*type=int,\s*default=(\d+)', src).group(1))
+    patience = inspect.signature(cnn.fit_predict).parameters["patience"].default
+    return {"cb_iters": int(cb["iterations"]), "cb_depth": int(cb["depth"]),
+            "cb_lr": float(cb["learning_rate"]),
+            "xgb_trees": int(xgb["n_estimators"]), "xgb_depth": int(xgb["max_depth"]),
+            "xgb_lr": float(xgb["learning_rate"]),
+            "cnn_maxlen": int(cnn.MAX_LEN), "cnn_emb": int(cnn.EMB),
+            "cnn_widths": tuple(int(w) for w in cnn.WIDTHS), "cnn_filters": int(cnn.FILTERS),
+            "cnn_dropout": float(cnn.DROPOUT), "cnn_batch": int(cnn.BATCH),
+            "cnn_lr": float(cnn.LR), "cnn_val": float(cnn.VAL_FRAC),
+            "cnn_epochs": epochs, "cnn_patience": int(patience)}
+
+
+def gen_p6_macros():
+    """\\newcommand definitions for every count the hand-written sections quote beside a
+    generated table, so a number that has two bases (one split, five-seed mean) can name its
+    basis where it is printed and still come from the CSV. Nothing in here is typed."""
+    p = _missshare_parts()
+    tld = pd.read_csv("data/processed/p6/p6_tld_shap.csv")
+    st = pd.read_csv("data/processed/p6/p6_suffix_strata.csv")
+    s0 = st[st.seed == 0].set_index("stratum")
+    sm = st.groupby("stratum").mean(numeric_only=True)
+    n_mean = {k: int(round(sm.loc[k, "n"])) for k in STRATUM_ORDER}   # as Table~tab:suffix prints
+    vn_row = tld[tld.tld.str.contains(r"\(")].iloc[0]
+    other = tld[~tld.tld.str.contains("vn")]
+    rate_vn = float(vn_row.n_phish / vn_row.n)
+    rate_ot = float(other.n_phish.sum() / other.n.sum())
+    gt = pd.read_csv("data/processed/p6/p6_group_threshold.csv")
+    fpr_other = float(gt[gt.condition == "default"].fpr_other.mean())
+    cc = pd.read_csv("data/processed/p6/p6_charcnn_strata.csv")
+    piv = cc.pivot_table(index="stratum", columns="model", values="FNR", aggfunc="mean")
+    rho = pd.read_csv("data/processed/p6/p6_protocol_shap_rho.csv")
+    n_seeds = int(rho.iloc[0].n_seeds)
+    prov = _benign_vn_provenance()
+    hp = _hyperparameters()
+    k2, n2, s2, share2 = p["two"]
+    kv, nv, sv, fv = p["vn"]
+    kc, nc, sc, fc = p["cc"]
+    few_benign = int(((tld.n - tld.n_phish) < MIN_PHISH)[tld.n_phish >= MIN_PHISH].sum())
+    n_groups = int((tld.n_phish >= MIN_PHISH).sum())
+    m = {
+        # the test split, on its two bases
+        "PsixTestRowsSeedZero": num(tld.n.sum()),
+        "PsixTestRowsSeedMean": num(sum(n_mean.values())),
+        "PsixVnPooledSeedZero": num(vn_row.n),
+        "PsixVnPooledSeedMean": num(n_mean["vn_short"] + n_mean["vn_compound"]),
+        "PsixComVnSeedZero": num(s0.loc["vn_compound", "n"]),
+        "PsixComVnSeedMean": num(n_mean["vn_compound"]),
+        "PsixPhishTotal": num(p["n_all"]),
+        "PsixMissTotal": str(p["tot"]),
+        # the headline, by suffix length
+        "PsixTwoCharPhish": str(n2),
+        "PsixTwoCharMiss": str(k2),
+        "PsixTwoCharPhishPct": f"{share2:.1f}",
+        "PsixTwoCharMissPct": f"{s2:.1f}",
+        "PsixCcMissPct": f"{sc:.1f}",
+        "PsixCcMissCount": str(kc),
+        "PsixVnMissCount": str(kv),
+        # the registry grouping, labelled as such where quoted
+        "PsixRegistryPhishPct": f"{100 * (nv + nc) / p['n_all']:.1f}",
+        "PsixRegistryMissPct": f"{100 * (kv + kc) / p['tot']:.1f}",
+        # benign .vn provenance
+        "PsixBenignTotal": num(prov["benign"]),
+        "PsixBenignVn": num(prov["vn"]),
+        "PsixBenignVnPct": f"{100 * prov['vn'] / prov['benign']:.1f}",
+        "PsixBenignVnRegistry": num(prov["registry"]),
+        "PsixBenignVnTrancoVn": num(prov["tranco_vn"]),
+        "PsixBenignVnSelected": num(prov["selected"]),
+        "PsixBenignVnGlobal": str(prov["global"]),
+        # base rates on the seed-0 split, pooled .vn against everything else
+        "PsixBaseRateVnPct": f"{100 * rate_vn:.1f}",
+        "PsixBaseRateOtherPct": f"{100 * rate_ot:.1f}",
+        "PsixBaseRateRatio": str(int(round(rate_ot / rate_vn))),
+        # false-alarm rates at the 0.5 threshold, on the two bases the prose uses
+        "PsixFprNonVnPct": str(int(round(100 * fpr_other))),
+        "PsixFprLong": f"{sm.loc['long', 'fpr']:.3f}",
+        "PsixFprCcShort": f"{sm.loc['cc_short', 'fpr']:.3f}",
+        # the char-CNN harness's own CatBoost reference against Table~tab:suffix
+        "PsixCharCnnRefCc": f"{float(piv.loc['cc_short', 'CatBoost']):.3f}",
+        "PsixCharCnnRefLong": f"{float(piv.loc['long', 'CatBoost']):.3f}",
+        "PsixSuffixCc": f"{sm.loc['cc_short', 'fnr']:.3f}",
+        "PsixSuffixLong": f"{sm.loc['long', 'fnr']:.3f}",
+        "PsixCnnSeeds": str(int(cc.seed.nunique())),
+        # seeds and fitted settings
+        "PsixSeeds": str(n_seeds),
+        "PsixSeedMax": str(n_seeds - 1),
+        "PsixCatBoostIters": str(hp["cb_iters"]),
+        "PsixCatBoostDepth": str(hp["cb_depth"]),
+        "PsixCatBoostLr": f"{hp['cb_lr']:g}",
+        "PsixXgbTrees": str(hp["xgb_trees"]),
+        "PsixXgbDepth": str(hp["xgb_depth"]),
+        "PsixXgbLr": f"{hp['xgb_lr']:g}",
+        "PsixCnnMaxLen": str(hp["cnn_maxlen"]),
+        "PsixCnnEmb": str(hp["cnn_emb"]),
+        "PsixCnnWidthMin": str(min(hp["cnn_widths"])),
+        "PsixCnnWidthMax": str(max(hp["cnn_widths"])),
+        "PsixCnnFilters": str(hp["cnn_filters"]),
+        "PsixCnnDropout": f"{hp['cnn_dropout']:g}",
+        "PsixCnnBatch": str(hp["cnn_batch"]),
+        "PsixCnnLr": f"{hp['cnn_lr']:g}",
+        "PsixCnnValPct": str(int(round(100 * hp["cnn_val"]))),
+        "PsixCnnEpochs": str(hp["cnn_epochs"]),
+        "PsixCnnPatience": str(hp["cnn_patience"]),
+        # Table~tab:tld: how many printed groups have too few benign rows for a per-suffix FPR
+        "PsixTldGroups": str(n_groups),
+        "PsixTldFewBenign": str(few_benign),
+    }
+    lines = ["% Macros for the hand-written sections. Every value is read from the P6 CSVs or",
+             "% from the code that fits the models; see gen_p6_macros() in the generator."]
+    lines += [f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in m.items()]
+    return "\n".join(lines)
 
 
 def gen_simpson():
@@ -526,15 +717,26 @@ def gen_charcnn_strata():
               + cell("vn_compound", "CharCNN") * n["vn_compound"]) / (n["vn_short"] + n["vn_compound"])
     vn_ref = (cell("vn_short", "CatBoost") * n["vn_short"]
               + cell("vn_compound", "CatBoost") * n["vn_compound"]) / (n["vn_short"] + n["vn_compound"])
+    # The harness's own CatBoost reference is fitted on the whole phishing-temporal training
+    # window (no calibration slice carved out), so its rates sit near but not on Table
+    # tab:suffix's, which come from a fit on the oldest 85% of that window. Both are printed
+    # with their basis; an earlier sentence called them the same number.
+    sm = (pd.read_csv("data/processed/p6/p6_suffix_strata.csv")
+          .groupby("stratum").mean(numeric_only=True))
     return (
         f"The prior is expressed through \\texttt{{tld\\_len}}, which is a column of the "
         f"hand-built schema, so we asked whether a representation without it inherits the blind "
-        f"spot. A character-CNN over the raw URL string, trained on the identical rows and seeds "
-        f"and read at the same $\\tau = 0.5$, still misses ${cell('vn_short','CharCNN'):.3f}$ of "
+        f"spot. The character-CNN of Section~\\ref{{sec:data}}, which reads the raw URL string, "
+        f"scored on the same phishing-temporal test rows and seeds and read at the same "
+        f"$\\tau = 0.5$, still misses ${cell('vn_short','CharCNN'):.3f}$ of "
         f"bare \\texttt{{.vn}} phishing and ${cell('cc_short','CharCNN'):.3f}$ of the other "
         f"two-character ccTLDs, against ${cell('long','CharCNN'):.3f}$ on suffixes of three "
-        f"characters or more ({seeds} seeds; the same harness reproduces the tabular model's "
-        f"${cell('cc_short','CatBoost'):.3f}$ and ${cell('long','CatBoost'):.3f}$). The blind spot "
+        f"characters or more ({seeds} seeds). The harness fits its CatBoost reference on the whole "
+        f"training window rather than on the oldest $85\\%$ of it that the calibrated runs of "
+        f"Table~\\ref{{tab:suffix}} use, and that reference gives "
+        f"${cell('cc_short','CatBoost'):.3f}$ and ${cell('long','CatBoost'):.3f}$ on the same two "
+        f"strata against the table's ${sm.loc['cc_short', 'fnr']:.3f}$ and "
+        f"${sm.loc['long', 'fnr']:.3f}$. The blind spot "
         f"is therefore not an artefact of the feature schema: it survives a model that never sees "
         # No em dashes: the 2026-09 pass stripped them from the papers' prose and could not reach
         # a generated file, which is rewritten by this script rather than edited.
@@ -552,19 +754,22 @@ def gen_rho():
         parts.append(f"{r.family} $\\rho_{{between}} = {r.rho_between_mean:.3f}\\pm"
                      f"{r.rho_between_sd:.3f}$ vs.\\ within-protocol re-seeding baselines"
                      f" ${r.rho_within_random_mean:.3f}$ (random) and"
-                     f" ${r.rho_within_temporal_mean:.3f}$ (temporal)")
-    # The closing claim, tested rather than asserted: it held for CatBoost and not for XGBoost.
-    # Flagged when between-protocol agreement falls below a within-protocol baseline by more than
-    # that baseline's own seed spread -- a shortfall inside the noise is not evidence against it.
+                     f" ${r.rho_within_temporal_mean:.3f}$ (phishing-temporal)")
+    # The closing claim, tested rather than asserted, family by family against that family's OWN
+    # baselines. Flagged when between-protocol agreement falls below a within-protocol baseline by
+    # more than that baseline's own seed spread -- a shortfall inside the noise is not evidence
+    # against it. The two families' between-protocol correlations can be equal to three decimals
+    # and still resolve differently, because the baselines differ; the sentence says so, and says
+    # that the difference BETWEEN the families is not a tested quantity.
     worse = [r.family for _, r in rho.iterrows()
              if r.rho_between_mean < r.rho_within_random_mean - r.rho_within_random_sd
              or r.rho_between_mean < r.rho_within_temporal_mean - r.rho_within_temporal_sd]
     if not worse:
-        tail = ("Switching the protocol perturbs the reliance ranking no more than re-training "
-                "under the same protocol does.")
+        tail = ("For every family measured, switching the protocol perturbs the reliance ranking "
+                "no more than re-training under the same protocol does.")
     elif len(worse) == len(rho):
-        tail = ("Switching the protocol perturbs the reliance ranking more than re-training under "
-                "the same protocol does, for every family measured.")
+        tail = ("For every family measured, switching the protocol perturbs the reliance ranking "
+                "more than re-training under the same protocol does.")
     else:
         # Name the baseline it actually falls below; "both" was wrong for the one family flagged.
         detail = []
@@ -573,17 +778,23 @@ def gen_rho():
                 continue
             under = [(n, m_, sd) for n, m_, sd in
                      (("random", r.rho_within_random_mean, r.rho_within_random_sd),
-                      ("temporal", r.rho_within_temporal_mean, r.rho_within_temporal_sd))
+                      ("phishing-temporal", r.rho_within_temporal_mean,
+                       r.rho_within_temporal_sd))
                      if r.rho_between_mean < m_ - sd]
             # Print the baseline's own sd beside the claim, so "more than the baseline's own
             # spread" is checkable on the page rather than only in the CSV.
             detail.append(f"{r.family} (${r.rho_between_mean:.3f}$ against its "
                           + " and ".join(f"{n} baseline of ${m_:.3f} \\pm {sd:.3f}$"
                                          for n, m_, sd in under) + ")")
-        tail = (f"Switching the protocol perturbs the reliance ranking no more than re-training "
-                f"under the same protocol does, except for {', '.join(detail)}, where the "
-                f"between-protocol agreement falls short by more than the baseline's own "
-                f"seed-to-seed standard deviation.")
+        inside = [r.family for _, r in rho.iterrows() if r.family not in worse]
+        tail = (f"Read against their own baselines, the two families resolve differently. For "
+                f"{', '.join(inside)} the between-protocol correlation lies inside the re-seeding "
+                f"band, so switching the protocol perturbs the reliance ranking no more than "
+                f"re-training under the same protocol does. For {', '.join(detail)} it falls "
+                f"short of the baseline by more than the baseline's own seed-to-seed standard "
+                f"deviation. Each verdict compares a family with its own null; the difference "
+                f"between the families is not itself tested, and their between-protocol "
+                f"correlations are the same to three decimals.")
     return ("Across " + str(int(rho.iloc[0].n_seeds)) + " seeds with independently-drawn benign"
             " masks per run: " + "; ".join(parts) + ". " + tail + " " + _rho_degenerate())
 
@@ -775,7 +986,7 @@ def gen_drift_verdict():
                 for pairing in permutations(values)]
         p[f] = float(np.mean(np.asarray(null) >= observed - 1e-12))
     return (
-            f"Applied forward over {nwin} equal-count time windows, the deployed detector's recall "
+            f"Applied forward over {nwin} equal-count time windows, the early-window model's recall "
             f"on freshly-arrived phishing falls from ${r0:.3f}$ to ${r1:.3f}$, and the attribution "
             f"profile moves with it: over the windows, recall's Spearman correlation with "
             f"$|$SHAP$|$ is ${c['dot_cnt']:+.2f}$ for \\texttt{{dot\\_cnt}} and "
@@ -786,9 +997,9 @@ def gen_drift_verdict():
             f"None reaches $p<0.05$ even under the exchangeability assumption; temporal "
             f"dependence between windows is not accounted for by this reference test. "
             f"With only {nwin} windows this is a descriptive co-movement, not a powered lead/lag "
-            f"test, and we report it as one: the candidate the discussion floated is not "
-            f"refuted and not established, and what it earns is a powered replication in the "
-            f"study designed for it rather than a place among this paper's findings")
+            f"test, and we report it as one: the monitoring candidate is neither refuted nor "
+            f"established, and what it earns is a powered replication in a study designed for "
+            f"it rather than a place among this paper's findings")
 
 
 def tab_case_studies():
@@ -933,7 +1144,8 @@ def main():
     assets = [("tab_shap_contrast", tab_shap_contrast), ("tab_tld", tab_tld),
               ("tab_brands", tab_brands), ("gen_rho", gen_rho),
               ("gen_vn_ci", gen_vn_ci), ("gen_brand_stats", gen_brand_stats),
-              ("gen_missshare", gen_missshare), ("gen_sweep", gen_sweep)]
+              ("gen_missshare", gen_missshare), ("gen_sweep", gen_sweep),
+              ("gen_p6_macros", gen_p6_macros)]
     # The 2026-08-19 reframing's assets, each gated on the run that produces its CSV so a fresh
     # checkout without run_p6_suffix_blindspot.py still regenerates the rest of the paper.
     if os.path.exists("data/processed/p6/p6_suffix_strata.csv"):

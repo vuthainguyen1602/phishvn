@@ -363,7 +363,9 @@ def make_tex(fr: pd.DataFrame, cal: pd.DataFrame, pts: pd.DataFrame, par: pd.Dat
 \\caption{{Budget-allocation frontier over \\emph{{all}} per-group threshold pairs
 ({family}, phishing-temporal test, {seeds} seeds). Top: lowest miss elsewhere under each
 \\texttt{{.vn}} ceiling at the deployed FPR ${b0:.3f}$; best balanced point ${mm:.3f}$.
-Bottom: price of parity.}}
+`Oracle': thresholds read off the test curves; `calibrated': thresholds set as
+calibration-benign quantiles, `n/a' where no calibrated allocation of this budget holds the
+\\texttt{{.vn}} miss rate under that ceiling. Bottom: price of parity.}}
 \\label{{tab:budgetfrontier}}
 \\small\\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{l c c}}
@@ -385,9 +387,11 @@ Requirement & min.\\ corpus FPR & vs deployed \\\\
     tau10 = par[np.isclose(par.tau, 0.10)]
     mo10, _, cal10, _ = at(0.10)
     verdict = (
-        f"Exhausting the space the four rules sample from (every pair of per-group thresholds, "
-        f"scored against the budget identity $\\mathrm{{FPR}} = \\pi_{{vn}}\\mathrm{{FPR}}_{{vn}} "
-        f"+ \\pi_{{other}}\\mathrm{{FPR}}_{{other}}$ with $\\pi_{{vn}} = {pi_vn:.3f}$) leaves "
+        f"A search over every pair of per-group thresholds (an exhaustive walk over the two "
+        f"groups' ROC staircases for the oracle curve, and a grid over the share of the budget "
+        f"given to \\texttt{{.vn}} for the calibrated curve), scored against the budget identity "
+        f"$\\mathrm{{FPR}} = \\pi_{{vn}}\\mathrm{{FPR}}_{{vn}} "
+        f"+ \\pi_{{other}}\\mathrm{{FPR}}_{{other}}$ with $\\pi_{{vn}} = {pi_vn:.3f}$, leaves "
         f"the conclusion intact and makes it exhaustive rather than illustrative "
         f"(Table~\\ref{{tab:budgetfrontier}}, Figure~\\ref{{fig:budgetfrontier}}). At the deployed "
         f"false-alarm budget of ${b0:.3f}$ the best allocation that holds \\texttt{{.vn}} misses "
@@ -406,37 +410,52 @@ Requirement & min.\\ corpus FPR & vs deployed \\\\
     return b0, pi_vn, mm, float(tau10.b_star.mean()), mo10, cal10, float(dflt.miss_vn.mean())
 
 
+CSV_NAMES = ("p6_budget_frontier", "p6_budget_frontier_cal", "p6_budget_frontier_points",
+             "p6_budget_parity")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--family", default="CatBoost")
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--cal-frac", type=float, default=0.15)
+    # The figure and the two generated .tex fragments are pure functions of the four CSVs.
+    # Re-drawing a title or re-wording a caption must not refit five CatBoost seeds: a refit on
+    # another machine can move a fourth decimal, and every table in the paper is pinned to the
+    # committed CSVs.
+    ap.add_argument("--from-csv", action="store_true",
+                    help="skip the fit; rebuild figure and .tex from the committed CSVs")
     args = ap.parse_args()
 
-    df = load()
-    feats = [c for c in COMPPHISH if c in df.columns]
-    FR, CAL, PTS, PAR = [], [], [], []
-    for s in range(args.seeds):
-        fr, cal, pts, par, b0, pi = one_seed(df, feats, args.family, s, args.cal_frac)
-        FR.append(fr)
-        CAL.append(cal)
-        PTS.append(pts)
-        PAR.append(par)
-        print(f"[i] seed {s}: budget(deployed FPR)={b0:.3f} pi_vn={pi:.3f} "
-              f"b*(both<=0.10)={par[np.isclose(par.tau, 0.10)].b_star.iloc[0]:.3f}")
-    fr = pd.concat(FR, ignore_index=True)
-    cal = pd.concat(CAL, ignore_index=True)
-    pts = pd.concat(PTS, ignore_index=True)
-    par = pd.concat(PAR, ignore_index=True)
-    os.makedirs(PROC, exist_ok=True)
-    for name, d in (("p6_budget_frontier", fr), ("p6_budget_frontier_cal", cal),
-                    ("p6_budget_frontier_points", pts), ("p6_budget_parity", par)):
-        d.to_csv(os.path.join(PROC, name + ".csv"), index=False)
-        print(f"[+] data/processed/{name}.csv")
+    if args.from_csv:
+        fr, cal, pts, par = (pd.read_csv(os.path.join(PROC, "p6", n + ".csv"))
+                             for n in CSV_NAMES)
+        seeds = int(fr.seed.nunique())
+    else:
+        df = load()
+        feats = [c for c in COMPPHISH if c in df.columns]
+        FR, CAL, PTS, PAR = [], [], [], []
+        for s in range(args.seeds):
+            fr, cal, pts, par, b0, pi = one_seed(df, feats, args.family, s, args.cal_frac)
+            FR.append(fr)
+            CAL.append(cal)
+            PTS.append(pts)
+            PAR.append(par)
+            print(f"[i] seed {s}: budget(deployed FPR)={b0:.3f} pi_vn={pi:.3f} "
+                  f"b*(both<=0.10)={par[np.isclose(par.tau, 0.10)].b_star.iloc[0]:.3f}")
+        fr = pd.concat(FR, ignore_index=True)
+        cal = pd.concat(CAL, ignore_index=True)
+        pts = pd.concat(PTS, ignore_index=True)
+        par = pd.concat(PAR, ignore_index=True)
+        seeds = args.seeds
+        os.makedirs(os.path.join(PROC, "p6"), exist_ok=True)
+        for name, d in zip(CSV_NAMES, (fr, cal, pts, par)):
+            d.to_csv(os.path.join(PROC, "p6", name + ".csv"), index=False)
+            print(f"[+] data/processed/p6/{name}.csv")
 
-    make_figure(fr, cal, pts, par, args.family, args.seeds)
+    make_figure(fr, cal, pts, par, args.family, seeds)
     b0, pi_vn, mm, bstar10, mo10, cal10, miss_default = make_tex(
-        fr, cal, pts, par, args.family, args.seeds)
+        fr, cal, pts, par, args.family, seeds)
     print(f"[+] deployed budget FPR={b0:.3f}  pi_vn={pi_vn:.3f}")
     print(f"[+] best balanced point at that budget: both groups miss {mm:.3f}")
     print(f"[+] miss_vn<=0.10 costs miss_other={mo10:.3f} (oracle) / {cal10:.3f} (calibrated)")
