@@ -164,8 +164,11 @@ def main():
                        _macro(f"HE{tag}Lo{w}", _f(lo)), _macro(f"HE{tag}Hi{w}", _f(hi))]
             lines.append(f"{q:18s} {w}: {k}/{n} = {k / n:.3f} [{lo:.3f}, {hi:.3f}]")
         po, kap = kappa([r[qi] for r in rated["A"]], [r[qi] for r in rated["B"]], (0, 1))
-        macros += [_macro(f"HE{tag}Agree", _f(po)), _macro(f"HE{tag}Kappa", _f(kap))]
-        lines.append(f"{q:18s} agreement {po:.3f}, kappa {_f(kap)}")
+        # PABAK = 2*p_o - 1: Cohen's kappa collapses when one rater accepts (almost) every pair,
+        # so the prevalence-adjusted bias-adjusted kappa is reported beside it (Byrt et al. 1993).
+        macros += [_macro(f"HE{tag}Agree", _f(po)), _macro(f"HE{tag}Kappa", _f(kap)),
+                   _macro(f"HE{tag}Pabak", _f(2 * po - 1))]
+        lines.append(f"{q:18s} agreement {po:.3f}, kappa {_f(kap)}, PABAK {2 * po - 1:.3f}")
 
     for w in "AB":
         col = [row[2] for row in rated[w]]

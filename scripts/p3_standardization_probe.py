@@ -207,7 +207,7 @@ def main():
             f"(paired ${t_std['mean']:+.3f}$, corrected {_fmt(t_std['p'])}), and stacked late fusion "
             f"to ${np.mean(res[('late', stk)]['F1']):.3f}$ (${t_late['mean']:+.3f}$, {_fmt(t_late['p'])}). "
             f"The standardised stack sits ${t_vs_url['mean']:+.3f}$ from URL-only "
-            f"({_fmt(t_vs_url['p'])}). The headline contrast, content$+$URL minus content, is "
+            f"(corrected {_fmt(t_vs_url['p'])}). The headline contrast, content$+$URL minus content, is "
             f"${head_c['raw']['mean']:+.3f}$ raw ({_fmt(head_c['raw']['p'])}), "
             f"${head_c['std']['mean']:+.3f}$ standardised ({_fmt(head_c['std']['p'])}) and "
             f"${head_c['late']['mean']:+.3f}$ under late fusion ({_fmt(head_c['late']['p'])}).")
@@ -233,6 +233,8 @@ def main():
         "probe (same subset, splits and heads) "
         "re-runs the stack with every dense block per-block standardised on the training "
         "portion, and with a stacked-probability late fusion in place of concatenation. "
+        "Its six contrasts are post hoc, outside any pre-specified family, and carry corrected "
+        "$p$-values without Benjamini--Hochberg adjustment. "
         + " ".join(frag_parts) + " "
         + ("The scaling hypothesis is therefore borne out at least in part: equalising the "
            "block scales moves the linear stack, and the head-capacity reading of "

@@ -226,7 +226,7 @@ def _table(per: pd.DataFrame, summary: pd.DataFrame) -> str:
         r"\begin{table*}[t]",
         r"\caption{Leave-one-scenario-out evaluation of the char-$n$-gram detector: each row "
         r"holds out one scenario (both classes). ID: mean of 20 class- and size-matched random "
-        r"splits.}",
+        r"splits. Differences quoted in the text are computed from unrounded means.}",
         r"\label{tab:scenarioood}",
         r"\small",
         r"\centering",

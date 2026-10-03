@@ -203,7 +203,7 @@ def main() -> None:
                 for d in ("D0", "D1", "D2")}
     tex = rf"""\begin{{table*}}[t]
 \caption{{Paraphrase evasion, attack strength controlled: all $2\times{n_ph}$ rewrites in
-$J \in [{lo_b:.2f}, {hi_b:.2f}]$, mean $\pm$ std over {SEEDS} splits. \emph{{n/a}}: D2 under character obfuscation is outside the pre-specified design (no hypothesis concerns it) and was not computed.}}
+$J \in [{lo_b:.2f}, {hi_b:.2f}]$, mean $\pm$ std over {SEEDS} splits. \emph{{n/a}}: D2 under character obfuscation is outside the pre-specified design (no hypothesis concerns it) and was not computed. Differences quoted in the text are computed from unrounded means.}}
 \label{{tab:paraphraseband}}
 \small
 \begin{{tabular}}{{l c c c c}}
