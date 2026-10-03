@@ -91,11 +91,15 @@ def main():
     rows = []
     for tld, g in te.groupby("tld_grp"):
         gp = g[g.y == 1]
+        gb = g[g.y == 0]
         rows.append({
             "tld": tld, "n": len(g), "n_phish": len(gp),
             "phish_rate": round(len(gp) / len(g), 4),
             "mean_shap_tld_len": round(float(g.shap_tld_len.mean()), 5),
             "fnr_phish@0.5": round(float((gp.pred < 0.5).mean()), 4) if len(gp) else np.nan,
+            # the benign-side price of the same operating point, per group, so the table can
+            # show both error rates rather than the miss rate alone
+            "fpr_benign@0.5": round(float((gb.pred >= 0.5).mean()), 4) if len(gb) else np.nan,
         })
     tab = pd.DataFrame(rows).sort_values("n", ascending=False)
     tab.to_csv(TLD_OUT, index=False)

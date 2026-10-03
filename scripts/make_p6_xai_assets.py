@@ -170,40 +170,41 @@ def tab_tld():
     df = df[df.n_phish >= MIN_PHISH].dropna(subset=["fnr_phish@0.5"])
     df = df.sort_values(["fnr_phish@0.5", "n_phish"], ascending=[False, False])
     n_grp = len(df)
-    # The CSV carries no per-suffix false-positive rate, and most groups could not support one:
-    # the benign side of a group is n minus ph., and it is below the phishing floor for a large
-    # share of the printed groups. Say so in the caption, with the count, rather than print a
-    # column of rates on four benign rows.
+    # The benign side of a group is n minus ph. and sits below the phishing floor for most
+    # printed groups, so the false-positive rate is printed only where that side has at least
+    # MIN_PHISH rows and left as a dash elsewhere, with the count in the caption.
     few_benign = int(((df.n - df.n_phish) < MIN_PHISH).sum())
     lines = [
         "\\begin{table*}[t]\\centering",
         "\\caption{Per-suffix decomposition, phishing-temporal test, single seed-0 split:"
         f" \\emph{{all}} {n_grp} groups with at least {MIN_PHISH} phishing rows, by miss rate"
         " (left block, then right). `ph.': phishing count; `SHAP': mean \\emph{signed}"
-        " \\texttt{tld\\_len} contribution; FNR at threshold 0.5. No per-suffix false-positive"
-        f" rate is printed: the benign count is $n$ minus ph., and it is below {MIN_PHISH} for"
-        f" {few_benign} of the {n_grp} groups, so false-positive rates are reported per stratum"
-        " in Table~\\ref{tab:suffix}.}",
+        " \\texttt{tld\\_len} contribution; FNR and FPR at threshold 0.5, the FPR over the"
+        " group's benign rows ($n$ minus ph.) and printed only where that side has at least"
+        f" {MIN_PHISH} rows, which {n_grp - few_benign} of the {n_grp} groups do. Stratum-level"
+        " false-positive rates are in Table~\\ref{tab:suffix}.}",
         "\\label{tab:tld}",
         "\\footnotesize\\setlength{\\tabcolsep}{3pt}",
         # Two blocks side by side rather than one 28-row column: printing every group is the
         # point of the 2026-08-19 fix, and a single column of 28 rows cost a page.
-        "\\begin{tabular}{lrrrrr@{\\hspace{10pt}}lrrrrr}\\toprule",
-        ("Suffix & len & $n$ & ph. & SHAP & FNR & "
-         "Suffix & len & $n$ & ph. & SHAP & FNR \\\\ \\midrule"),
+        "\\begin{tabular}{lrrrrrr@{\\hspace{10pt}}lrrrrrr}\\toprule",
+        ("Suffix & len & $n$ & ph. & SHAP & FNR & FPR & "
+         "Suffix & len & $n$ & ph. & SHAP & FNR & FPR \\\\ \\midrule"),
     ]
 
     def cell(r):
         L = len(str(r.tld).lstrip("."))
         lab = "2/6" if "(" in str(r.tld) else str(L)
+        benign = int(r.n) - int(r.n_phish)
+        fpr = f"{r['fpr_benign@0.5']:.3f}" if benign >= MIN_PHISH and pd.notna(r.get("fpr_benign@0.5")) else "--"
         return (f"\\texttt{{{esc(r.tld)}}} & {lab} & {int(r.n)} & {int(r.n_phish)} & "
-                f"{r.mean_shap_tld_len:+.2f} & {r['fnr_phish@0.5']:.3f}")
+                f"{r.mean_shap_tld_len:+.2f} & {r['fnr_phish@0.5']:.3f} & {fpr}")
 
     rows = [r for _, r in df.iterrows()]
     half = (len(rows) + 1) // 2
     for i in range(half):
         left = cell(rows[i])
-        right = cell(rows[i + half]) if i + half < len(rows) else " & & & & & "
+        right = cell(rows[i + half]) if i + half < len(rows) else " & & & & & & "
         lines.append(f"{left} & {right} \\\\")
     lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
     return "\n".join(lines)

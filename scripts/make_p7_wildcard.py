@@ -25,6 +25,7 @@ import datetime
 import io
 import math
 import os
+import re
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -185,22 +186,42 @@ def make_hosting_tex(rows: list[dict], total_hosts: int, tier1_platform_hosts: i
     write_generated(os.path.join(SEC, "gen_hosting.tex"), body.rstrip() + "%")
 
 
-def p4_contrast() -> tuple[int, int] | None:
-    """(wildcard candidates removed, candidates screened) from the companion funnel."""
+P4B_PINNED_FUNNEL = os.path.join(ROOT, "papers", "P4b_infra_data", "sections", "tab_funnel.tex")
+P4B_PIN = os.path.join(ROOT, "papers", "P4b_infra_data", "DATA_PIN.json")
+
+
+def p4_contrast() -> tuple[int, int, str] | None:
+    """(wildcard candidates removed, candidates screened, snapshot date) from the companion funnel.
+
+    The companion study pinned its numbers on a dated snapshot (DATA_PIN.json) while its
+    collection keeps running, so this reads the PINNED table the companion prints rather than the
+    live funnel.csv: the two papers then quote one snapshot, and the sentence names its date.
+    The live file is the fallback only when the pinned table is absent."""
+    if os.path.exists(P4B_PINNED_FUNNEL):
+        rows = {}
+        for m in re.finditer(r"^([^&\\]+?)\s*&\s*([\d{},]+)\s*&\s*([\d{},]+|--)", open(P4B_PINNED_FUNNEL, encoding="utf-8").read(), re.M):
+            rows[m.group(1).strip()] = (m.group(2), m.group(3))
+        try:
+            wild = int(rows["less registry wildcards"][1].replace("{,}", "").replace(",", ""))
+            screened = int(rows["less hosted subdomains"][0].replace("{,}", "").replace(",", ""))
+            as_of = "the companion's pinned snapshot"
+            if os.path.exists(P4B_PIN):
+                import json
+                as_of = json.load(open(P4B_PIN, encoding="utf-8")).get("data_as_of", as_of)
+            return wild, screened, as_of
+        except (KeyError, ValueError):
+            pass
     if not os.path.exists(P4_FUNNEL):
         return None
     rows = list(csv.DictReader(open(P4_FUNNEL, newline="", encoding="utf-8")))
     try:
         i = next(i for i, r in enumerate(rows) if r["stage"].startswith("less registry"))
         wild = int(rows[i]["removed"])
-        # The population the screen actually operates on, which is the stage BEFORE it -- not
-        # rows[0]. Reading the first row credited the screen with a denominator including the 63
-        # hosted subdomains removed a stage earlier and never shown to it, understating the share
-        # (1,139/1,525 = 74.7% instead of 1,139/1,462 = 77.9%).
         screened = int(rows[i - 1]["surviving"]) if i > 0 else int(rows[0]["surviving"])
+        as_of = datetime.date.fromtimestamp(os.path.getmtime(P4_FUNNEL)).isoformat()
+        return wild, screened, as_of
     except (StopIteration, ValueError, KeyError, IndexError):
         return None
-    return wild, screened
 
 
 def phishing_total() -> int:
@@ -330,14 +351,14 @@ def make_tex(s: dict, p4: tuple[int, int] | None, probe_date: str) -> None:
     if p4:
         # The companion funnel is regenerated as its collection runs, so the sentence dates
         # the snapshot it read rather than printing a moving number as if it were fixed.
-        funnel_date = datetime.date.fromtimestamp(os.path.getmtime(P4_FUNNEL)).isoformat()
+        funnel_date = p4[2]
         p4_txt = (
             f" The comparison that gives the number meaning is a separate prospective "
             f"collection of candidate names generated from brand tokens, screened by the same "
             f"label: a candidate whose resolved addresses matched the probe's answer for its "
             f"suffix was removed as a registry answer, which removed ${tex_int(p4[0])}$ of "
             f"${tex_int(p4[1])}$ candidates (${100.0 * p4[0] / p4[1]:.1f}\\%$) in that "
-            f"collection's funnel as of {funnel_date}. "
+            f"collection's funnel at its pinned snapshot of {funnel_date}. "
             # Computed, not asserted. This read "Four orders of magnitude" as a literal while the
             # ratio was 3,046x -- 3.5 decades. Four orders would need the companion to remove more
             # than 100% of its candidates, so the claim was not merely stale but unreachable.
