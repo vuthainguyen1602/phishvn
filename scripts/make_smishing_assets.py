@@ -491,8 +491,8 @@ def tab_logodds(cues, out):
                      cell(b), b["z"], b["phish"], b["ham"]))
     buf.write("\\bottomrule\n\\end{tabular}\n"
               "\\\\[4pt]\n\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
-              "Log-odds ratio with an informative Dirichlet prior, over the whole corpus; $z$ is the\n"
-              "prior-regularised score and the two count columns are raw occurrences. The positive\n"
+              "Log-odds ratio with an informative Dirichlet prior, over the whole corpus. The score $z$ is\n"
+              "prior-regularised, and the two count columns are raw occurrences. The positive\n"
               "column is led by function words written with diacritics. The ham column is led by\n"
               "unaccented forms of the same language, plus carrier boilerplate (\\texttt{lh}, \\texttt{viettel}),\n"
               "the regulated brand-SMS prefix \\texttt{[TB]} (\\texttt{tb}) and the publisher's\n"
@@ -581,6 +581,22 @@ def read_raw():
 
 def _n(v: int) -> str:
     return f"{v:,}".replace(",", "{,}")
+
+
+def url_feature_list() -> str:
+    """The 21 URL columns the registered arms fit, read from train_sms_fusion.py's own COMPPHISH
+    list rather than retyped, so the configuration table cannot name a column the model never saw."""
+    import ast
+    src = open(os.path.join(_HERE, "train_sms_fusion.py"), encoding="utf-8").read()
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "COMPPHISH" for t in node.targets):
+            cols = [e.value for e in node.value.elts]
+            break
+    else:
+        raise SystemExit("[!] COMPPHISH not found in train_sms_fusion.py")
+    names = ["\\texttt{" + c.replace("_", "\\_") + "}" for c in cols]
+    return (f"\\newcommand{{\\SmsUrlFeatureN}}{{{len(cols)}}}\n"
+            f"\\newcommand{{\\SmsUrlFeatureList}}{{{', '.join(names)}}}\n")
 
 
 def split_and_date_macros(msgs, raw) -> str:
@@ -752,6 +768,7 @@ def main() -> int:
         f"\\newcommand{{\\SmsPhishTopSuffixPct}}{{{100 * top_ph[0][1] / tot_ph:.1f}}}\n"
         f"\\newcommand{{\\SmsHamMaxOnPhishSuffixPct}}{{{ham_on_ph:.1f}}}\n"
         + split_and_date_macros(msgs, raw)
+        + url_feature_list()
         + f"\\newcommand{{\\SmsMonths}}{{{len(months)}}}\n"
         f"\\newcommand{{\\SmsSpanStart}}{{{months[0]}}}\n"
         f"\\newcommand{{\\SmsSpanEnd}}{{{months[-1]}}}\n"
