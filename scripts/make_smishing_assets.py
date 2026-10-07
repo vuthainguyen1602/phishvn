@@ -493,8 +493,8 @@ def tab_logodds(cues, out):
               "\\\\[4pt]\n\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Log-odds ratio with an informative Dirichlet prior, over the whole corpus; $z$ is the\n"
               "prior-regularised score and the two count columns are raw occurrences. The positive\n"
-              "column is Vietnamese written with diacritics. The ham column is the same language\n"
-              "written without them, plus carrier boilerplate (\\texttt{lh}, \\texttt{viettel}),\n"
+              "column is led by function words written with diacritics. The ham column is led by\n"
+              "unaccented forms of the same language, plus carrier boilerplate (\\texttt{lh}, \\texttt{viettel}),\n"
               "the regulated brand-SMS prefix \\texttt{[TB]} (\\texttt{tb}) and the publisher's\n"
               "redaction tokens (\\texttt{time}). Post-hoc and unregistered.\n"
               "\\end{minipage}\n\\end{table}\n")
@@ -605,6 +605,8 @@ def split_and_date_macros(msgs, raw) -> str:
         if parse_date(m["date"]):
             dates_per_text[m["text_sha1"]].add(parse_date(m["date"]))
     multi_date = sum(1 for v in dates_per_text.values() if len(v) > 1)
+    # tokens the card lists as its redaction vocabulary, counted in the released text
+    card_tok = {t: sum(1 for r in raw if f"[{t}]" in r.get("message", "")) for t in ("PHONE", "BANK_ACC")}
     pre_any = sum(1 for m in msgs
                   if re.search(r"\[(TB|QC)\]", by_id.get(m["message_id"], {}).get("message", "")))
     return (f"\\newcommand{{\\SmsTrainRows}}{{{_n(n['train'])}}}\n"
@@ -626,6 +628,8 @@ def split_and_date_macros(msgs, raw) -> str:
             f"\\newcommand{{\\SmsPhishAfterCutoff}}{{{_n(after['1'])}}}\n"
             f"\\newcommand{{\\SmsHamAfterCutoff}}{{{_n(after['0'])}}}\n"
             f"\\newcommand{{\\SmsLastPhishDate}}{{{last_ph.isoformat()}}}\n"
+            f"\\newcommand{{\\SmsTokPhoneRows}}{{{_n(card_tok['PHONE'])}}}\n"
+            f"\\newcommand{{\\SmsTokBankAccRows}}{{{_n(card_tok['BANK_ACC'])}}}\n"
             f"\\newcommand{{\\SmsDistinctDates}}{{{len(days)}}}\n"
             f"\\newcommand{{\\SmsLastDate}}{{{last_day.isoformat()}}}\n"
             f"\\newcommand{{\\SmsLastDateRows}}{{{_n(len(last_rows))}}}\n"

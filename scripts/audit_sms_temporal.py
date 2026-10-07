@@ -70,7 +70,7 @@ def main():
         writer.writerows(predictions)
     a, b, c = (out['runs'][n] for n in masks)
     macros = {'SmsTimeAugN': str(a['n_test']), 'SmsTimeAugFP': str(a['fp']),
-              'SmsTimeAugFPR': f"{100*a['fpr']:.2f}", 'SmsTimeEarlyN': str(b['n_train']+b['n_test']),
+              'SmsTimeAugFPR': f"{100*a['fpr']:.2f}", 'SmsTimeEarlyN': f"{b['n_train']+b['n_test']:,}".replace(',', '{,}'),
               'SmsTimeEarlyTestN': str(b['n_test']), 'SmsTimeEarlyF': f"{b['f1']:.3f}",
               'SmsTimeForwardN': str(c['n_test']), 'SmsTimeForwardFPR': f"{100*c['fpr']:.2f}",
               'SmsTimeExcluded': str(int(overlap.sum())),
