@@ -699,7 +699,7 @@ def tab_examples(raw, msgs, out):
               "\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Each row is the first positive-labelled message in the published file that carries\n"
               "the host in the last column, quoted verbatim and cut at a word boundary. Bracketed\n"
-              "tokens are the publisher's. The pretext is the author's gloss. The table illustrates\n"
+              "tokens are the publisher's. The pretext is a gloss added in this study. The table illustrates\n"
               "measured corpus properties and does not estimate pretext frequency.\n"
               "\\end{minipage}\n\\end{table*}\n")
     write_generated(out, buf.getvalue())
