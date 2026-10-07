@@ -171,3 +171,18 @@ section records where the paper now departs from what was registered, and why.
 - **Class term.** The paper now uses "positive class" / "positive-labelled" throughout for
   label 1, following the card's "spam/scam"; the word "phishing" in this file's own text and in
   field and macro names is left as written.
+
+### Deviation record, 2026-10-07 (appended; nothing above is edited)
+
+- **What `date` measures.** This registration, and the paper until 2026-10-07, treated the
+  publisher's `date` column as the day a message was sent or received, and named the temporal
+  split on that basis (cutoff 2026-07-15). The card does not define the column. On inspection
+  it takes 21 distinct values over 2,976 dated rows; its last value, 2026-08-03, holds 627 rows
+  (all ham) and is the day the Hugging Face repository was created (Hub API `createdAt`); 83
+  repeated texts carry more than one date. The paper now reads the field as a batch (entry or
+  contribution) date and words the three post-hoc checks as checks across batches. No number
+  changes. The registered temporal-split replication stays unrun; had it been run, it would have
+  split collection batches, not time.
+- **Source revision.** The corpus is analysed at Hugging Face revision
+  `a90e2bd7e8df2376939658075ba8094dcee488ad`; on 2026-10-07 the Hub copy of
+  `full_dataset.csv` matched the local file byte for byte (SHA-1 7dcbfdbd…).

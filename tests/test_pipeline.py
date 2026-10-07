@@ -404,3 +404,73 @@ def test_foreign_cctlds_and_ecommerce_targets():
         assert is_vn_target(d), f"Expected True for VN e-commerce domain {d}"
 
 
+
+
+from datetime import date as _d
+
+
+def _gz_csv(path, rows, submitted="2026-10-06"):
+    import gzip
+    with gzip.open(path, "wt", encoding="utf-8") as f:
+        f.write("phish_id,url,phish_detail_url,submission_time,verified,verification_time,online,target\n")
+        for u in rows:
+            day = submitted
+            if isinstance(u, tuple):
+                u, day = u
+            f.write(f"1,{u},d,{day}T00:00:00+00:00,yes,{day}T00:00:00+00:00,yes,Other\n")
+
+
+def test_phishtank_source_admits_vn_cctld_only(tmp_path):
+    """The shared token rule passed 164 unseen PhishTank hosts on 2026-10-06 and 151 of them were
+    Italian (brt.<random>.click) and Brazilian (bradesco.*) campaigns. This feed is therefore gated
+    on the ccTLD before is_vn_target ever sees it; a token match alone must not admit a host."""
+    import fetch_phishing_feeds as ffp
+    snap = tmp_path / "2026-10-06.csv.gz"
+    _gz_csv(snap, ["http://brt.alrpxi.buzz/track", "http://tuyendoan.vn/login",
+                   "https://www.ant.com.vn/", "http://bradesco.appnet-empresas.click/",
+                   "http://vietcombank-verify.top/"])
+    got = ffp.src_phishtank(snapshot_dir=str(tmp_path), today=_d(2026, 10, 6))
+    assert sorted(got) == ["ant.com.vn", "tuyendoan.vn"]
+    assert "phishtank" in ffp.SOURCES and ffp.SOURCES["phishtank"] is ffp.src_phishtank
+
+
+def test_phishtank_source_falls_back_to_download_when_snapshot_is_stale(tmp_path):
+    """A snapshot older than the allowed age is a dead cron, not data; the live list is read instead
+    and nothing is served from the stale file."""
+    import os
+    import time
+    import fetch_phishing_feeds as ffp
+    snap = tmp_path / "2026-09-01.csv.gz"
+    _gz_csv(snap, ["http://stale-only.vn/"])
+    old = time.time() - 10 * 24 * 3600
+    os.utime(snap, (old, old))
+
+    class _Resp:
+        text = ("phish_id,url,submission_time\n1,http://fresh.com.vn/x,2026-10-01T00:00:00+00:00\n"
+                "1,http://brt.zzzz.cc/,2026-10-01T00:00:00+00:00\n")
+
+        def raise_for_status(self):
+            return None
+    keep = ffp._get
+    ffp._get = lambda *a, **k: _Resp()
+    try:
+        assert ffp.src_phishtank(snapshot_dir=str(tmp_path), today=_d(2026, 10, 6)) == ["fresh.com.vn"]
+    finally:
+        ffp._get = keep
+
+
+def test_phishtank_source_drops_names_whose_newest_submission_is_old(tmp_path):
+    """PhishTank's online flag is never cleared: the first tick admitted account.esms.vn (2023) and
+    a 2025 web-shell path on jb.com.vn. A name passes on its NEWEST submission only, and a fresh
+    resubmission of an old name is enough to bring it back."""
+    import fetch_phishing_feeds as ffp
+    _gz_csv(tmp_path / "2026-10-06.csv.gz", [
+        ("http://account.esms.vn/QuangCao", "2023-08-14"),
+        ("http://jb.com.vn/vendor/phpunit/pp/", "2025-08-16"),
+        ("http://capmentor.vn/plo/", "2026-07-31"),
+        ("http://resubmitted.vn/old", "2024-01-01"),
+        ("http://resubmitted.vn/new", "2026-09-30"),
+    ])
+    got = ffp.src_phishtank(snapshot_dir=str(tmp_path), today=_d(2026, 10, 6))
+    assert sorted(got) == ["capmentor.vn", "resubmitted.vn"]
+    assert ffp.PHISHTANK_MAX_SUBMISSION_AGE_D == 180

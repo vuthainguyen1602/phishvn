@@ -54,7 +54,9 @@ def parse_date(s):
 
 
 def fig_timeline(msgs, out):
-    """The class mix is not stationary, and a random split cannot see that."""
+    """The class mix moves across the publisher's date values, which a random split cannot see.
+    The card leaves `date` undefined and it takes few distinct values, so the axis is the month of
+    that field, not of receipt."""
     by = collections.defaultdict(collections.Counter)
     for m in msgs:
         d = parse_date(m["date"])
@@ -73,7 +75,8 @@ def fig_timeline(msgs, out):
     for i, v in enumerate(ham):
         ax.text(i + w / 2, v + 12, str(v), ha="center", fontsize=7, color=INK)
     ax.set_xticks(x, months)
-    ax.set_ylabel("messages")
+    ax.set_ylabel("rows")
+    ax.set_xlabel("month of the publisher's date field")
     ax.legend(frameon=False, loc="upper left")
     ax.set_ylim(0, max(max(ham), max(ph)) * 1.22)
     fig.tight_layout()
@@ -562,6 +565,12 @@ def cues_macros(cues) -> str:
 WORDS = {3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
 REG_CUTOFF = dt.date(2026, 7, 15)   # the temporal-split cutoff PREREG_smishing.md registered
 PREFIX_RX = re.compile(r"^\s*\[(TB|QC)\]")
+# The Hugging Face revision full_dataset.csv was taken from and the day the repository was created,
+# both read from the Hub API (/api/datasets/trannguyenthaituan/vietnamese_sms_dataset) on
+# 2026-10-07; the file's SHA-1 then matched the local copy. The card does not define `date`, and
+# the last value it takes is this creation day, so the prose reads it as a batch date.
+HF_REVISION = "a90e2bd7e8df2376939658075ba8094dcee488ad"
+HF_CREATED = dt.date(2026, 8, 3)
 
 
 def read_raw():
@@ -588,6 +597,14 @@ def split_and_date_macros(msgs, raw) -> str:
     last_ph = max(d for d, l in dated if l == "1")
     pre = collections.Counter(m["label"] for m in msgs
                               if PREFIX_RX.match(by_id.get(m["message_id"], {}).get("message", "")))
+    days = collections.Counter(d for d, _l in dated)
+    last_day = max(days)
+    last_rows = [l for d, l in dated if d == last_day]
+    dates_per_text = collections.defaultdict(set)
+    for m in msgs:
+        if parse_date(m["date"]):
+            dates_per_text[m["text_sha1"]].add(parse_date(m["date"]))
+    multi_date = sum(1 for v in dates_per_text.values() if len(v) > 1)
     pre_any = sum(1 for m in msgs
                   if re.search(r"\[(TB|QC)\]", by_id.get(m["message_id"], {}).get("message", "")))
     return (f"\\newcommand{{\\SmsTrainRows}}{{{_n(n['train'])}}}\n"
@@ -609,6 +626,13 @@ def split_and_date_macros(msgs, raw) -> str:
             f"\\newcommand{{\\SmsPhishAfterCutoff}}{{{_n(after['1'])}}}\n"
             f"\\newcommand{{\\SmsHamAfterCutoff}}{{{_n(after['0'])}}}\n"
             f"\\newcommand{{\\SmsLastPhishDate}}{{{last_ph.isoformat()}}}\n"
+            f"\\newcommand{{\\SmsDistinctDates}}{{{len(days)}}}\n"
+            f"\\newcommand{{\\SmsLastDate}}{{{last_day.isoformat()}}}\n"
+            f"\\newcommand{{\\SmsLastDateRows}}{{{_n(len(last_rows))}}}\n"
+            f"\\newcommand{{\\SmsLastDatePhish}}{{{_n(last_rows.count('1'))}}}\n"
+            f"\\newcommand{{\\SmsMultiDateTexts}}{{{_n(multi_date)}}}\n"
+            f"\\newcommand{{\\SmsHfCreated}}{{{HF_CREATED.isoformat()}}}\n"
+            f"\\newcommand{{\\SmsHfRevision}}{{{HF_REVISION[:8]}}}\n"
             f"\\newcommand{{\\SmsPrefixMsgs}}{{{_n(pre_any)}}}\n"
             f"\\newcommand{{\\SmsPrefixStartMsgs}}{{{_n(sum(pre.values()))}}}\n"
             f"\\newcommand{{\\SmsPrefixStartHam}}{{{_n(pre['0'])}}}\n"

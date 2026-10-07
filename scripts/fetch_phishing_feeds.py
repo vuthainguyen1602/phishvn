@@ -9,6 +9,9 @@ Sources (all public; each is optional and failures are tolerated):
   * URLhaus online URLs                 (abuse.ch; phishing + malware — tagged by source)
   * Phishing.Database ACTIVE domains    (mitchellkrogza; large, freshness-filtered to ACTIVE)
   * ChongLuaDao current denylist        (rotating sample, VN community project)
+  * PhishTank online-valid              (community-verified; read from the daily snapshot that
+                                         fetch_blocklists.py already keeps, .vn names only -- see
+                                         src_phishtank for why the token rule is not applied)
 
 Output: data/interim/vn_phishing_candidates.csv  (domain, sources, fetched_at) — VN-targeting only.
 Feed these to a liveness check + urlscan capture (crawl-at-detection), then build_content_manifest.
@@ -40,6 +43,15 @@ from vn_filter import host_of, is_vn_target
 H = {"User-Agent": "research (contact: thaivn_ph@utc.edu.vn)"}
 OUT = os.path.join("data", "interim", "vn_phishing_candidates.csv")
 DENYLIST_URL = "https://chongluadao.vn/database/denylist"
+PHISHTANK_URL = "http://data.phishtank.com/data/online-valid.csv"
+# fetch_blocklists.py (subdomain study) stores this feed once a day, gzipped, under this directory,
+# so the collector reads the newest snapshot instead of downloading 14 MB every hour.
+PHISHTANK_DIR = os.path.join("data", "raw", "blocklists", "phishtank")
+PHISHTANK_MAX_AGE_H = 48
+# PhishTank's "online-valid" flag is sticky: on 2026-10-05's snapshot the 21 `.vn` names had 0
+# submissions in the last 30 days, 2 in 90, 8 in 180, and three were over three years old. A
+# name is admitted only if its NEWEST submission is at most this many days old.
+PHISHTANK_MAX_SUBMISSION_AGE_D = 180
 # Attributes may sit between the class value and the closing > -- see watch_chongluadao.py.
 CLD_ENTRY_RE = re.compile(r'class="_urlText_[^"]*"[^>]*>\s*(https?://[^<\s]+)', re.I)
 
@@ -90,8 +102,58 @@ def src_chongluadao():
     return hosts
 
 
+def _phishtank_text(snapshot_dir: str = PHISHTANK_DIR, max_age_h: float = PHISHTANK_MAX_AGE_H) -> str:
+    """The newest daily snapshot if one is at most max_age_h old, else the live download."""
+    import glob
+    import gzip
+    import time
+    snaps = sorted(glob.glob(os.path.join(snapshot_dir, "*.csv.gz")))
+    if snaps:
+        latest = snaps[-1]
+        if time.time() - os.path.getmtime(latest) <= max_age_h * 3600:
+            with gzip.open(latest, "rt", encoding="utf-8", errors="replace") as f:
+                return f.read()
+    return _get(PHISHTANK_URL, timeout=120).text
+
+
+def src_phishtank(snapshot_dir: str = PHISHTANK_DIR, max_age_h: float = PHISHTANK_MAX_AGE_H,
+                  max_submission_age_d: int = PHISHTANK_MAX_SUBMISSION_AGE_D,
+                  today: "_dt.date | None" = None):
+    """PhishTank's online-valid list, restricted to `.vn` names BEFORE the shared VN filter sees it.
+
+    Measured 2026-10-06 on the 72,023-row snapshot: is_vn_target passed 176 hosts, 164 of them
+    absent from seen_domains.txt -- and 151 of those 164 were two foreign campaigns the token rule
+    cannot tell from Vietnamese ones (the Italian courier wave `brt.<random>.click|cc|help|buzz`
+    and Brazilian `bradesco.*` / `*-topaz.*` lures). Only 13 were `.vn`, and those are the
+    population this feed is wanted for: compromised Vietnamese sites (`tuyendoan.vn`,
+    `benhtumiencoxuongkhop-tphcm.org.vn`) that Phishing.Database no longer surfaces as new. The
+    other four feeds keep the full token rule; this one is admitted on the ccTLD alone, so a wrong
+    token can never enter through it. Hosts it contributes carry `phishtank` in the `sources`
+    column of vn_phishing_live/detections.csv.
+
+    Freshness (added the same evening, after the first tick): the first tick admitted 13 names and
+    9 of them had no submission newer than 180 days -- `account.esms.vn` (2023), a compromised
+    `jb.com.vn` web-shell path (2025-08), an IRS lure on `ant.com.vn` (2025-04). PhishTank never
+    clears its online flag, so the list is an archive, not a feed. A name passes only when its
+    newest submission is at most PHISHTANK_MAX_SUBMISSION_AGE_D days before `today`."""
+    newest = {}
+    for row in csv.DictReader(_phishtank_text(snapshot_dir, max_age_h).splitlines()):
+        h = host_of(row.get("url") or "")
+        if not (h and h.endswith(".vn")):
+            continue
+        try:
+            sub = _dt.date.fromisoformat((row.get("submission_time") or "")[:10])
+        except ValueError:
+            continue
+        if h not in newest or sub > newest[h]:
+            newest[h] = sub
+    today = today or _dt.date.today()
+    return [h for h, sub in newest.items() if (today - sub).days <= max_submission_age_d]
+
+
 SOURCES = {"openphish": src_openphish, "urlhaus": src_urlhaus,
-           "phishdb": src_phishdb, "chongluadao": src_chongluadao}
+           "phishdb": src_phishdb, "chongluadao": src_chongluadao,
+           "phishtank": src_phishtank}
 
 
 def main():
