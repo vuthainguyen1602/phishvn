@@ -413,8 +413,10 @@ def audit_macros() -> str:
         lo, rv, nu = b["leave_one_batch_out"], b["reverse"], b["no_url_positive"]
         bt, cs = lb["batch"], lb["control_span"]
         def rng_(v, d=2):
+            # \textup{--}, not a bare --: a range macro used inside $...$ printed as two minus
+            # signs (0.85--0.88 -> "0.85 - -0.88") twice before this was fixed at the source
             f = "%%.%df" % d
-            return (f + "--" + f) % tuple(v) if round(v[0], d) != round(v[1], d) else f % v[0]
+            return (f + "\\textup{--}" + f) % tuple(v) if round(v[0], d) != round(v[1], d) else f % v[0]
         m += ("\\newcommand{\\SmsBatchN}{%d}\n" % sum(1 for d in b["batches"] if parse_date(d))
               + "\\newcommand{\\SmsPureRows}{%s}\n" % _fmt(b["rows_in_pure_batches"])
               + "\\newcommand{\\SmsPurePct}{%d}\n" % round(100 * b["pure_threshold"])
@@ -456,9 +458,12 @@ def audit_macros() -> str:
               + "\\newcommand{\\SmsLobArmPm}{%.3f}\n" % lo["text_arm_by_batch"]["recall_at_2pct_fpr_per_model"]
               + "\\newcommand{\\SmsLocArmPool}{%.3f}\n" % lo["text_arm_by_component_5fold"]["recall_at_2pct_fpr"]
               + "\\newcommand{\\SmsLocArmPm}{%.3f}\n" % lo["text_arm_by_component_5fold"]["recall_at_2pct_fpr_per_model"]
-              + "\\newcommand{\\SmsMixedBatchN}{%d}\n" % len(lo["per_batch_auc_mixed"])
-              + "\\newcommand{\\SmsMixedBatchAuc}{%s}\n" % rng_([min(lo["per_batch_auc_mixed"].values()),
-                                                                  max(lo["per_batch_auc_mixed"].values())])
+              + "\\newcommand{\\SmsMixedBatchN}{%d}\n" % sum(1 for v in lo["per_batch_auc_mixed"].values() if v["positive_texts"] >= 5)
+              + "\\newcommand{\\SmsMixedBatchAuc}{%s}\n" % rng_([
+                  min(v["auc"] for v in lo["per_batch_auc_mixed"].values() if v["positive_texts"] >= 5),
+                  max(v["auc"] for v in lo["per_batch_auc_mixed"].values() if v["positive_texts"] >= 5)], 3)
+              + "\\newcommand{\\SmsPseudoBalRecTwo}{%s}\n" % rng_(lo["pseudo_balanced_span"])
+              + "\\newcommand{\\SmsPseudoPmRecTwo}{%s}\n" % rng_(lo["pseudo_per_model_span"])
               + "\\newcommand{\\SmsLobAuc}{%.3f}\n" % lo["by_batch"]["roc_auc"]
               + "\\newcommand{\\SmsLobF}{%.3f}\n" % lo["by_batch"]["f1_at_0.5"]
               + "\\newcommand{\\SmsLocAuc}{%.3f}\n" % lo["by_component_5fold"]["roc_auc"]
@@ -603,12 +608,12 @@ def tab_flow(msgs, out):
          " under the corrected one", "registered stratum"),
         ("Similarity-grouped split", f"train {_fmt(rb['n_train'])}, test {rb['n_test']} "
          f"({rb['test_phishing']} pos.)", "\\S\\ref{sec:robust}"),
-        ("Batch check 1", f"train {_fmt(tp['registered_august']['n_train'])}, test "
+        ("August ham, August in training", f"train {_fmt(tp['registered_august']['n_train'])}, test "
          f"{tp['registered_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
-        ("Batch check 2", f"train {_fmt(tp['without_august']['n_train'])}, test "
+        ("Registered split without August", f"train {_fmt(tp['without_august']['n_train'])}, test "
          f"{tp['without_august']['n_test']} May--July rows of the registered test side",
          "\\S\\ref{sec:sms_batches}"),
-        ("Batch check 3", f"train {_fmt(tp['forward_august']['n_train'])}, test "
+        ("August ham, no August in training", f"train {_fmt(tp['forward_august']['n_train'])}, test "
          f"{tp['forward_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
         ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])}; "
          f"test the batches' {ba['leave_batches_out']['batch']['eval_positive_texts']} pos. texts "
@@ -782,11 +787,7 @@ def tab_logodds(cues, out):
               "\\\\[4pt]\n\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Log-odds ratio with an informative Dirichlet prior, over the whole corpus. The score $z$ is\n"
               "prior-regularised, and the two count columns are raw occurrences. The positive\n"
-              "column mixes accented Vietnamese words with \\texttt{http}: the text arm sees the URL\n"
-              "scheme as a word. The ham column is led by unaccented forms of the same language,\n"
-              "carrier boilerplate (\\texttt{lh}, \\texttt{viettel}) and \\texttt{tb}, which is the\n"
-              "\\texttt{[TB]} notice prefix in about half of its ham messages and the abbreviation of\n"
-              "\\vntext{thuê bao} (subscriber) in the rest. Post-hoc and unregistered.\n"
+              "column is discussed in Section~\\ref{sec:sms_words}. Post-hoc and unregistered.\n"
               "\\end{minipage}\n\\end{table}\n")
     write_generated(out, buf.getvalue())
     return out

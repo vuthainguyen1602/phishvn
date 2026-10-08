@@ -303,3 +303,14 @@ Written after a second audit of the revised manuscript. Registered quantities ar
   the same groups gives recall at 2% ham FPR 0.461 pooled and 0.741 with per-model thresholds,
   against 0.904 and 0.906 for component-grouped five-fold, the same pattern as the probe. Within
   the 13 batches that hold both classes, the probe's ROC-AUC ranges 0.81–1.00. Both are reported.
+
+### Deviation record, 2026-10-08, sixth entry (appended; nothing above is edited)
+
+- **Pseudo-batch control under every calibration.** The fourth entry's pseudo-batch control was run
+  with pooled scores only. Under balanced class weights it gives 0.88–0.91 and with per-model
+  thresholds 0.92–0.93, against 0.495 and 0.748 for the real batches, so each leave-one-batch-out
+  figure now has its own control. The explanation of the calibration dependence is reworded: a
+  pooled threshold compares scores across fold models.
+- **Within-batch ROC-AUC** is now reported for groups with at least five positive texts (8 groups,
+  0.980–1.000). The earlier 0.81–1.00 over 13 groups counted groups with one to three positives,
+  after near-duplicate components were moved to their majority batch.

@@ -328,13 +328,17 @@ def main() -> int:
     oof_b = np.zeros(len(Y))
     for a_, b_ in GroupKFold(len(set(B))).split(T, Y, B):
         oof_b[b_] = probe().fit(T[a_], Y[a_]).predict_proba(T[b_])[:, 1]
-    per_batch = {g: round(float(roc_auc_score(Y[B == g], oof_b[B == g])), 3)
+    per_batch = {g: {"auc": round(float(roc_auc_score(Y[B == g], oof_b[B == g])), 3),
+                     "positive_texts": int(Y[B == g].sum()), "ham_texts": int((Y[B == g] == 0).sum())}
                  for g in sorted(set(B.tolist())) if 0 < Y[B == g].sum() < (B == g).sum()}
 
-    pseudo = []
+    pseudo, pseudo_bal, pseudo_pm = [], [], []
     for s_ in CONTROL_SEEDS:
         pg = pseudo_batches(s_)
-        pseudo.append(pooled(pg, len(set(pg.tolist()))))
+        k_ = len(set(pg.tolist()))
+        pseudo.append(pooled(pg, k_))
+        pseudo_bal.append(pooled(pg, k_, bal_probe))
+        pseudo_pm.append(per_model(pg, k_))
     out["leave_one_batch_out"] = {"by_batch": pooled(B, len(set(B))),
                                   "by_component_5fold": pooled(C, 5),
                                   "by_batch_balanced": pooled(B, len(set(B)), bal_probe),
@@ -345,6 +349,12 @@ def main() -> int:
                                   "pseudo_span": {m_: [round(min(p_[m_] for p_ in pseudo), 3),
                                                        round(max(p_[m_] for p_ in pseudo), 3)]
                                                   for m_ in ("roc_auc", "recall_at_2pct_fpr")},
+                                  "pseudo_balanced_span": [
+                                      round(min(p_["recall_at_2pct_fpr"] for p_ in pseudo_bal), 3),
+                                      round(max(p_["recall_at_2pct_fpr"] for p_ in pseudo_bal), 3)],
+                                  "pseudo_per_model_span": [
+                                      round(min(p_["recall_at_2pct_fpr"] for p_ in pseudo_pm), 3),
+                                      round(max(p_["recall_at_2pct_fpr"] for p_ in pseudo_pm), 3)],
                                   "text_arm_by_batch": arm_b, "text_arm_by_component_5fold": arm_c,
                                   "per_batch_auc_mixed": per_batch,
                                   "batches": len(set(B)), "undated_is_one_group": True,
