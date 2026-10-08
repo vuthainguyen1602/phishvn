@@ -283,7 +283,7 @@ def emit_results():
     pos = int(round(r["confusion_mean"]["text"]["tp"] + r["confusion_mean"]["text"]["fn"]))
     buf.write("\\caption{The two registered arms and their fusion on the registered test split "
               "(%d rows, %d positive), mean over %d seeds. F1, precision and recall are for the "
-              "positive class at $\\tau = 0.5$; FPR is the share of ham flagged; SD is the seed "
+              "positive class at $\\tau = 0.5$. FPR is the share of ham flagged, and SD is the seed "
               "standard deviation of F1.}\n\\label{tab:sms_fusion}\n"
               % (r["n_test"], pos, r["seeds"]))
     buf.write("\\begin{tabular}{lrrrrr}\n\\toprule\n"
@@ -602,7 +602,7 @@ def tab_flow(msgs, out):
          f"({rows[('train', '1')]} pos.), {_fmt(texts['train'])} texts", "all registered arms"),
         ("Registered split, test", f"{rows[('test', '0')] + rows[('test', '1')]} rows "
          f"({rows[('test', '1')]} pos.), {texts['test']} texts", "Table~\\ref{tab:sms_fusion}"),
-        ("\\quad test rows with a URL", f"{d['url/has_url']['n']} ({d['url/has_url']['n_pos']} pos.); "
+        ("\\quad test rows with a URL", f"{d['url/has_url']['n']} ({d['url/has_url']['n_pos']} pos.), "
          f"{ps['diagnostics']['url/has_url']['n']} under the suffix rule", "has-URL diagnostic"),
         ("\\quad test rows without a URL", f"{d['url/no_url']['n']} ({d['url/no_url']['n_pos']} pos.)",
          "no-URL diagnostic"),
@@ -618,7 +618,7 @@ def tab_flow(msgs, out):
          "\\S\\ref{sec:sms_batches}"),
         ("August ham, no August in training", f"train {_fmt(tp['forward_august']['n_train'])}, test "
          f"{tp['forward_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
-        ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])}; "
+        ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])}, "
          f"test the batches' {ba['leave_batches_out']['batch']['eval_positive_texts']} pos. texts "
          f"and {ba['leave_batches_out']['eval_ham_texts']} held-out ham texts",
          "\\S\\ref{sec:sms_batches}"),
@@ -1010,7 +1010,7 @@ def tab_examples(raw, msgs, out):
               "\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Each row is the first positive-labelled message in the published file that carries\n"
               "the host in the last column, quoted verbatim and cut at a word boundary. Placeholders\n"
-              "such as [MONEY] are the publisher's redaction; [TB] and [QC] are sender prefixes, and\n"
+              "such as [MONEY] are the publisher's redaction, [TB] and [QC] are sender prefixes, and\n"
               "other brackets are part of the message. The pretext is a gloss added in this study. The table illustrates\n"
               "measured corpus properties and does not estimate pretext frequency.\n"
               "\\end{minipage}\n\\end{table*}\n")
