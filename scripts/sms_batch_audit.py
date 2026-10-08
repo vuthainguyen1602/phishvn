@@ -69,6 +69,29 @@ def text_arm(Xtr, ytr, seed=0):
                                        early_stopping=True, n_iter_no_change=15)).fit(Xtr, ytr)
 
 
+SIM = 0.90
+
+
+def components(txts):
+    """Near-duplicate components over distinct texts, as in the similarity-grouped split."""
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import connected_components
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    X = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), min_df=1,
+                        sublinear_tf=True).fit_transform(txts)
+    return connected_components(csr_matrix(cosine_similarity(X) >= SIM), directed=False)[1]
+
+
+def scores(yev, sc):
+    """Recall at 0.5, ROC-AUC, and recall at the threshold that flags 2% of the evaluation ham."""
+    from sklearn.metrics import roc_auc_score
+    thr = np.quantile(sc[yev == 0], 0.98)
+    return {"recall_at_0.5": round(float((sc[yev == 1] >= 0.5).mean()), 3),
+            "roc_auc": round(float(roc_auc_score(yev, sc)), 3),
+            "recall_at_2pct_fpr": round(float((sc[yev == 1] > thr).mean()), 3)}
+
+
 def norm_ws(t):
     return " ".join(t.split())
 
@@ -115,35 +138,102 @@ def main() -> int:
         "ham": round(100 * acc[y == 0].mean(), 1),
         "positive_all": round(100 * acc[y == 1].mean(), 1)}
 
-    # --- leave-batches-out, unit = distinct text so no copy of a held-out text is trained on
-    held_txt = set(sha[inb & (y == 1)])
-    held = np.isin(sha, list(held_txt)) & (y == 1)
-    train = ~np.isin(sha, list(held_txt)) & ~inb
+    # --- leave-batches-out, matched and threshold-free (2026-10-08, second revision)
+    # Unit: near-duplicate component (char 3-5-gram TF-IDF, cosine >= SIM), so no held-out text
+    # has a near-twin in training. A fixed evaluation set of ham components (20%) is held out of
+    # every fit, so each condition is scored by ROC-AUC and by recall at a matched 2% ham
+    # false-positive rate as well as at the default 0.5 threshold, which mixes ranking with the
+    # training class share. The control holds out random positive components until it trains on
+    # the same number of positive rows as the batch hold-out.
     first = {}
     for i, h in enumerate(sha):
         first.setdefault(h, i)
-    held_rows = [first[h] for h in held_txt]      # one row per distinct held-out text
-    m = probe().fit(texts[train], y[train])
-    lbo_probe = float(m.predict(texts[held_rows]).mean())
+    utxt = sorted(first)
+    comp = components([texts[first[h]] for h in utxt])
+    comp_of = dict(zip(utxt, comp))
+    lab_of = {h: int(y[first[h]]) for h in utxt}
+    rng0 = np.random.default_rng(0)
+    ham_comps = sorted({comp_of[h] for h in utxt if lab_of[h] == 0})
+    eval_ham_comps = set(rng0.choice(ham_comps, int(0.2 * len(ham_comps)), replace=False).tolist())
+    eval_ham = [h for h in utxt if lab_of[h] == 0 and comp_of[h] in eval_ham_comps]
     emb = np.load(EMB)
-    lbo_arm = float(np.mean([text_arm(emb[train], y[train], s).predict(emb[held_rows]).mean()
-                             for s in range(3)]))
-    pos_txt = sorted(set(sha[y == 1]))
-    ctrl_probe, ctrl_arm = [], []
-    for s in CONTROL_SEEDS:
-        pick = set(np.random.default_rng(s).choice(pos_txt, len(held_txt), replace=False))
-        tr_c = ~np.isin(sha, list(pick))
-        rows_c = [first[h] for h in pick]
-        ctrl_probe.append(float(probe().fit(texts[tr_c], y[tr_c]).predict(texts[rows_c]).mean()))
-        ctrl_arm.append(float(text_arm(emb[tr_c], y[tr_c], 0).predict(emb[rows_c]).mean()))
+    row_comp = np.array([comp_of[h] for h in sha])
+
+    def run(held_pos, extra_excl_rows=None, arm_seeds=(0, 1, 2)):
+        """Fit without the components of held_pos and of the ham evaluation set; score them."""
+        held_c = {comp_of[h] for h in held_pos} | eval_ham_comps
+        tr = ~np.isin(row_comp, list(held_c))
+        if extra_excl_rows is not None:
+            tr &= ~extra_excl_rows
+        pos_eval = [h for h in held_pos if lab_of[h] == 1]
+        ev = [first[h] for h in pos_eval] + [first[h] for h in eval_ham]
+        yev = np.array([1] * len(pos_eval) + [0] * len(eval_ham))
+        res = {"train_positive_rows": int((tr & (y == 1)).sum()), "train_rows": int(tr.sum()),
+               "eval_positive_texts": len(pos_eval), "eval_ham_texts": len(eval_ham)}
+        sc_probe = probe().fit(texts[tr], y[tr]).predict_proba(texts[ev])[:, 1]
+        res["probe"] = scores(yev, sc_probe)
+        arm = [scores(yev, text_arm(emb[tr], y[tr], s_).predict_proba(emb[ev])[:, 1])
+               for s_ in arm_seeds]
+        res["text_arm"] = {k: round(float(np.mean([a[k] for a in arm])), 3) for k in arm[0]}
+        return res
+
+    held_txt = sorted({h for h in sha[inb & (y == 1)]})
+    batch = run(held_txt, extra_excl_rows=inb)
+    target = batch["train_positive_rows"]
+    pos_comps = sorted({comp_of[h] for h in utxt if lab_of[h] == 1} - eval_ham_comps)
+    controls = []
+    for s_ in CONTROL_SEEDS:
+        order = np.random.default_rng(100 + s_).permutation(pos_comps)
+        picked, held_c = [], set()
+        for c in order:
+            held_c.add(c)
+            ntr = int((~np.isin(row_comp, list(held_c | eval_ham_comps)) & (y == 1)).sum())
+            if ntr <= target:
+                break
+        hp = [h for h in utxt if comp_of[h] in held_c and lab_of[h] == 1]
+        controls.append(run(hp))
+    def span(key, metric):
+        v = [c[key][metric] for c in controls]
+        return [round(min(v), 3), round(max(v), 3)]
     out["leave_batches_out"] = {
-        "held_out_texts": len(held_txt), "train_rows": int(train.sum()),
-        "train_positive_rows": int((train & (y == 1)).sum()),
-        "probe_recall": round(lbo_probe, 3), "text_arm_recall": round(lbo_arm, 3),
-        "control_probe_recall": [round(v, 3) for v in ctrl_probe],
-        "control_text_arm_recall": [round(v, 3) for v in ctrl_arm],
-        "control": "same number of positive texts held out at random, 5 seeds",
-        "unit": "distinct text"}
+        "unit": f"near-duplicate component (char 3-5-gram TF-IDF, cosine >= {SIM})",
+        "eval_ham_texts": len(eval_ham), "batch": batch, "controls": controls,
+        "control_span": {k: {m_: span(k, m_) for m_ in ("recall_at_0.5", "roc_auc", "recall_at_2pct_fpr")}
+                         for k in ("probe", "text_arm")},
+        "control_train_positive_rows": [c["train_positive_rows"] for c in controls]}
+
+    # --- the reverse direction: trained on the two batches' positives only (plus ham)
+    other_pos = sorted({h for h in sha[~inb & (y == 1)]} - set(held_txt))
+    tr_rev = ~np.isin(row_comp, list({comp_of[h] for h in other_pos} | eval_ham_comps))
+    ev = [first[h] for h in other_pos] + [first[h] for h in eval_ham]
+    yev = np.array([1] * len(other_pos) + [0] * len(eval_ham))
+    out["reverse"] = {"train_positive_rows": int((tr_rev & (y == 1)).sum()),
+                      "eval_positive_texts": len(other_pos),
+                      "probe": scores(yev, probe().fit(texts[tr_rev], y[tr_rev])
+                                      .predict_proba(texts[ev])[:, 1])}
+
+    # --- every batch held out in turn (texts assigned to the batch of their first row), against
+    # a five-fold split grouped by near-duplicate component; pooled out-of-fold scores
+    from sklearn.model_selection import GroupKFold
+    from sklearn.metrics import roc_auc_score
+    T = np.array([texts[first[h]] for h in utxt], dtype=object)
+    Y = np.array([lab_of[h] for h in utxt])
+    B = np.array([date[first[h]] or "(undated)" for h in utxt])
+    C = np.array([comp_of[h] for h in utxt])
+    def pooled(groups, k):
+        oof = np.zeros(len(Y))
+        for a_, b_ in GroupKFold(k).split(T, Y, groups):
+            oof[b_] = probe().fit(T[a_], Y[a_]).predict_proba(T[b_])[:, 1]
+        return {"roc_auc": round(float(roc_auc_score(Y, oof)), 3),
+                "f1_at_0.5": round(float(f1_score(Y, (oof >= 0.5).astype(int))), 3)}
+    out["leave_one_batch_out"] = {"by_batch": pooled(B, len(set(B))),
+                                  "by_component_5fold": pooled(C, 5),
+                                  "batches": len(set(B)), "unit": "distinct text"}
+
+    # --- positives without a URL: how many sit in the two batches (registered extractor)
+    nurl = np.array([int(r["n_urls"]) for r in rows])
+    out["no_url_positive"] = {"total": int(((y == 1) & (nurl == 0)).sum()),
+                              "in_two_batches": int(((y == 1) & (nurl == 0) & inb).sum())}
 
     # --- pure batches -> mixed batches
     is_pure = np.isin(date, list(pure))
@@ -202,8 +292,11 @@ def main() -> int:
     print(f"  accented: positive in batches {a['positive_in_batches']}%, outside "
           f"{a['positive_outside']}% (n={a['positive_outside_n']}), ham {a['ham']}%")
     lb = out["leave_batches_out"]
-    print(f"  leave-batches-out recall: probe {lb['probe_recall']}, text arm {lb['text_arm_recall']} "
-          f"| random control probe {lb['control_probe_recall']}, arm {lb['control_text_arm_recall']}")
+    print(f"  leave-batches-out: batch {lb['batch']}")
+    print(f"    control span {lb['control_span']}, train pos rows {lb['control_train_positive_rows']}")
+    print(f"  reverse: {out['reverse']}")
+    print(f"  leave-one-batch-out: {out['leave_one_batch_out']}")
+    print(f"  no-URL positives: {out['no_url_positive']}")
     print(f"  pure -> mixed: {out['pure_to_mixed']}")
     print(f"  URL ceiling: {out['url_ceiling']}")
     print(f"  twins: {twins}")

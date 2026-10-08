@@ -48,11 +48,14 @@ CAND = re.compile(r"(?:https?://)?((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2
 SHORTENERS_REG = {"bit.ly", "tinyurl.com", "goo.gl", "t.co", "rb.gy", "shorturl.at", "cutt.ly",
                   "is.gd", "ow.ly", "s.id", "zalo.me", "page.link", "me.qr", "link.vn",
                   "shorturl.asia", "buff.ly", "rebrand.ly"}
-# Corrected list: zalo.me out; added are the short-link and app deep-link services that occur in
-# the corpus and send a short opaque path to a redirect (viettelmoney.go.link/8EWu8): AppsFlyer
-# OneLink, go.link, and the Lazada, Grab and LinkedIn short domains.
-SHORTENERS = (SHORTENERS_REG - {"zalo.me"}) | {"onelink.me", "onelink.to", "go.link", "lzd.co",
-                                              "grb.to", "lnkd.in"}
+# Corrected list, one rule: a domain whose service is to send a short opaque path to a redirect.
+# zalo.me is out (it opens a Zalo profile or chat). Every such domain that occurs in the corpus is
+# in, whichever class carries it: the public shorteners t.ly, ln.run and qrco.de (positive class),
+# the app deep-link services go.link and AppsFlyer OneLink, and the brand short domains lzd.co,
+# grb.to and lnkd.in. Look-alikes registered by a sender (ibit.ly) are not services and stay out.
+SHORTENERS = (SHORTENERS_REG - {"zalo.me"}) | {"t.ly", "ln.run", "qrco.de", "onelink.me",
+                                              "onelink.to", "go.link", "lzd.co", "grb.to",
+                                              "lnkd.in"}
 # Viettel's own app deep links carry most ham shortening; the snapshot reports shortening with and
 # without them so no reader has to take the pooled rate.
 OPERATOR_DEEP_LINKS = {"myvt.page.link", "viettelmoney.go.link", "myviettel.go.link",

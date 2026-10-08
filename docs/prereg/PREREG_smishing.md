@@ -230,3 +230,32 @@ first run did not store; their F1 values reproduce exactly (0.607 / 0.929 / 0.92
 - **Registered rule for T1.** The paper now states the registered success rule (≥ 3 points with an
   interval excluding zero) where T1 is reported, and reads it descriptively because the registered
   test is withdrawn.
+
+### Deviation record, 2026-10-08, second entry (appended; nothing above is edited)
+
+Written after a second audit of the revised manuscript. Registered quantities are unchanged.
+
+- **Batch analysis redesigned.** The first entry reported recall at the 0.5 threshold for a
+  hold-out of the two positive batches against a random hold-out of the same number of positive
+  *texts*. That control trained on more positive rows (294–316 against 269), kept near-duplicates
+  of its held-out texts in training, and recall at 0.5 mixes ranking with the training class
+  share. `sms_batch_audit.py` now (i) keeps near-duplicate components together, (ii) holds a fixed
+  20% of ham components out of every fit and reports ROC-AUC and recall at 2% ham FPR beside
+  recall at 0.5, (iii) matches the control's positive training rows exactly (268), (iv) adds the
+  reverse direction and (v) holds every batch out in turn. Results: two-batch hold-out probe
+  recall@0.5 0.14, AUC 0.974, recall@2%FPR 0.44 against 0.65–0.69, 0.988–0.992 and 0.83–0.93;
+  text arm 0.54 / 0.940 / 0.68 against 0.78–0.87 / 0.971–0.986 / 0.84–0.90; reverse AUC 0.971;
+  leave-one-batch-out F1 0.699 and AUC 0.958 against 0.928 and 0.991 for component-grouped
+  five-fold. The paper's reading changes from "text models miss most of the batches' positives"
+  to "held-out batches are still ranked well, but the default threshold no longer separates them".
+  The pure-to-mixed analysis is dropped from the paper.
+- **Shortener list, third version.** `t.ly`, `ln.run` and `qrco.de` (public shorteners occurring
+  only in positive messages) are added under one stated rule. Positive-class shortening is now
+  11 of 510 URLs (2.2%); ham without Viettel's app links stays 2.9%.
+- **Registered shortened stratum.** Three of its four test messages qualify only through
+  `zalo.me`; under the corrected rule it holds one. The paper says so.
+- **Surface-feature floor.** A strict variant without token identities (no `[TB]`/`[QC]`, no
+  bracketed names) reaches 0.847; the text arm exceeds the full floor by +0.043 [+0.008, +0.082]
+  and the strict one by +0.082 [+0.040, +0.128] (cluster bootstrap over distinct test texts).
+- **Suffix-rule deltas** are now the seed-paired means, the same estimator as the registered ones
+  (T1 +0.330, T2 +0.325).

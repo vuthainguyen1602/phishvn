@@ -36,6 +36,7 @@ from sklearn.metrics import (average_precision_score, f1_score, precision_score,
 from train_sms_fusion import MSG, PHOBERT, PRED, SRC, first_url  # noqa: E402
 
 OUT = os.path.join(ROOT, "data", "processed", "sms", "extra_diagnostics.json")
+FLOOR = os.path.join(ROOT, "data", "processed", "sms", "floor_test_predictions.csv")
 
 
 def main() -> int:
@@ -103,6 +104,28 @@ def main() -> int:
                               1 for r in fps if int(r["text_votes"]) >= 6
                               and date_of[r["message_id"]].endswith(("/8/2026", "/08/2026"))),
                           "top": ex[:8]}
+    # --- false negatives: positive test rows the text arm misses in most seeds
+    fns = [r for r in pr if r["label"] == "1" and int(r["text_votes"]) <= 4]
+    out["fn_examples"] = {
+        "positive_rows_missed_by_majority": len(fns),
+        "in_two_positive_batches": sum(1 for r in fns if date_of[r["message_id"]]
+                                       in ("22/07/2026", "24/07/2026")),
+        "without_url": sum(1 for r in fns if r["has_url"] == "0"),
+        "ids": [r["message_id"] for r in fns][:12]}
+
+    # --- paired interval: text arm (ten registered seeds) minus each surface/format floor
+    from sms_predecision_common import load as load_reg, test_groups
+    from train_sms_fusion import EMB as EMB_PATH, SEEDS, cluster_bootstrap_f1, embed, fit_score
+    rows_r, texts_r, y_r, tr_r, te_r, _xu, _hu = load_reg()
+    Xt = embed(texts_r, cache=EMB_PATH)
+    text_preds = [fit_score(Xt[tr_r], y_r[tr_r], Xt[te_r], y_r[te_r], s_)[1] for s_ in SEEDS]
+    fl = {r["message_id"]: r for r in csv.DictReader(open(FLOOR, encoding="utf-8"))}
+    ids = [rows_r[i]["message_id"] for i in np.where(te_r)[0]]
+    groups = test_groups(rows_r, te_r)
+    out["text_minus_floor"] = {
+        k: cluster_bootstrap_f1(y_r[te_r], text_preds,
+                                [np.array([int(fl[m_][k]) for m_ in ids])], groups)
+        for k in ("floor_full", "floor_strict")}
     json.dump(out, open(OUT, "w", encoding="utf-8"), indent=2, sort_keys=True)
     print(json.dumps(out, indent=1, ensure_ascii=False)[:2500])
     print(f"  [+] {OUT}")

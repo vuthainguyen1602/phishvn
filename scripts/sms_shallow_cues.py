@@ -36,6 +36,7 @@ import argparse, collections, csv, json, os, re, statistics, sys
 
 MSG = os.path.join("data", "processed", "sms", "sms_messages.csv")
 OUT = os.path.join("data", "processed", "sms", "shallow_cues.json")
+FLOOR_PRED = os.path.join("data", "processed", "sms", "floor_test_predictions.csv")
 SEED = 0
 
 
@@ -173,6 +174,15 @@ def format_feats(r) -> list:
             sum(c.isdigit() for c in t) / 10.0, t.count("\n") / 1.0]
 
 
+def gbm_predict(train, test, featf):
+    import numpy as np
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    Xtr = np.array([featf(r) for r in train], dtype=float)
+    ytr = np.array([int(r["label"]) for r in train])
+    Xte = np.array([featf(r) for r in test], dtype=float)
+    return HistGradientBoostingClassifier(random_state=SEED).fit(Xtr, ytr).predict(Xte)
+
+
 def fit_f1_gbm(train, test, featf) -> dict:
     """The same features under gradient-boosted trees: a linear model gives a lower bound on what
     a feature set separates, not the floor itself."""
@@ -288,7 +298,11 @@ def main() -> int:
                     "all_shallow_gbm": fit_f1_gbm(tr_t, te_t, f_all),
                     "all_shallow_format_lr": fit_f1(tr_t, te_t, lambda r: f_all(r) + format_feats(r)),
                     "all_shallow_format_gbm": fit_f1_gbm(tr_t, te_t,
-                                                         lambda r: f_all(r) + format_feats(r))},
+                                                         lambda r: f_all(r) + format_feats(r)),
+                    # strict: no token identities (no [TB]/[QC], no bracketed names), only
+                    # diacritic presence, length and the six format features
+                    "strict_format_gbm": fit_f1_gbm(tr_t, te_t,
+                                                    lambda r: f_acc(r) + f_len(r) + format_feats(r))},
                 "sender_tag_pct": sender_tag, "tb_usage": tb, "carrier_mention_pct": carrier,
                 "near_duplicate_leak": duplicate_leak(tr_t, te_t),
                 "families": {l: families([r["text"] for r in with_text if r["label"] == l])
@@ -299,6 +313,15 @@ def main() -> int:
         print(f"[!] {RAW} missing — the language layer is skipped, not silently empty",
               file=sys.stderr)
 
+    if with_text:
+        # test-row predictions of both floors, for the paired interval against the text arm
+        full = gbm_predict(tr_t, te_t, lambda r: f_acc(r) + f_len(r) + f_tok(r) + format_feats(r))
+        strict = gbm_predict(tr_t, te_t, lambda r: f_acc(r) + f_len(r) + format_feats(r))
+        with open(FLOOR_PRED, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["message_id", "text_sha1", "label", "floor_full", "floor_strict"])
+            for r, a_, b_ in zip(te_t, full, strict):
+                w.writerow([r["message_id"], r["text_sha1"], r["label"], int(a_), int(b_)])
     out = {"n": dict(tot), "accented_pct": accented, "language": lang,
            "any_token_pct": {l: round(100 * any_tok[l] / tot[l], 1) for l in labs},
            "token_pct": per_token,

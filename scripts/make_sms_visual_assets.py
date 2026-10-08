@@ -4,7 +4,7 @@
 Every message on the figure is a row of data/raw/sms_hf_full/full_dataset.csv, quoted verbatim
 (wrapped, and cut with an ellipsis when it runs past the card). Nothing is paraphrased and no
 sender field is drawn: the published file carries no sender, so a card that printed one would be
-inventing it. Rows are chosen by the host they carry, the same hosts as Table 1, plus one
+inventing it. Rows are chosen by the host they carry, three hosts not used in Table 1, plus one
 ham-labelled telecom template that opens with the [TB] notice prefix.
 
 Writes papers/future_smishing/figures/fig_sms_examples.pdf

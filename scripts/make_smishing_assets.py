@@ -244,7 +244,7 @@ def fig_robust(cues, fus, out):
 def fig_shortener(urls, out, operator_links):
     """Shortening per class, with ham split into Viettel's own app deep links and everything else:
     the pooled ham rate is mostly one operator's links, and a single bar hid that."""
-    fig, ax = plt.subplots(figsize=(3.6, 2.6))
+    fig, ax = plt.subplots(figsize=(3.3, 2.5))
     ph = [u for u in urls if u["label"] == "1"]
     hm = [u for u in urls if u["label"] == "0"]
     v_ph = 100 * sum(int(u["shortener"]) for u in ph) / max(len(ph), 1)
@@ -252,15 +252,16 @@ def fig_shortener(urls, out, operator_links):
     v_ot = 100 * sum(int(u["shortener"]) for u in hm if u["host"] not in operator_links) / max(len(hm), 1)
     x = [0, 1]
     ax.bar(x[0], v_ph, 0.5, color=ORANGE, edgecolor=INK)
-    ax.bar(x[1], v_ot, 0.5, color=FILL_B, edgecolor=INK, hatch="///", label="other services")
-    ax.bar(x[1], v_op, 0.5, bottom=v_ot, color=BLUE, edgecolor=INK,
+    ax.bar(x[1], v_ot, 0.5, color=FILL_B, edgecolor=INK, hatch="///", label="other shorteners")
+    ax.bar(x[1], v_op, 0.5, bottom=v_ot, color=BLUE, edgecolor=INK, hatch="///",
            label="Viettel app deep links")
     ax.text(x[0], v_ph + 0.4, f"{v_ph:.1f}%", ha="center", fontsize=9, color=INK)
     ax.text(x[1], v_op + v_ot + 0.4, f"{v_op + v_ot:.1f}%", ha="center", fontsize=9, color=INK)
-    ax.set_xticks(x, ["positive\n(spam/scam)", "ham"])
-    ax.set_ylabel("URLs that are shortened (%)")
+    ax.set_xticks(x, ["positive\n(spam/scam)", "ham"], fontsize=9)
+    ax.tick_params(axis="y", labelsize=9)
+    ax.set_ylabel("URLs that are shortened (%)", fontsize=9)
     ax.set_ylim(0, (v_op + v_ot) * 1.3)
-    ax.legend(frameon=False, fontsize=7.5, loc="upper left")
+    ax.legend(frameon=False, fontsize=8.5, loc="upper left")
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     fig.savefig(out)
@@ -403,8 +404,13 @@ def audit_macros() -> str:
          "phobert_ft.json, split_robustness.json; do not edit\n")
     if os.path.exists(BATCH):
         b = json.load(open(BATCH, encoding="utf-8"))
-        pb, a, lb, pm, uc, tw = (b["positive_only_batches"], b["accented_pct"], b["leave_batches_out"],
-                                 b["pure_to_mixed"], b["url_ceiling"], b["twins"])
+        pb, a, lb, uc, tw = (b["positive_only_batches"], b["accented_pct"], b["leave_batches_out"],
+                             b["url_ceiling"], b["twins"])
+        lo, rv, nu = b["leave_one_batch_out"], b["reverse"], b["no_url_positive"]
+        bt, cs = lb["batch"], lb["control_span"]
+        def rng_(v, d=2):
+            f = "%%.%df" % d
+            return (f + "--" + f) % tuple(v) if round(v[0], d) != round(v[1], d) else f % v[0]
         m += ("\\newcommand{\\SmsBatchN}{%d}\n" % sum(1 for d in b["batches"] if parse_date(d))
               + "\\newcommand{\\SmsPureRows}{%s}\n" % _fmt(b["rows_in_pure_batches"])
               + "\\newcommand{\\SmsPurePct}{%d}\n" % round(100 * b["pure_threshold"])
@@ -416,17 +422,27 @@ def audit_macros() -> str:
               + "\\newcommand{\\SmsAccPosIn}{%.1f}\n" % a["positive_in_batches"]
               + "\\newcommand{\\SmsAccPosOut}{%.1f}\n" % a["positive_outside"]
               + "\\newcommand{\\SmsAccPosOutN}{%d}\n" % a["positive_outside_n"]
-              + "\\newcommand{\\SmsLboTexts}{%d}\n" % lb["held_out_texts"]
-              + "\\newcommand{\\SmsLboTrainPos}{%d}\n" % lb["train_positive_rows"]
-              + "\\newcommand{\\SmsLboProbe}{%.2f}\n" % lb["probe_recall"]
-              + "\\newcommand{\\SmsLboArm}{%.2f}\n" % lb["text_arm_recall"]
-              + "\\newcommand{\\SmsLboCtlProbe}{%.2f--%.2f}\n" % (min(lb["control_probe_recall"]), max(lb["control_probe_recall"]))
-              + "\\newcommand{\\SmsLboCtlArm}{%.2f--%.2f}\n" % (min(lb["control_text_arm_recall"]), max(lb["control_text_arm_recall"]))
-              + "\\newcommand{\\SmsPureMixF}{%.3f}\n" % pm["f1"]
-              + "\\newcommand{\\SmsPureMixR}{%.3f}\n" % pm["recall"]
-              + "\\newcommand{\\SmsPureMixP}{%.3f}\n" % pm["precision"]
-              + "\\newcommand{\\SmsPureMixTest}{%s}\n" % _fmt(pm["test_rows"])
-              + "\\newcommand{\\SmsPureMixTrain}{%s}\n" % _fmt(pm["train_rows"])
+              + "\\newcommand{\\SmsLboTexts}{%d}\n" % bt["eval_positive_texts"]
+              + "\\newcommand{\\SmsLboEvalHam}{%d}\n" % lb["eval_ham_texts"]
+              + "\\newcommand{\\SmsLboTrainPos}{%d}\n" % bt["train_positive_rows"]
+              + "".join("\\newcommand{\\SmsLbo%s%s}{%s}\n" % (an, mn, ("%.3f" if mn == "Auc" else "%.2f") % bt[ak][mk])
+                        + "\\newcommand{\\SmsLboCtl%s%s}{%s}\n" % (an, mn, rng_(cs[ak][mk], 3 if mn == "Auc" else 2))
+                        for ak, an in (("probe", "Probe"), ("text_arm", "Arm"))
+                        for mk, mn in (("recall_at_0.5", "Rec"), ("roc_auc", "Auc"),
+                                       ("recall_at_2pct_fpr", "RecTwo")))
+              + "\\newcommand{\\SmsRevAuc}{%.3f}\n" % rv["probe"]["roc_auc"]
+              + "\\newcommand{\\SmsRevRecTwo}{%.2f}\n" % rv["probe"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsRevTexts}{%d}\n" % rv["eval_positive_texts"]
+              + "\\newcommand{\\SmsLobAuc}{%.3f}\n" % lo["by_batch"]["roc_auc"]
+              + "\\newcommand{\\SmsLobF}{%.3f}\n" % lo["by_batch"]["f1_at_0.5"]
+              + "\\newcommand{\\SmsLocAuc}{%.3f}\n" % lo["by_component_5fold"]["roc_auc"]
+              + "\\newcommand{\\SmsLocF}{%.3f}\n" % lo["by_component_5fold"]["f1_at_0.5"]
+              + "\\newcommand{\\SmsLobBatches}{%d}\n" % lo["batches"]
+              + "\\newcommand{\\SmsNoUrlPos}{%d}\n" % nu["total"]
+              + "\\newcommand{\\SmsNoUrlPosBatch}{%d}\n" % nu["in_two_batches"]
+              + "\\newcommand{\\SmsShortStratumCorr}{%d}\n" % sum(
+                  1 for m in read(MSG) if m["split"] == "test" and m["label"] == "1"
+                  and int(m["n_shortened_valid"]) > 0)
               + "\\newcommand{\\SmsUrlCeilNoUrlPct}{%.1f}\n" % uc["test_positive_no_url_pct"]
               + "\\newcommand{\\SmsUrlCeilR}{%.3f}\n" % uc["max_recall"]
               + "\\newcommand{\\SmsUrlCeilF}{%.3f}\n" % uc["max_f1"]
@@ -449,7 +465,13 @@ def audit_macros() -> str:
               + "\\newcommand{\\SmsTruncRawTwoFiveSix}{%.1f}\n" % max(t["ham"]["raw_over_256_pct"], t["positive"]["raw_over_256_pct"])
               + "\\newcommand{\\SmsFpAny}{%d}\n" % f["ham_rows_flagged_by_any_seed"]
               + "\\newcommand{\\SmsFpMajority}{%d}\n" % f["ham_rows_flagged_by_majority"]
-              + "\\newcommand{\\SmsFpMajorityAug}{%d}\n" % f["majority_in_august_batch"])
+              + "\\newcommand{\\SmsFpMajorityAug}{%d}\n" % f["majority_in_august_batch"]
+              + "\\newcommand{\\SmsFnMajority}{%d}\n" % e["fn_examples"]["positive_rows_missed_by_majority"]
+              + "\\newcommand{\\SmsFnBatch}{%d}\n" % e["fn_examples"]["in_two_positive_batches"]
+              + "\\newcommand{\\SmsFnNoUrl}{%d}\n" % e["fn_examples"]["without_url"]
+              + "".join("\\newcommand{\\SmsTextMinus%s}{%+.3f}\n" % (n_, e["text_minus_floor"][k]["mean"])
+                        + "\\newcommand{\\SmsTextMinus%sCI}{[%+.3f,%+.3f]}\n" % ((n_,) + tuple(e["text_minus_floor"][k]["ci95"]))
+                        for k, n_ in (("floor_full", "Floor"), ("floor_strict", "Strict"))))
     if os.path.exists(CUES):
         c = json.load(open(CUES, encoding="utf-8"))
         L = c.get("language") or {}
@@ -458,6 +480,7 @@ def audit_macros() -> str:
             m += ("\\newcommand{\\SmsCueAllGbm}{%.3f}\n" % nf["all_shallow_gbm"]["f1"]
                   + "\\newcommand{\\SmsCueFormatLr}{%.3f}\n" % nf["all_shallow_format_lr"]["f1"]
                   + "\\newcommand{\\SmsCueFormatGbm}{%.3f}\n" % nf["all_shallow_format_gbm"]["f1"]
+                  + "\\newcommand{\\SmsCueStrictGbm}{%.3f}\n" % nf["strict_format_gbm"]["f1"]
                   + "\\newcommand{\\SmsTfidfNoBracket}{%.3f}\n" % L["tfidf"]["word_no_brackets"]
                   + "\\newcommand{\\SmsSenderTagPos}{%.1f}\n" % L["sender_tag_pct"]["1"]
                   + "\\newcommand{\\SmsSenderTagHam}{%.1f}\n" % L["sender_tag_pct"]["0"]
@@ -470,11 +493,13 @@ def audit_macros() -> str:
         bq = q["cluster_bootstrap"]
         m += ("\\newcommand{\\SmsPslUrl}{%.3f}\n" % q["arms"]["url"]["f1"]
               + "\\newcommand{\\SmsPslFusion}{%.3f}\n" % q["arms"]["fusion"]["f1"]
-              + "\\newcommand{\\SmsPslTTwo}{%+.3f}\n" % bq["T2_text_minus_url"]["mean"]
+              # seed-paired means, the same estimator as the registered \\SmsTOneDelta/\\SmsTTwoDelta
+              + "\\newcommand{\\SmsPslTTwo}{%+.3f}\n" % q["T2_text_minus_url"]["mean"]
               + "\\newcommand{\\SmsPslTTwoCI}{[%+.3f,%+.3f]}\n" % tuple(bq["T2_text_minus_url"]["ci95"])
-              + "\\newcommand{\\SmsPslTOne}{%+.3f}\n" % bq["T1_fusion_minus_url"]["mean"]
+              + "\\newcommand{\\SmsPslTOne}{%+.3f}\n" % q["T1_fusion_minus_url"]["mean"]
               + "\\newcommand{\\SmsPslTOneCI}{[%+.3f,%+.3f]}\n" % tuple(bq["T1_fusion_minus_url"]["ci95"])
-              + "\\newcommand{\\SmsPslPost}{%+.3f}\n" % bq["posthoc_fusion_minus_text"]["mean"]
+              + "\\newcommand{\\SmsPslPost}{%+.3f}\n" % q["posthoc_fusion_minus_text"]["mean"]
+              + "\\newcommand{\\SmsPslTextHas}{%.3f}\n" % q["diagnostics"]["text/has_url"]["f1"]
               + "\\newcommand{\\SmsPslPostCI}{[%+.3f,%+.3f]}\n" % tuple(bq["posthoc_fusion_minus_text"]["ci95"])
               + "\\newcommand{\\SmsPslHasUrlN}{%d}\n" % q["diagnostics"]["url/has_url"]["n"]
               + "\\newcommand{\\SmsPslUrlHas}{%.3f}\n" % q["diagnostics"]["url/has_url"]["f1"])
@@ -547,30 +572,35 @@ def tab_flow(msgs, out):
          f"{ps['diagnostics']['url/has_url']['n']} under the suffix rule", "has-URL diagnostic"),
         ("\\quad test rows without a URL", f"{d['url/no_url']['n']} ({d['url/no_url']['n_pos']} pos.)",
          "no-URL diagnostic"),
-        ("\\quad shortened positive rows", f"{d['url/shortened_phish']['n']}", "registered stratum"),
+        ("\\quad shortened positive rows", f"{d['url/shortened_phish']['n']} under the registered list, "
+         f"{sum(1 for m in msgs if m['split'] == 'test' and m['label'] == '1' and int(m['n_shortened_valid']) > 0)}"
+         " under the corrected one", "registered stratum"),
         ("Similarity-grouped split", f"train {_fmt(rb['n_train'])}, test {rb['n_test']} "
          f"({rb['test_phishing']} pos.)", "\\S\\ref{sec:robust}"),
         ("Batch check 1", f"train {_fmt(tp['registered_august']['n_train'])}, test "
          f"{tp['registered_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
         ("Batch check 2", f"train {_fmt(tp['without_august']['n_train'])}, test "
-         f"{tp['without_august']['n_test']}", "\\S\\ref{sec:sms_batches}"),
+         f"{tp['without_august']['n_test']} May--July rows of the registered test side",
+         "\\S\\ref{sec:sms_batches}"),
         ("Batch check 3", f"train {_fmt(tp['forward_august']['n_train'])}, test "
          f"{tp['forward_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
-        ("Leave-batches-out", f"train {_fmt(ba['leave_batches_out']['train_rows'])}, test "
-         f"{ba['leave_batches_out']['held_out_texts']} pos. texts", "\\S\\ref{sec:sms_batches}"),
-        ("Pure batches $\\rightarrow$ mixed", f"train {_fmt(ba['pure_to_mixed']['train_rows'])}, "
-         f"test {_fmt(ba['pure_to_mixed']['test_rows'])} ({ba['pure_to_mixed']['test_positive']} pos.)",
+        ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])}; "
+         f"test the batches' {ba['leave_batches_out']['batch']['eval_positive_texts']} pos. texts "
+         f"and {ba['leave_batches_out']['eval_ham_texts']} held-out ham texts",
+         "\\S\\ref{sec:sms_batches}"),
+        ("Leave-one-batch-out", f"all {_fmt(len({m['text_sha1'] for m in msgs}))} texts, "
+         f"{ba['leave_one_batch_out']['batches']} folds",
          "\\S\\ref{sec:sms_batches}"),
     ]
     buf = io.StringIO()
-    buf.write("\\begin{table}[htbp]\n\\centering\\footnotesize\n"
+    buf.write("\\begin{table*}[t]\n\\centering\\footnotesize\n"
               "\\caption{Every evaluation set in the paper and where it is used. Pos.\\ counts "
               "positive (spam/scam) rows.}\n\\label{tab:sms_flow}\n"
-              "\\begin{tabular}{p{30mm}p{30mm}p{18mm}}\n\\toprule\n"
+              "\\begin{tabular}{@{}p{42mm}p{95mm}p{30mm}@{}}\n\\toprule\n"
               "Set & Size & Used in \\\\\n\\midrule\n")
     for a_, b_, c_ in lines:
         buf.write(f"{a_} & {b_} & {c_} \\\\\n")
-    buf.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
+    buf.write("\\bottomrule\n\\end{tabular}\n\\end{table*}\n")
     write_generated(out, buf.getvalue())
     return out
 
@@ -663,9 +693,11 @@ def fig_ladder(cues, fus, out):
     ft = (json.load(open(PREDEC["ft"], encoding="utf-8"))["arms"]["text_ft"]["f1"]
           if os.path.exists(PREDEC["ft"]) else 0.0)
     arms = [("URL only\n(CompPhish-21)", fus["arms"]["url"]["f1"], BLUE),
-            ("bracketed tokens\n(no words read)", cues["baselines"]["tokens"]["f1"], GRAY),
+            ("bracketed-token presence", cues["baselines"]["tokens"]["f1"], GRAY),
             ("diacritics + length\n+ tokens, linear", floor, GRAY),
-            ("same + message format,\nboosted trees",
+            ("diacritics + length + format,\nno token names, boosted trees",
+             nf.get("strict_format_gbm", {}).get("f1", 0.0), GRAY),
+            ("same + token names,\nboosted trees",
              nf.get("all_shallow_format_gbm", {}).get("f1", 0.0), GRAY),
             ("word TF-IDF\n(linear, 1 seed)", cues.get("language", {}).get("tfidf", {}).get("word", 0.0),
              ORANGE),
@@ -673,7 +705,7 @@ def fig_ladder(cues, fus, out):
             ("fine-tuned PhoBERT\n(post-hoc, 5 seeds)", ft, ORANGE),
             ("fusion\n(text + URL)", fus["arms"]["fusion"]["f1"], FILL_O)]
     arms = [a for a in arms if a[1] > 0]
-    fig, ax = plt.subplots(figsize=(5.6, 3.9))
+    fig, ax = plt.subplots(figsize=(5.6, 4.3))
     y = np.arange(len(arms))[::-1]
     ax.barh(y, [a[1] for a in arms], 0.62,
             color=[a[2] for a in arms], edgecolor=INK, linewidth=0.7)
@@ -891,11 +923,12 @@ def split_and_date_macros(msgs, raw) -> str:
 
 # Table 1: positive-labelled rows quoted from the corpus, chosen by the host they carry. The
 # pretext column is the author's one-line gloss; the message and host are the publisher's.
-EXAMPLE_HOSTS = (("Unauthorised login", "vietcombank.vn-gll.top"),
-                 ("Foreign charge", "acb.i-pay.vip"),
-                 ("Reward expiry", "techcombank.huy-the-visa-vn.com"),
-                 ("Service charge", "shb.com.vn-zy.top"),
-                 ("App reactivation", "vietcombank.vn-nng.top"))
+# None of these rows is in Figure 1, whose panels quote three other positive rows.
+EXAMPLE_HOSTS = (("Service charge", "shb.com.vn-zy.top"),
+                 ("App reactivation", "vietcombank.vn-nng.top"),
+                 ("Points expiry", "vietcompriority.com"),
+                 ("Traffic fine", "dichvucong-vn.com"),
+                 ("Debt collection", "t.ly"))
 QUOTE_CHARS = 60
 TEX_SPECIAL = {"&": "\\&", "%": "\\%", "$": "\\$", "#": "\\#", "_": "\\_", "{": "\\{",
                "}": "\\}", "~": "\\textasciitilde{}", "^": "\\textasciicircum{}", "\\": "\\textbackslash{}"}
