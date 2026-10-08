@@ -90,7 +90,13 @@ def build_sms_examples_figure(out_path: str) -> None:
                                             facecolor="#ffffff", edgecolor="#e2e8f0", linewidth=0.75))
         ax.plot([3, 97], [97.5, 97.5], color=accent, lw=2.2, solid_capstyle="round")
 
-        ax.text(4.5, 88, f"({letter}) {r['message_id']}, {r['date'] or 'undated'}",
+        d_ = r["date"]
+        try:
+            import datetime as _dt
+            d_ = _dt.datetime.strptime(d_, "%d/%m/%Y").date().isoformat()
+        except (TypeError, ValueError):
+            d_ = d_ or "undated"
+        ax.text(4.5, 88, f"({letter}) {r['message_id']}, {d_}",
                 fontsize=7.2, fontweight="bold", color=COL_NAVY, va="center")
         ax.text(95.5, 88, BADGE[r["label"]], fontsize=6.0, fontweight="bold", color=accent,
                 ha="right", va="center",

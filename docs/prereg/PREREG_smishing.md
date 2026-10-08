@@ -296,3 +296,10 @@ Written after a second audit of the revised manuscript. Registered quantities ar
   training class shares; the paper no longer reads their difference as the size of a batch effect.
 - **Shortener list, fourth version.** `cps.onl`, `o2o.vn` (`l.o2o.vn`) and `id.vin`, short-link
   domains with opaque paths in ham, are added. Ham shortening without Viettel's links is 3.3%.
+
+### Deviation record, 2026-10-08, fifth entry (appended; nothing above is edited)
+
+- **Leave-one-batch-out with the text arm.** The frozen-PhoBERT head (registered head, seed 0) under
+  the same groups gives recall at 2% ham FPR 0.461 pooled and 0.741 with per-model thresholds,
+  against 0.904 and 0.906 for component-grouped five-fold, the same pattern as the probe. Within
+  the 13 batches that hold both classes, the probe's ROC-AUC ranges 0.81–1.00. Both are reported.

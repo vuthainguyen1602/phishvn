@@ -172,9 +172,9 @@ def fig_deltas(r, boot, why, out):
     lo = min(ci[0] for _l, _m, ci in rows)
     hi = max(ci[1] for _l, _m, ci in rows)
     pad = (hi - lo) * 0.10
-    ax.set_xlim(lo - pad, hi + (hi - lo) * 0.75)
+    ax.set_xlim(lo - pad, hi + (hi - lo) * 0.62)
     ax.set_xlabel("difference in positive-class F1", fontsize=7.5)
-    ax.set_xticks([t for t in (-0.01, 0.0, 0.01, 0.02, 0.03, 0.04) if lo - pad <= t <= hi + (hi - lo) * 0.75])
+    ax.set_xticks([t for t in (-0.01, 0.0, 0.01, 0.02) if lo - pad <= t <= hi + (hi - lo) * 0.62])
     ax.tick_params(axis="x", labelsize=7)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
@@ -452,6 +452,13 @@ def audit_macros() -> str:
               + "\\newcommand{\\SmsLocBalRecTwo}{%.3f}\n" % lo["by_component_5fold_balanced"]["recall_at_2pct_fpr"]
               + "\\newcommand{\\SmsPseudoRecTwo}{%s}\n" % rng_(lo["pseudo_span"]["recall_at_2pct_fpr"])
               + "\\newcommand{\\SmsPseudoAuc}{%s}\n" % rng_(lo["pseudo_span"]["roc_auc"], 3)
+              + "\\newcommand{\\SmsLobArmPool}{%.3f}\n" % lo["text_arm_by_batch"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsLobArmPm}{%.3f}\n" % lo["text_arm_by_batch"]["recall_at_2pct_fpr_per_model"]
+              + "\\newcommand{\\SmsLocArmPool}{%.3f}\n" % lo["text_arm_by_component_5fold"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsLocArmPm}{%.3f}\n" % lo["text_arm_by_component_5fold"]["recall_at_2pct_fpr_per_model"]
+              + "\\newcommand{\\SmsMixedBatchN}{%d}\n" % len(lo["per_batch_auc_mixed"])
+              + "\\newcommand{\\SmsMixedBatchAuc}{%s}\n" % rng_([min(lo["per_batch_auc_mixed"].values()),
+                                                                  max(lo["per_batch_auc_mixed"].values())])
               + "\\newcommand{\\SmsLobAuc}{%.3f}\n" % lo["by_batch"]["roc_auc"]
               + "\\newcommand{\\SmsLobF}{%.3f}\n" % lo["by_batch"]["f1_at_0.5"]
               + "\\newcommand{\\SmsLocAuc}{%.3f}\n" % lo["by_component_5fold"]["roc_auc"]
@@ -993,14 +1000,14 @@ def tab_examples(raw, msgs, out):
               "Pretext (gloss) & Row & Message, first %d characters & Embedded host \\\\\n\\midrule\n"
               % QUOTE_CHARS)
     for gloss, host, r in example_rows(raw, msgs):
-        buf.write("%s & \\texttt{%s} & \\vntext{%s} & \\path{%s} \\\\\n"
+        buf.write("%s & \\texttt{%s} & \\vntextsf{%s} & \\path{%s} \\\\\n"
                   % (gloss, tex_escape(r["message_id"]), quote_row(r["message"]), host))
     buf.write("\\bottomrule\n\\end{tabular}\n\\\\[4pt]\n"
               "\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Each row is the first positive-labelled message in the published file that carries\n"
-              "the host in the last column, quoted verbatim and cut at a word boundary. Upper-case\n"
-              "bracketed placeholders such as [MONEY] are the publisher's; other brackets are part of\n"
-              "the message. The pretext is a gloss added in this study. The table illustrates\n"
+              "the host in the last column, quoted verbatim and cut at a word boundary. Placeholders\n"
+              "such as [MONEY] are the publisher's redaction; [TB] and [QC] are sender prefixes, and\n"
+              "other brackets are part of the message. The pretext is a gloss added in this study. The table illustrates\n"
               "measured corpus properties and does not estimate pretext frequency.\n"
               "\\end{minipage}\n\\end{table*}\n")
     write_generated(out, buf.getvalue())

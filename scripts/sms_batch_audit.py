@@ -302,6 +302,35 @@ def main() -> int:
             target[g][lab] -= len(idx)
             out_g[idx] = g
         return out_g
+    # the frozen-PhoBERT text arm under the same groups (one seed), pooled and per-model
+    E = np.array([emb[first[h]] for h in utxt])
+
+    def arm_lobo(groups, k):
+        ev_ham = np.isin(C, list(eval_ham_comps)) & (Y == 0)
+        oof = np.zeros(len(Y))
+        hit = np.zeros(len(Y), dtype=bool)
+        for a_, b_ in GroupKFold(k).split(E, Y, groups):
+            m_ = text_arm(E[a_], Y[a_], 0)
+            oof[b_] = m_.predict_proba(E[b_])[:, 1]
+            a2 = a_[~ev_ham[a_]]
+            m2 = text_arm(E[a2], Y[a2], 0)
+            thr2 = np.quantile(m2.predict_proba(E[ev_ham])[:, 1], 0.98)
+            bp = b_[Y[b_] == 1]
+            if len(bp):
+                hit[bp] = m2.predict_proba(E[bp])[:, 1] > thr2
+        thr = np.quantile(oof[Y == 0], 0.98)
+        return {"roc_auc": round(float(roc_auc_score(Y, oof)), 3),
+                "recall_at_2pct_fpr": round(float((oof[Y == 1] > thr).mean()), 3),
+                "recall_at_2pct_fpr_per_model": round(float(hit[Y == 1].mean()), 3)}
+    arm_b, arm_c = arm_lobo(B, len(set(B))), arm_lobo(C, 5)
+
+    # per-batch ROC-AUC of the pooled probe scores, for batches holding both classes
+    oof_b = np.zeros(len(Y))
+    for a_, b_ in GroupKFold(len(set(B))).split(T, Y, B):
+        oof_b[b_] = probe().fit(T[a_], Y[a_]).predict_proba(T[b_])[:, 1]
+    per_batch = {g: round(float(roc_auc_score(Y[B == g], oof_b[B == g])), 3)
+                 for g in sorted(set(B.tolist())) if 0 < Y[B == g].sum() < (B == g).sum()}
+
     pseudo = []
     for s_ in CONTROL_SEEDS:
         pg = pseudo_batches(s_)
@@ -316,6 +345,8 @@ def main() -> int:
                                   "pseudo_span": {m_: [round(min(p_[m_] for p_ in pseudo), 3),
                                                        round(max(p_[m_] for p_ in pseudo), 3)]
                                                   for m_ in ("roc_auc", "recall_at_2pct_fpr")},
+                                  "text_arm_by_batch": arm_b, "text_arm_by_component_5fold": arm_c,
+                                  "per_batch_auc_mixed": per_batch,
                                   "batches": len(set(B)), "undated_is_one_group": True,
                                   "components_spanning_batches": int(sum(
                                       1 for c in set(C.tolist()) if len(set(B0[C == c])) > 1)),
