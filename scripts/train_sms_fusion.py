@@ -17,7 +17,13 @@ hidden state, NOT fine-tuned. Fusion concatenates the two into R^789 and fits on
 Messages with no URL get a zero URL vector; they are a registered diagnostic, reported
 separately, because the URL arm has nothing to read for them and pooling them hides that.
 
-RUN:  python3 scripts/train_sms_fusion.py
+RUN:  python3 scripts/train_sms_fusion.py               # registered
+      python3 scripts/train_sms_fusion.py --url-rule psl  # sensitivity
+
+--url-rule psl (2026-10-08, post hoc): the registered extractor takes any regex match as the
+click target, and 109 of its matches are sentence fragments ("ngay.tcqc", "tp.hcm") that end in
+no public suffix. The psl rule takes the first match that does, writes fusion_results_psl.json,
+and leaves the registered file alone.
 """
 from __future__ import annotations
 import argparse, csv, hashlib, json, os, re, sys, warnings
@@ -32,14 +38,18 @@ except ImportError:
     ROOT = os.path.dirname(_HERE)
 import numpy as np  # noqa: E402
 from compphish_features import extract  # noqa: E402
+from psl import has_public_suffix  # noqa: E402
 from paired_eval import corrected_paired_t  # noqa: E402
-from sklearn.metrics import f1_score, precision_score, recall_score  # noqa: E402
+from sklearn.metrics import (average_precision_score, f1_score, precision_score,  # noqa: E402
+                             recall_score, roc_auc_score)
 from sklearn.neural_network import MLPClassifier  # noqa: E402
 from sklearn.preprocessing import StandardScaler  # noqa: E402
 
 SRC = os.path.join(ROOT, "data", "raw", "sms_hf_full", "full_dataset.csv")
 MSG = os.path.join(ROOT, "data", "processed", "sms", "sms_messages.csv")
 OUT = os.path.join(ROOT, "data", "processed", "sms", "fusion_results.json")
+OUT_PSL = os.path.join(ROOT, "data", "processed", "sms", "fusion_results_psl.json")
+PRED = os.path.join(ROOT, "data", "processed", "sms", "fusion_test_predictions.csv")
 EMB = os.path.join(ROOT, "data", "processed", "sms", "phobert_emb.npy")
 EMB_META_SUFFIX = ".meta.json"
 PHOBERT = os.path.expanduser("~/.cache/phishvn/phobert-base-st")
@@ -53,12 +63,13 @@ URL_RE = re.compile(r"(?:https?://)?((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]
 SEEDS = list(range(10))
 
 
-def first_url(text: str) -> str:
-    m = URL_RE.search(text or "")
-    if not m:
-        return ""
-    u = m.group(0)
-    return u if u.lower().startswith("http") else "http://" + u
+def first_url(text: str, rule: str = "registered") -> str:
+    for m in URL_RE.finditer(text or ""):
+        if rule == "psl" and not has_public_suffix(m.group(1).lower()):
+            continue
+        u = m.group(0)
+        return u if u.lower().startswith("http") else "http://" + u
+    return ""
 
 
 def _cache_identity(texts) -> dict:
@@ -140,15 +151,22 @@ def fit_score(Xtr, ytr, Xte, yte, seed):
                         early_stopping=True, n_iter_no_change=15)
     clf.fit(sc.transform(Xtr), ytr)
     p = clf.predict(sc.transform(Xte))
+    prob = clf.predict_proba(sc.transform(Xte))[:, 1]
+    tp = int(((yte == 1) & (p == 1)).sum()); fp = int(((yte == 0) & (p == 1)).sum())
+    fn = int(((yte == 1) & (p == 0)).sum()); tn = int(((yte == 0) & (p == 0)).sum())
     return {"f1": f1_score(yte, p, pos_label=1, zero_division=0),
             "precision": precision_score(yte, p, pos_label=1, zero_division=0),
-            "recall": recall_score(yte, p, pos_label=1, zero_division=0)}, p
+            "recall": recall_score(yte, p, pos_label=1, zero_division=0),
+            "fpr": fp / max(fp + tn, 1), "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+            "roc_auc": roc_auc_score(yte, prob), "pr_auc": average_precision_score(yte, prob)}, p
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=len(SEEDS))
+    ap.add_argument("--url-rule", choices=("registered", "psl"), default="registered")
     a = ap.parse_args()
+    out_path = OUT if a.url_rule == "registered" else OUT_PSL
 
     raw = {r["message_id"]: r["message"] for r in
            csv.DictReader(open(SRC, newline="", encoding="utf-8-sig"))}
@@ -157,7 +175,7 @@ def main() -> int:
     y = np.array([int(r["label"]) for r in rows])
     split = np.array([r["split"] for r in rows])
 
-    urls = [first_url(t) for t in texts]
+    urls = [first_url(t, a.url_rule) for t in texts]
     has_url = np.array([bool(u) for u in urls])
     Xurl = np.zeros((len(rows), len(COMPPHISH)), dtype=np.float32)
     for i, u in enumerate(urls):
@@ -211,9 +229,13 @@ def main() -> int:
             if mask.sum():
                 diag[f"{name}/{tag}"] = {
                     "n": int(mask.sum()),
+                    "n_pos": int(y[te][mask].sum()),
                     "f1": round(float(np.mean([
                         f1_score(y[te][mask], p[mask], pos_label=1, zero_division=0)
-                        for p in pp])), 4)}
+                        for p in pp])), 4),
+                    # on an all-positive stratum F1 is only recall; detected/n says it plainly
+                    "detected_mean": round(float(np.mean([
+                        int(((y[te][mask] == 1) & (p[mask] == 1)).sum()) for p in pp])), 2)}
 
     res = {
         "n_messages": len(rows), "n_train": int(tr.sum()), "n_test": int(te.sum()),
@@ -223,6 +245,15 @@ def main() -> int:
         "arms": {k: {m: round(float(np.mean([x[m] for x in v])), 4)
                      for m in ("f1", "precision", "recall")} for k, v in per_seed.items()},
         "arms_sd": {k: round(float(np.std(f1[k], ddof=1)), 4) for k in f1},
+        "url_rule": a.url_rule,
+        # registered diagnostic: confusion counts at the operating point (tau = 0.5), mean over
+        # seeds, plus the benign false-positive rate; these were not retained before 2026-10-08
+        "confusion_mean": {k: {c: round(float(np.mean([x[c] for x in v])), 1)
+                               for c in ("tp", "fp", "fn", "tn")} for k, v in per_seed.items()},
+        "fpr": {k: round(float(np.mean([x["fpr"] for x in v])), 4) for k, v in per_seed.items()},
+        # threshold-free, mean over seeds (post hoc; the registered metric is F1 at tau = 0.5)
+        "auc": {k: {m: round(float(np.mean([x[m] for x in v])), 4) for m in ("roc_auc", "pr_auc")}
+                for k, v in per_seed.items()},
         "T1_fusion_minus_url": {kk: (vv if kk in ("p", "p_naive") else round(vv, 4) if isinstance(vv, float) else vv)
                                 for kk, vv in t1.items()},
         "T2_text_minus_url": {kk: (vv if kk in ("p", "p_naive") else round(vv, 4) if isinstance(vv, float) else vv)
@@ -237,7 +268,16 @@ def main() -> int:
         "cluster_bootstrap": boot,
         "diagnostics": diag,
     }
-    json.dump(res, open(OUT, "w", encoding="utf-8"), indent=2, sort_keys=True)
+    json.dump(res, open(out_path, "w", encoding="utf-8"), indent=2, sort_keys=True)
+    if a.url_rule == "registered":
+        # per test row: how many of the seeds flag it, per arm (the error analysis reads this)
+        with open(PRED, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["message_id", "text_sha1", "label", "has_url"]
+                       + [f"{k}_votes" for k in arms])
+            for j, i in enumerate(te_idx):
+                w.writerow([rows[i]["message_id"], rows[i]["text_sha1"], int(y[i]),
+                            int(has_url[i])] + [int(sum(p[j] for p in preds[k])) for k in arms])
 
     print("\n  arm        F1     P      R")
     for k in ("url", "text", "fusion"):
@@ -251,7 +291,7 @@ def main() -> int:
         z = boot[k]
         print(f"  {label:<25}: bootstrap mean {z['mean']:+.4f}, 95% CI "
               f"[{z['ci95'][0]:+.4f}, {z['ci95'][1]:+.4f}], {z['clusters']} text clusters")
-    print(f"  [+] {OUT}")
+    print(f"  [+] {out_path}")
     return 0
 
 

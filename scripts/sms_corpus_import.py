@@ -28,7 +28,7 @@ try:
     add_script_dirs()
 except ImportError:
     ROOT = os.path.dirname(_HERE)
-from psl import registered_domain  # noqa: E402
+from psl import has_public_suffix, registered_domain  # noqa: E402
 
 SRC = os.path.join("data", "raw", "sms_hf_full", "full_dataset.csv")
 PUB_TRAIN = os.path.join("data", "raw", "sms_hf_full", "train.csv")
@@ -41,9 +41,22 @@ SNAP = os.path.join(OUTDIR, "sms_snapshot.json")
 # A bare host is a URL in an SMS: "truy cap vietcombank.vn-gll.top" carries no scheme and is still
 # the click target. Requiring https:// would have missed most of the phishing side.
 CAND = re.compile(r"(?:https?://)?((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})(?:/[^\s,;)\]]*)?", re.I)
-SHORTENERS = {"bit.ly", "tinyurl.com", "goo.gl", "t.co", "rb.gy", "shorturl.at", "cutt.ly",
-              "is.gd", "ow.ly", "s.id", "zalo.me", "page.link", "me.qr", "link.vn",
-              "shorturl.asia", "buff.ly", "rebrand.ly"}
+# The list as registered (ingestion bound at c3c913b). It counted zalo.me, which is a Zalo
+# profile/chat link rather than a link shortener, and it took any regex match as a URL. Both are
+# kept so the registered stratum and the registered URL arm stay reproducible, but the corpus
+# description uses the corrected rule below (deviation record of 2026-10-08).
+SHORTENERS_REG = {"bit.ly", "tinyurl.com", "goo.gl", "t.co", "rb.gy", "shorturl.at", "cutt.ly",
+                  "is.gd", "ow.ly", "s.id", "zalo.me", "page.link", "me.qr", "link.vn",
+                  "shorturl.asia", "buff.ly", "rebrand.ly"}
+# Corrected list: zalo.me out; added are the short-link and app deep-link services that occur in
+# the corpus and send a short opaque path to a redirect (viettelmoney.go.link/8EWu8): AppsFlyer
+# OneLink, go.link, and the Lazada, Grab and LinkedIn short domains.
+SHORTENERS = (SHORTENERS_REG - {"zalo.me"}) | {"onelink.me", "onelink.to", "go.link", "lzd.co",
+                                              "grb.to", "lnkd.in"}
+# Viettel's own app deep links carry most ham shortening; the snapshot reports shortening with and
+# without them so no reader has to take the pooled rate.
+OPERATOR_DEEP_LINKS = {"myvt.page.link", "viettelmoney.go.link", "myviettel.go.link",
+                       "vtmoney.onelink.me"}
 PII_TOKEN = re.compile(r"\[[A-Z_]+\]")
 RESIDUAL = {"phone_vn": re.compile(r"(?<![0-9])0[0-9]{8,10}(?![0-9])"),
             "email": re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")}
@@ -68,13 +81,20 @@ def split_of(text_sha: str) -> str:
 
 
 def hosts_in(msg: str):
+    """Every regex match the registered extractor accepted, with a flag saying whether the host
+    ends in a real public suffix. Fragments such as "ngay.tcqc" or "tp.hcm" match the regex and
+    are not URLs; they keep their row (the registered URL arm saw them) with valid = 0."""
     out = []
     for m in CAND.finditer(msg):
         host = m.group(1).lower()
         apex = registered_domain(host)
         if apex and "." in apex:
-            out.append((host, apex))
+            out.append((host, apex, has_public_suffix(host)))
     return out
+
+
+def is_short(host: str, apex: str, names=SHORTENERS) -> bool:
+    return apex in names or host.endswith(".page.link")
 
 
 def read(path):
@@ -93,21 +113,26 @@ def main() -> int:
         text, lab = r.get("message") or "", r.get("label", "")
         h = sha(text)
         hh = hosts_in(text)
-        short = sum(1 for host, apex in hh
-                    if apex in SHORTENERS or host.endswith(".page.link"))
+        short = sum(1 for host, apex, _ in hh if is_short(host, apex, SHORTENERS_REG))
+        hv = [(host, apex) for host, apex, ok in hh if ok]
         msgs.append({
             "message_id": r.get("message_id", ""), "date": r.get("date", ""),
             "text_sha1": h, "label": lab, "split": split_of(h),
             "chars": len(text), "accented": int(has_vietnamese_diacritic(text)),
             "pii_tokens": " ".join(sorted(set(PII_TOKEN.findall(text)))),
             "residual_pii": " ".join(sorted(k for k, rx in RESIDUAL.items() if rx.search(text))),
+            # n_urls / n_shortened: the registered extractor and shortener list, unchanged
             "n_urls": len(hh), "n_shortened": short,
-            "apexes": " ".join(sorted({a for _, a in hh})),
+            "n_urls_valid": len(hv),
+            "n_shortened_valid": sum(1 for host, apex in hv if is_short(host, apex)),
+            "apexes": " ".join(sorted({a for _, a, ok in hh if ok})),
         })
-        for host, apex in hh:
+        for host, apex, ok in hh:
             urls.append({"message_id": r.get("message_id", ""), "label": lab,
                          "host": host, "apex": apex, "tld": apex.rsplit(".", 1)[-1],
-                         "shortener": int(apex in SHORTENERS or host.endswith(".page.link"))})
+                         "valid": int(ok),
+                         "shortener": int(ok and is_short(host, apex)),
+                         "shortener_reg": int(is_short(host, apex, SHORTENERS_REG))})
 
     os.makedirs(OUTDIR, exist_ok=True)
     for path, data in ((MSG_OUT, msgs), (URL_OUT, urls)):
@@ -135,20 +160,49 @@ def main() -> int:
         return {lab: sum(1 for m in msgs if m["label"] == lab and pred(m)) for lab in ("0", "1")}
 
     n_lab = {lab: sum(1 for m in msgs if m["label"] == lab) for lab in ("0", "1")}
-    url_rows = collections.defaultdict(list)
+    url_rows = collections.defaultdict(list)    # valid URLs only: what the paper describes
+    reg_rows = collections.defaultdict(list)    # every registered-extractor match
     for u in urls:
-        url_rows[u["label"]].append(u)
+        reg_rows[u["label"]].append(u)
+        if u["valid"]:
+            url_rows[u["label"]].append(u)
+
+    def short_hosts(v):
+        return collections.Counter(u["host"] if u["host"] in OPERATOR_DEEP_LINKS else u["apex"]
+                                   for u in v if u["shortener"]).most_common()
     snap = {
         "source": "trannguyenthaituan/vietnamese_sms_dataset full_dataset.csv (CC-BY-4.0)",
         "messages": len(msgs), "unique_texts": len({m["text_sha1"] for m in msgs}),
         "exact_duplicates": len(msgs) - len({m["text_sha1"] for m in msgs}),
         "ham": n_lab["0"], "phishing": n_lab["1"],
-        "with_url": per_label(lambda m: m["n_urls"] > 0),
+        "with_url": per_label(lambda m: m["n_urls_valid"] > 0),
         "urls": {k: len(v) for k, v in url_rows.items()},
         "unique_apexes": {k: len({u["apex"] for u in v}) for k, v in url_rows.items()},
         "shortened_urls": {k: sum(u["shortener"] for u in v) for k, v in url_rows.items()},
+        "shortened_hosts": {k: short_hosts(v) for k, v in url_rows.items()},
+        "operator_deep_links": sorted(OPERATOR_DEEP_LINKS),
+        "shortened_urls_without_operator_link": {
+            k: sum(u["shortener"] for u in v if u["host"] not in OPERATOR_DEEP_LINKS)
+            for k, v in url_rows.items()},
+        "urls_without_operator_link": {
+            k: sum(1 for u in v if u["host"] not in OPERATOR_DEEP_LINKS) for k, v in url_rows.items()},
+        "zalo_me_urls": {k: sum(1 for u in v if u["apex"] == "zalo.me")
+                         for k, v in url_rows.items()},
         "top_tlds": {k: collections.Counter(u["tld"] for u in v).most_common(6)
                      for k, v in url_rows.items()},
+        # what the registered extractor and shortener list produced, kept for the deviation record
+        "registered_extractor": {
+            "with_url": per_label(lambda m: m["n_urls"] > 0),
+            "urls": {k: len(v) for k, v in reg_rows.items()},
+            "non_url_fragments": {k: sum(1 for u in v if not u["valid"])
+                                  for k, v in reg_rows.items()},
+            "fragment_hosts": collections.Counter(
+                u["host"] for v in reg_rows.values() for u in v if not u["valid"]).most_common(12),
+            "messages_url_only_by_fragment": per_label(
+                lambda m: m["n_urls"] > 0 and m["n_urls_valid"] == 0),
+            "shortened_urls": {k: sum(u["shortener_reg"] for u in v) for k, v in reg_rows.items()},
+            "unique_apexes": {k: len({u["apex"] for u in v}) for k, v in reg_rows.items()},
+        },
         "residual_pii_messages": sum(1 for m in msgs if m["residual_pii"]),
         "pii_token_kinds": len({t for m in msgs for t in m["pii_tokens"].split()}),
         "own_split": {s: len(v) for s, v in sorted(by_split.items())},
@@ -179,6 +233,25 @@ def main() -> int:
            + mc("PhishShort", f"{snap['shortened_urls'].get('1', 0):,}")
            + mc("HamShortPct", pct(snap['shortened_urls'].get('0', 0), snap['urls'].get('0', 1)))
            + mc("PhishShortPct", pct(snap['shortened_urls'].get('1', 0), snap['urls'].get('1', 1)))
+           + mc("HamShortOp", f"{snap['shortened_urls'].get('0', 0) - snap['shortened_urls_without_operator_link'].get('0', 0):,}")
+           + mc("HamShortNoOp", f"{snap['shortened_urls_without_operator_link'].get('0', 0):,}")
+           + mc("HamUrlsNoOp", f"{snap['urls_without_operator_link'].get('0', 0):,}")
+           + mc("HamShortNoOpPct", pct(snap['shortened_urls_without_operator_link'].get('0', 0),
+                                       snap['urls_without_operator_link'].get('0', 1)))
+           + mc("HamZalo", f"{snap['zalo_me_urls'].get('0', 0)}")
+           + mc("PhishZalo", f"{snap['zalo_me_urls'].get('1', 0)}")
+           + mc("RegHamUrls", f"{snap['registered_extractor']['urls'].get('0', 0):,}")
+           + mc("RegPhishUrls", f"{snap['registered_extractor']['urls'].get('1', 0):,}")
+           + mc("RegFragHam", f"{snap['registered_extractor']['non_url_fragments'].get('0', 0)}")
+           + mc("RegFragPhish", f"{snap['registered_extractor']['non_url_fragments'].get('1', 0)}")
+           + mc("RegFrag", f"{sum(snap['registered_extractor']['non_url_fragments'].values())}")
+           + mc("RegFragMsgs", f"{sum(snap['registered_extractor']['messages_url_only_by_fragment'].values())}")
+           + mc("RegPhishShort", f"{snap['registered_extractor']['shortened_urls'].get('1', 0)}")
+           + mc("RegHamShort", f"{snap['registered_extractor']['shortened_urls'].get('0', 0)}")
+           + mc("RegHamShortPct", pct(snap['registered_extractor']['shortened_urls'].get('0', 0),
+                                      snap['registered_extractor']['urls'].get('0', 1)))
+           + mc("RegPhishShortPct", pct(snap['registered_extractor']['shortened_urls'].get('1', 0),
+                                        snap['registered_extractor']['urls'].get('1', 1)))
            + mc("PubLeakRows", f"{pub_leak_rows:,}") + mc("PubTestRows", f"{pub_test_rows:,}")
            + mc("PubLeakTexts", f"{pub_leak_texts:,}")
            + mc("PubLeakPct", pct(pub_leak_rows, pub_test_rows or 1))

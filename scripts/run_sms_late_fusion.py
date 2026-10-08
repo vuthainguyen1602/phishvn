@@ -11,7 +11,9 @@ use it. Four post-hoc combinations test the second reading, on the registered sp
   late_mean    mean of the URL arm's and the text arm's probabilities
   late_gated   the text arm's probability where the message has no URL, the mean where it has
   stack        logistic regression over (p_url, p_text, has_url), fitted on 5-fold out-of-fold
-               probabilities of the training window
+               probabilities of the training window; the folds are grouped by message text
+               (2026-10-08: they were stratified over rows, so a repeated text could sit in the
+               fold that scored it and the out-of-fold probabilities were optimistic)
 
 Every arm is compared with the registered text-only arm by the distinct-text cluster bootstrap on
 identical rows. POST-HOC and UNREGISTERED; the registered T1/T2 stand as printed.
@@ -33,7 +35,7 @@ except ImportError:
 import numpy as np  # noqa: E402
 from sklearn.linear_model import LogisticRegression  # noqa: E402
 from sklearn.metrics import f1_score, precision_score, recall_score  # noqa: E402
-from sklearn.model_selection import StratifiedKFold  # noqa: E402
+from sklearn.model_selection import StratifiedGroupKFold  # noqa: E402
 from sklearn.neural_network import MLPClassifier  # noqa: E402
 from sklearn.preprocessing import StandardScaler  # noqa: E402
 
@@ -54,9 +56,10 @@ def fit_proba(Xtr, ytr, Xte, seed):
     return m.predict_proba(sc.transform(Xte))[:, 1]
 
 
-def oof_proba(X, y, seed):
+def oof_proba(X, y, groups, seed):
     out = np.zeros(len(y))
-    for f, (i, j) in enumerate(StratifiedKFold(5, shuffle=True, random_state=seed).split(X, y)):
+    folds = StratifiedGroupKFold(5, shuffle=True, random_state=seed).split(X, y, groups)
+    for f, (i, j) in enumerate(folds):
         out[j] = fit_proba(X[i], y[i], X[j], seed * 100 + f)
     return out
 
@@ -77,6 +80,7 @@ def main() -> int:
     rows, texts, y, tr, te, Xurl, has_url = load()
     Xtxt = embed(texts, cache=EMB)
     flag = has_url.astype(np.float32)[:, None]
+    tr_groups = np.array([r["text_sha1"] for r in rows])[tr]
     Xfus = np.hstack([Xtxt, Xurl])
     Xflag = np.hstack([Xtxt, Xurl, flag])
     print(f"  {len(rows)} messages; train {int(tr.sum())} / test {int(te.sum())}; "
@@ -92,7 +96,8 @@ def main() -> int:
         _, p_flag = fit_score(Xflag[tr], y[tr], Xflag[te], y[te], s)
         mean = (p_url + p_txt) / 2
         gated = np.where(has_url[te], mean, p_txt)
-        o_url, o_txt = oof_proba(Xurl[tr], y[tr], s), oof_proba(Xtxt[tr], y[tr], s)
+        o_url = oof_proba(Xurl[tr], y[tr], tr_groups, s)
+        o_txt = oof_proba(Xtxt[tr], y[tr], tr_groups, s)
         Ztr = np.column_stack([o_url, o_txt, has_url[tr]])
         Zte = np.column_stack([p_url, p_txt, has_url[te]])
         stack = LogisticRegression(max_iter=2000).fit(Ztr, y[tr]).predict(Zte)
@@ -110,6 +115,7 @@ def main() -> int:
                                  for k in names if k != "text"},
            "has_url_only": {k: round(float(np.mean([f1_score(y[te][has_url[te]], p[has_url[te]], zero_division=0)
                                                     for p in preds[k]])), 4) for k in names},
+           "stack_folds": "StratifiedGroupKFold(5) by message text",
            "status": "post-hoc, unregistered; the registered fusion is the concatenation MLP"}
     json.dump(res, open(a.out, "w", encoding="utf-8"), indent=2, sort_keys=True)
     for k in names:

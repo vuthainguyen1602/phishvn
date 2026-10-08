@@ -41,6 +41,10 @@ SEED = 0
 
 RAW = os.path.join("data", "raw", "sms_hf_full", "full_dataset.csv")
 TOKRX = re.compile(r"\[[A-Z_]+\]")
+# Any bracketed span, which also catches sender-style tags such as [VlB-Bank] or [SHB.ET] that
+# TOKRX misses (2026-10-08, after review: the "tokens stripped" probe still saw those).
+BRACKET = re.compile(r"\[[^\]\n]{1,40}\]")
+LEAD_TAG = re.compile(r"^\s*\[[^\]\n]{1,40}\]")
 DUP_THRESHOLDS = (0.95, 0.90, 0.80)
 FAMILY_SIM = 0.80
 
@@ -75,9 +79,11 @@ def tfidf_baselines(train: list, test: list) -> dict:
     grids = (("word", dict(analyzer="word", ngram_range=(1, 2), min_df=2, sublinear_tf=True), False),
              ("char", dict(analyzer="char_wb", ngram_range=(3, 5), min_df=2, sublinear_tf=True), False),
              ("word_no_tokens", dict(analyzer="word", ngram_range=(1, 2), min_df=2,
-                                     sublinear_tf=True), True))
+                                     sublinear_tf=True), TOKRX),
+             ("word_no_brackets", dict(analyzer="word", ngram_range=(1, 2), min_df=2,
+                                       sublinear_tf=True), BRACKET))
     for name, kw, strip in grids:
-        prep = (lambda t: TOKRX.sub(" ", t)) if strip else (lambda t: t)
+        prep = (lambda t, rx=strip: rx.sub(" ", t)) if strip else (lambda t: t)
         v = TfidfVectorizer(**kw)
         A = v.fit_transform([prep(r["text"]) for r in train])
         B = v.transform([prep(r["text"]) for r in test])
@@ -153,6 +159,36 @@ def log_odds(rows: list, top: int = 12) -> dict:
     pick = lambda idx: [{"term": str(vocab[i]), "z": round(float(z[i]), 1),
                          "phish": int(c1[i]), "ham": int(c0[i])} for i in idx]
     return {"phishing": pick(order[::-1][:top]), "ham": pick(order[:top])}
+
+
+def format_feats(r) -> list:
+    """Message format, read off the characters without reading a word: whether a URL with a real
+    public suffix is present, whether any URL carries a scheme, a leading bracketed tag, the share
+    of upper-case letters, the digit count and the line count."""
+    t = r["text"]
+    letters = [c for c in t if c.isalpha()]
+    return [float(int(r.get("n_urls_valid") or 0) > 0), float("http" in t.lower()),
+            float(bool(LEAD_TAG.match(t))),
+            sum(c.isupper() for c in letters) / max(len(letters), 1),
+            sum(c.isdigit() for c in t) / 10.0, t.count("\n") / 1.0]
+
+
+def fit_f1_gbm(train, test, featf) -> dict:
+    """The same features under gradient-boosted trees: a linear model gives a lower bound on what
+    a feature set separates, not the floor itself."""
+    import numpy as np
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    from sklearn.metrics import f1_score, precision_score, recall_score
+    Xtr = np.array([featf(r) for r in train], dtype=float)
+    ytr = np.array([int(r["label"]) for r in train])
+    Xte = np.array([featf(r) for r in test], dtype=float)
+    yte = np.array([int(r["label"]) for r in test])
+    m = HistGradientBoostingClassifier(random_state=SEED).fit(Xtr, ytr)
+    p = m.predict(Xte)
+    return {"f1": round(float(f1_score(yte, p)), 4),
+            "precision": round(float(precision_score(yte, p, zero_division=0)), 4),
+            "recall": round(float(recall_score(yte, p)), 4),
+            "n_train": len(ytr), "n_test": len(yte), "model": "HistGradientBoosting"}
 
 
 def rows(path: str) -> list:
@@ -234,7 +270,26 @@ def main() -> int:
     if with_text:
         tr_t = [r for r in with_text if r["split"] == "train"]
         te_t = [r for r in with_text if r["split"] == "test"]
+        f_all = lambda r: f_acc(r) + f_len(r) + f_tok(r)
+        lead = {l: [r for r in with_text if r["label"] == l] for l in labs}
+        sender_tag = {l: round(100 * sum(1 for r in v if LEAD_TAG.match(r["text"])
+                                         and not TOKRX.match(r["text"].lstrip()))
+                               / max(len(v), 1), 1) for l, v in lead.items()}
+        # "tb" in the log-odds table: the [TB] prefix, or "TB" = thuê bao (subscriber)?
+        tb_rx = re.compile(r"(?<![\w\[])tb(?![\w\]])", re.I)
+        tb = {l: {"prefix_msgs": sum(1 for r in v if "[TB]" in r["text"]),
+                  "bare_tb_msgs": sum(1 for r in v if tb_rx.search(r["text"]))}
+              for l, v in lead.items()}
+        carrier_rx = re.compile(r"viettel|vinaphone|mobifone|vietnamobile|itelecom|myvt", re.I)
+        carrier = {l: round(100 * sum(1 for r in v if carrier_rx.search(r["text"]))
+                            / max(len(v), 1), 1) for l, v in lead.items()}
         lang = {"tfidf": tfidf_baselines(tr_t, te_t),
+                "nonlinear_floor": {
+                    "all_shallow_gbm": fit_f1_gbm(tr_t, te_t, f_all),
+                    "all_shallow_format_lr": fit_f1(tr_t, te_t, lambda r: f_all(r) + format_feats(r)),
+                    "all_shallow_format_gbm": fit_f1_gbm(tr_t, te_t,
+                                                         lambda r: f_all(r) + format_feats(r))},
+                "sender_tag_pct": sender_tag, "tb_usage": tb, "carrier_mention_pct": carrier,
                 "near_duplicate_leak": duplicate_leak(tr_t, te_t),
                 "families": {l: families([r["text"] for r in with_text if r["label"] == l])
                              for l in labs},

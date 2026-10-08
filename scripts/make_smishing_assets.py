@@ -30,11 +30,15 @@ FUSION = os.path.join(ROOT, "data", "processed", "sms", "fusion_results.json")
 WHY = os.path.join(ROOT, "data", "processed", "sms", "why_fusion.json")
 CUES = os.path.join(ROOT, "data", "processed", "sms", "shallow_cues.json")
 ROB = os.path.join(ROOT, "data", "processed", "sms", "split_robustness.json")
+FUSION_PSL = os.path.join(ROOT, "data", "processed", "sms", "fusion_results_psl.json")
+BATCH = os.path.join(ROOT, "data", "processed", "sms", "batch_audit.json")
+EXTRA = os.path.join(ROOT, "data", "processed", "sms", "extra_diagnostics.json")
+TEMPORAL = os.path.join(ROOT, "data", "processed", "sms", "temporal_audit.json")
 FIG = os.path.join(ROOT, "papers", "future_smishing", "figures")
 SEC = os.path.join(ROOT, "papers", "future_smishing", "sections")
 
 # The publisher defines label 1 as spam/scam, not phishing; every legend says so.
-LAB = {"0": "ham", "1": "spam/scam"}
+LAB = {"0": "ham", "1": "positive (spam/scam)"}
 SRC = os.path.join(ROOT, "data", "raw", "sms_hf_full", "full_dataset.csv")
 EMB_META = os.path.join(ROOT, "data", "processed", "sms", "phobert_emb.npy.meta.json")
 
@@ -153,21 +157,23 @@ def fig_deltas(r, boot, why, out):
     if not rows:
         return None
 
-    fig, ax = plt.subplots(figsize=(5.6, 0.62 * len(rows) + 1.15))
+    # single-column width: the panel holds three rows, and at double width most of it was empty
+    fig, ax = plt.subplots(figsize=(3.5, 0.62 * len(rows) + 1.25))
     y = np.arange(len(rows))[::-1]
     ax.axvline(0.0, color=INK, lw=1.0, zorder=1)
     for yy, (_lab, m, ci) in zip(y, rows):
         ax.plot([ci[0], ci[1]], [yy, yy], color=BLUE, lw=2.2, solid_capstyle="butt", zorder=2)
         ax.plot([m], [yy], "o", ms=6, color=ORANGE, mec=INK, mew=0.7, zorder=3)
-        ax.text(ci[1] + 0.0012, yy, f"{m:+.3f}  [{ci[0]:+.3f}, {ci[1]:+.3f}]",
-                va="center", ha="left", fontsize=7.5, color=INK)
-    ax.set_yticks(y, [r_[0] for r_ in rows], fontsize=8)
+        ax.text(ci[1] + 0.0012, yy, f"{m:+.3f}\n[{ci[0]:+.3f}, {ci[1]:+.3f}]",
+                va="center", ha="left", fontsize=6.5, color=INK)
+    ax.set_yticks(y, [r_[0] for r_ in rows], fontsize=7)
     ax.set_ylim(-0.6, len(rows) - 0.4)
     lo = min(ci[0] for _l, _m, ci in rows)
     hi = max(ci[1] for _l, _m, ci in rows)
     pad = (hi - lo) * 0.10
-    ax.set_xlim(lo - pad, hi + (hi - lo) * 1.15)
-    ax.set_xlabel("difference in positive-class F1")
+    ax.set_xlim(lo - pad, hi + (hi - lo) * 0.75)
+    ax.set_xlabel("difference in positive-class F1", fontsize=7.5)
+    ax.tick_params(axis="x", labelsize=7)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
     fig.tight_layout()
@@ -235,27 +241,31 @@ def fig_robust(cues, fus, out):
     return panels
 
 
-def fig_shortener(urls, out):
-    """The reversal, drawn: shortening is a ham habit in this corpus."""
-    fig, ax = plt.subplots(figsize=(3.4, 2.5))
-    vals, labels, colours = [], [], []
-    for lab, colour in (("1", ORANGE), ("0", FILL_B)):
-        sub = [u for u in urls if u["label"] == lab]
-        vals.append(100 * sum(int(u["shortener"]) for u in sub) / max(len(sub), 1))
-        labels.append(LAB[lab])
-        colours.append(colour)
-    # Hatched ham, like every other two-class figure here: this one was the odd one out.
-    b = ax.bar(labels, vals, 0.5, color=colours, edgecolor=INK,
-               hatch=["", "///"])
-    for r, v in zip(b, vals):
-        ax.text(r.get_x() + r.get_width() / 2, v + 0.3, f"{v:.1f}%", ha="center",
-                fontsize=9, color=INK)
+def fig_shortener(urls, out, operator_links):
+    """Shortening per class, with ham split into Viettel's own app deep links and everything else:
+    the pooled ham rate is mostly one operator's links, and a single bar hid that."""
+    fig, ax = plt.subplots(figsize=(3.6, 2.6))
+    ph = [u for u in urls if u["label"] == "1"]
+    hm = [u for u in urls if u["label"] == "0"]
+    v_ph = 100 * sum(int(u["shortener"]) for u in ph) / max(len(ph), 1)
+    v_op = 100 * sum(int(u["shortener"]) for u in hm if u["host"] in operator_links) / max(len(hm), 1)
+    v_ot = 100 * sum(int(u["shortener"]) for u in hm if u["host"] not in operator_links) / max(len(hm), 1)
+    x = [0, 1]
+    ax.bar(x[0], v_ph, 0.5, color=ORANGE, edgecolor=INK)
+    ax.bar(x[1], v_ot, 0.5, color=FILL_B, edgecolor=INK, hatch="///", label="other services")
+    ax.bar(x[1], v_op, 0.5, bottom=v_ot, color=BLUE, edgecolor=INK,
+           label="Viettel app deep links")
+    ax.text(x[0], v_ph + 0.4, f"{v_ph:.1f}%", ha="center", fontsize=9, color=INK)
+    ax.text(x[1], v_op + v_ot + 0.4, f"{v_op + v_ot:.1f}%", ha="center", fontsize=9, color=INK)
+    ax.set_xticks(x, ["positive\n(spam/scam)", "ham"])
     ax.set_ylabel("URLs that are shortened (%)")
-    ax.set_ylim(0, max(vals) * 1.35)
+    ax.set_ylim(0, (v_op + v_ot) * 1.3)
+    ax.legend(frameon=False, fontsize=7.5, loc="upper left")
+    ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     fig.savefig(out)
     plt.close(fig)
-    return vals
+    return [v_ph, v_op + v_ot]
 
 
 def emit_results():
@@ -265,14 +275,19 @@ def emit_results():
     r = json.load(open(FUSION, encoding="utf-8"))
     buf = io.StringIO()
     buf.write("\\begin{table}[t]\n\\centering\\small\n")
-    buf.write("\\caption{The registered comparison, %d seeds.}\n\\label{tab:sms_fusion}\n"
-              % r["seeds"])
-    buf.write("\\begin{tabular}{lrrr}\n\\toprule\n"
-              "Arm & F1 & Precision & Recall \\\\\n\\midrule\n")
-    for k, name in (("url", "URL only (CompPhish-21)"), ("text", "Text only (PhoBERT)"),
+    pos = int(round(r["confusion_mean"]["text"]["tp"] + r["confusion_mean"]["text"]["fn"]))
+    buf.write("\\caption{The two registered arms and their fusion on the registered test split "
+              "(%d rows, %d positive), mean over %d seeds. F1, precision and recall are for the "
+              "positive class at $\\tau = 0.5$; FPR is the share of ham flagged; SD is the seed "
+              "standard deviation of F1.}\n\\label{tab:sms_fusion}\n"
+              % (r["n_test"], pos, r["seeds"]))
+    buf.write("\\begin{tabular}{lrrrrr}\n\\toprule\n"
+              "Arm & F1 & SD & Precision & Recall & FPR \\\\\n\\midrule\n")
+    for k, name in (("url", "URL only (CompPhish-21)"), ("text", "Text only (frozen PhoBERT)"),
                     ("fusion", "Fusion")):
         m = r["arms"][k]
-        buf.write(f"{name} & {m['f1']:.3f} & {m['precision']:.3f} & {m['recall']:.3f} \\\\\n")
+        buf.write(f"{name} & {m['f1']:.3f} & {r['arms_sd'][k]:.3f} & {m['precision']:.3f} & "
+                  f"{m['recall']:.3f} & {r['fpr'][k]:.3f} \\\\\n")
     buf.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
     write_generated(os.path.join(SEC, "tab_sms_fusion.tex"), buf.getvalue())
 
@@ -313,7 +328,25 @@ def emit_results():
            + "\\newcommand{\\SmsPostDelta}{%+.3f}\n" % r["posthoc_fusion_minus_text"]["mean"]
            + "\\newcommand{\\SmsPostCI}{[%+.3f,%+.3f]}\n" % tuple(boot.get("posthoc_fusion_minus_text", {}).get("ci95", [float("nan"), float("nan")]))
            + "\\newcommand{\\SmsBootClusters}{%d}\n" % boot.get("T1_fusion_minus_url", {}).get("clusters", 0)
-           + "\\newcommand{\\SmsTestN}{%d}\n" % r["n_test"])
+           + "\\newcommand{\\SmsTestN}{%d}\n" % r["n_test"]
+           + "".join("\\newcommand{\\SmsFpr%s}{%.1f}\n" % (k.capitalize(), 100 * r["fpr"][k])
+                     for k in ("url", "text", "fusion"))
+           + "".join("\\newcommand{\\SmsSd%s}{%.3f}\n" % (k.capitalize(), r["arms_sd"][k])
+                     for k in ("url", "text", "fusion"))
+           # ...Cnt, not ...TP/FP: a macro ending in P reads as a withdrawn p-value to the claims guard
+           + "".join("\\newcommand{\\Sms%s%sCnt}{%.1f}\n" % (k.capitalize(), c.upper(),
+                                                          r["confusion_mean"][k][c])
+                     for k in ("url", "text", "fusion") for c in ("tp", "fp", "fn", "tn"))
+           + "".join("\\newcommand{\\SmsRocAuc%s}{%.3f}\n" % (k.capitalize(), r["auc"][k]["roc_auc"])
+                     + "\\newcommand{\\SmsPrAuc%s}{%.3f}\n" % (k.capitalize(), r["auc"][k]["pr_auc"])
+                     for k in ("url", "text", "fusion"))
+           + "\\newcommand{\\SmsTestPos}{%d}\n" % int(round(r["confusion_mean"]["text"]["tp"]
+                                                         + r["confusion_mean"]["text"]["fn"]))
+           + "\\newcommand{\\SmsTextNoUrlScore}{%.3f}\n" % r["diagnostics"]["text/no_url"]["f1"]
+           + "\\newcommand{\\SmsFusNoUrlScore}{%.3f}\n" % r["diagnostics"]["fusion/no_url"]["f1"]
+           + "".join("\\newcommand{\\SmsShortDet%s}{%s}\n"
+                     % (k.capitalize(), ("%.1f" % r["diagnostics"][f"{k}/shortened_phish"]["detected_mean"]).rstrip("0").rstrip("."))
+                     for k in ("url", "text", "fusion")))
     if os.path.exists(EMB_META):
         em = json.load(open(EMB_META, encoding="utf-8"))
         mac += ("\\newcommand{\\SmsEmbMaxLen}{%d}\n" % em["max_length"]
@@ -328,6 +361,8 @@ def emit_results():
                 + "\\newcommand{\\SmsUrlBackCI}{[%+.3f,%+.3f]}\n" % tuple(w["url_adds_to_masked"].get("ci95", [float("nan"), float("nan")])))
     write_generated(os.path.join(SEC, "gen_sms_fusion.tex"), mac)
     write_generated(os.path.join(SEC, "gen_sms_predecision.tex"), predecision_macros())
+    write_generated(os.path.join(SEC, "gen_sms_audit.tex"), audit_macros())
+    tab_batches(os.path.join(SEC, "tab_sms_batches.tex"))
     def _ci(k):
         c = boot.get(k, {}).get("ci95")
         return f"[{c[0]:+.3f},{c[1]:+.3f}]" if c else "[no bootstrap in artefact]"
@@ -352,6 +387,192 @@ def emit_results():
     else:
         print(f"  [!] {CUES} missing — run scripts/sms_shallow_cues.py", file=sys.stderr)
     return r
+
+
+def _fmt(v: int) -> str:
+    return f"{v:,}".replace(",", "{,}")
+
+
+def audit_macros() -> str:
+    """Macros for the corpus checks run after the registered analysis: batch confound, the
+    public-suffix sensitivity of the URL arm, the non-linear shallow floor, the URL-as-characters
+    baseline, truncation, the error-analysis rows, and the intervals the paper had computed but
+    never printed. Each block is emitted only from its JSON."""
+    m = ("%% generated by scripts/make_smishing_assets.py from "
+         "batch_audit.json, extra_diagnostics.json, shallow_cues.json, fusion_results_psl.json, "
+         "phobert_ft.json, split_robustness.json; do not edit\n")
+    if os.path.exists(BATCH):
+        b = json.load(open(BATCH, encoding="utf-8"))
+        pb, a, lb, pm, uc, tw = (b["positive_only_batches"], b["accented_pct"], b["leave_batches_out"],
+                                 b["pure_to_mixed"], b["url_ceiling"], b["twins"])
+        m += ("\\newcommand{\\SmsBatchN}{%d}\n" % sum(1 for d in b["batches"] if parse_date(d))
+              + "\\newcommand{\\SmsPureRows}{%s}\n" % _fmt(b["rows_in_pure_batches"])
+              + "\\newcommand{\\SmsPurePct}{%d}\n" % round(100 * b["pure_threshold"])
+              + "\\newcommand{\\SmsPosBatchA}{%s}\n" % parse_date(pb["dates"][0]).isoformat()
+              + "\\newcommand{\\SmsPosBatchB}{%s}\n" % parse_date(pb["dates"][1]).isoformat()
+              + "\\newcommand{\\SmsPosBatchPos}{%d}\n" % pb["positive"]
+              + "\\newcommand{\\SmsPosBatchHam}{%d}\n" % pb["ham"]
+              + "\\newcommand{\\SmsPosBatchPct}{%.0f}\n" % (100 * pb["positive"] / pb["positive_total"])
+              + "\\newcommand{\\SmsAccPosIn}{%.1f}\n" % a["positive_in_batches"]
+              + "\\newcommand{\\SmsAccPosOut}{%.1f}\n" % a["positive_outside"]
+              + "\\newcommand{\\SmsAccPosOutN}{%d}\n" % a["positive_outside_n"]
+              + "\\newcommand{\\SmsLboTexts}{%d}\n" % lb["held_out_texts"]
+              + "\\newcommand{\\SmsLboTrainPos}{%d}\n" % lb["train_positive_rows"]
+              + "\\newcommand{\\SmsLboProbe}{%.2f}\n" % lb["probe_recall"]
+              + "\\newcommand{\\SmsLboArm}{%.2f}\n" % lb["text_arm_recall"]
+              + "\\newcommand{\\SmsLboCtlProbe}{%.2f--%.2f}\n" % (min(lb["control_probe_recall"]), max(lb["control_probe_recall"]))
+              + "\\newcommand{\\SmsLboCtlArm}{%.2f--%.2f}\n" % (min(lb["control_text_arm_recall"]), max(lb["control_text_arm_recall"]))
+              + "\\newcommand{\\SmsPureMixF}{%.3f}\n" % pm["f1"]
+              + "\\newcommand{\\SmsPureMixR}{%.3f}\n" % pm["recall"]
+              + "\\newcommand{\\SmsPureMixP}{%.3f}\n" % pm["precision"]
+              + "\\newcommand{\\SmsPureMixTest}{%s}\n" % _fmt(pm["test_rows"])
+              + "\\newcommand{\\SmsPureMixTrain}{%s}\n" % _fmt(pm["train_rows"])
+              + "\\newcommand{\\SmsUrlCeilNoUrlPct}{%.1f}\n" % uc["test_positive_no_url_pct"]
+              + "\\newcommand{\\SmsUrlCeilR}{%.3f}\n" % uc["max_recall"]
+              + "\\newcommand{\\SmsUrlCeilF}{%.3f}\n" % uc["max_f1"]
+              + "\\newcommand{\\SmsUrlCeilPosUrl}{%d}\n" % uc["test_positive_with_url"]
+              + "\\newcommand{\\SmsTwinWs}{%d}\n" % tw["whitespace"]["test_rows"]
+              + "\\newcommand{\\SmsTwinLoose}{%d}\n" % tw["case_punct"]["test_rows"]
+              + "\\newcommand{\\SmsTwinLoosePos}{%d}\n" % tw["case_punct"]["positive"]
+              + "\\newcommand{\\SmsAugTrainRows}{%d}\n" % b["august_rows"]["train"]
+              + "".join("\\newcommand{\\SmsIdPrefix%s}{%d of %s}\n" % (k.capitalize(), v["positive"], _fmt(v["ham"] + v["positive"]))
+                        for k, v in b["id_prefix"].items()))
+    if os.path.exists(EXTRA):
+        e = json.load(open(EXTRA, encoding="utf-8"))
+        u, t, f = e["url_char"], e["truncation"], e["fp_examples"]
+        m += ("\\newcommand{\\SmsUrlCharHasF}{%.3f}\n" % u["has_url_f1"]
+              + "\\newcommand{\\SmsUrlCharHasAuc}{%.3f}\n" % u["has_url_roc_auc"]
+              + "\\newcommand{\\SmsUrlCharAllF}{%.3f}\n" % u["all_test_f1"]
+              + "\\newcommand{\\SmsUrlCharHasN}{%d}\n" % u["test_rows_with_url"]
+              + "\\newcommand{\\SmsTruncHamOneTwoEight}{%.1f}\n" % t["ham"]["seg_over_128_pct"]
+              + "\\newcommand{\\SmsTruncPosOneTwoEight}{%.1f}\n" % t["positive"]["seg_over_128_pct"]
+              + "\\newcommand{\\SmsTruncRawTwoFiveSix}{%.1f}\n" % max(t["ham"]["raw_over_256_pct"], t["positive"]["raw_over_256_pct"])
+              + "\\newcommand{\\SmsFpAny}{%d}\n" % f["ham_rows_flagged_by_any_seed"]
+              + "\\newcommand{\\SmsFpMajority}{%d}\n" % f["ham_rows_flagged_by_majority"]
+              + "\\newcommand{\\SmsFpMajorityAug}{%d}\n" % f["majority_in_august_batch"])
+    if os.path.exists(CUES):
+        c = json.load(open(CUES, encoding="utf-8"))
+        L = c.get("language") or {}
+        if L.get("nonlinear_floor"):
+            nf = L["nonlinear_floor"]
+            m += ("\\newcommand{\\SmsCueAllGbm}{%.3f}\n" % nf["all_shallow_gbm"]["f1"]
+                  + "\\newcommand{\\SmsCueFormatLr}{%.3f}\n" % nf["all_shallow_format_lr"]["f1"]
+                  + "\\newcommand{\\SmsCueFormatGbm}{%.3f}\n" % nf["all_shallow_format_gbm"]["f1"]
+                  + "\\newcommand{\\SmsTfidfNoBracket}{%.3f}\n" % L["tfidf"]["word_no_brackets"]
+                  + "\\newcommand{\\SmsSenderTagPos}{%.1f}\n" % L["sender_tag_pct"]["1"]
+                  + "\\newcommand{\\SmsSenderTagHam}{%.1f}\n" % L["sender_tag_pct"]["0"]
+                  + "\\newcommand{\\SmsCarrierHam}{%.1f}\n" % L["carrier_mention_pct"]["0"]
+                  + "\\newcommand{\\SmsCarrierPos}{%.1f}\n" % L["carrier_mention_pct"]["1"]
+                  + "\\newcommand{\\SmsTbPrefixMsgs}{%d}\n" % L["tb_usage"]["0"]["prefix_msgs"]
+                  + "\\newcommand{\\SmsTbBareMsgs}{%d}\n" % L["tb_usage"]["0"]["bare_tb_msgs"])
+    if os.path.exists(FUSION_PSL):
+        q = json.load(open(FUSION_PSL, encoding="utf-8"))
+        bq = q["cluster_bootstrap"]
+        m += ("\\newcommand{\\SmsPslUrl}{%.3f}\n" % q["arms"]["url"]["f1"]
+              + "\\newcommand{\\SmsPslFusion}{%.3f}\n" % q["arms"]["fusion"]["f1"]
+              + "\\newcommand{\\SmsPslTTwo}{%+.3f}\n" % bq["T2_text_minus_url"]["mean"]
+              + "\\newcommand{\\SmsPslTTwoCI}{[%+.3f,%+.3f]}\n" % tuple(bq["T2_text_minus_url"]["ci95"])
+              + "\\newcommand{\\SmsPslTOne}{%+.3f}\n" % bq["T1_fusion_minus_url"]["mean"]
+              + "\\newcommand{\\SmsPslTOneCI}{[%+.3f,%+.3f]}\n" % tuple(bq["T1_fusion_minus_url"]["ci95"])
+              + "\\newcommand{\\SmsPslPost}{%+.3f}\n" % bq["posthoc_fusion_minus_text"]["mean"]
+              + "\\newcommand{\\SmsPslPostCI}{[%+.3f,%+.3f]}\n" % tuple(bq["posthoc_fusion_minus_text"]["ci95"])
+              + "\\newcommand{\\SmsPslHasUrlN}{%d}\n" % q["diagnostics"]["url/has_url"]["n"]
+              + "\\newcommand{\\SmsPslUrlHas}{%.3f}\n" % q["diagnostics"]["url/has_url"]["f1"])
+    if os.path.exists(PREDEC["ft"]):
+        r = json.load(open(PREDEC["ft"], encoding="utf-8"))
+        tm = r["cluster_bootstrap"]["tfidf_minus_text"]
+        m += ("\\newcommand{\\SmsFrozenFive}{%.3f}\n" % r["arms"]["text"]["f1"]
+              + "\\newcommand{\\SmsTfidfMinusFrozen}{%+.3f}\n" % tm["mean"]
+              + "\\newcommand{\\SmsTfidfMinusFrozenCI}{[%+.3f,%+.3f]}\n" % tuple(tm["ci95"]))
+    if os.path.exists(ROB):
+        rb = json.load(open(ROB, encoding="utf-8"))
+        m += ("\\newcommand{\\SmsRobPostCI}{[%+.3f,%+.3f]}\n" % tuple(rb["posthoc_fusion_minus_text"]["ci95"])
+              + "\\newcommand{\\SmsRobTTwoCI}{[%+.3f,%+.3f]}\n" % tuple(rb["T2_text_minus_url"]["ci95"])
+              + "\\newcommand{\\SmsRobHoldout}{%d}\n" % round(100 * rb["split"]["holdout"]))
+    return m
+
+
+def tab_batches(out):
+    """Batch x class, every value of the publisher's date column, three column groups."""
+    if not os.path.exists(BATCH):
+        return None
+    b = json.load(open(BATCH, encoding="utf-8"))["batches"]
+    keyf = lambda d: (parse_date(d) or dt.date(2100, 1, 1))
+    items = sorted(b.items(), key=lambda kv: keyf(kv[0]))
+    k = -(-len(items) // 3)
+    cols = [items[i * k:(i + 1) * k] for i in range(3)]
+    buf = io.StringIO()
+    buf.write("\\begin{table}[htbp]\n\\centering\\footnotesize\n"
+              "\\caption{Rows per value of the publisher's \\texttt{date} field (read as a "
+              "collection batch) and class. Pos.\\ is the positive (spam/scam) class.}\n"
+              "\\label{tab:sms_batches}\n\\setlength{\\tabcolsep}{3pt}\n"
+              "\\begin{tabular}{lrr@{\\qquad}lrr@{\\qquad}lrr}\n\\toprule\n"
+              "Batch & Ham & Pos. & Batch & Ham & Pos. & Batch & Ham & Pos. \\\\\n\\midrule\n")
+    for i in range(k):
+        cells = []
+        for c in cols:
+            if i < len(c):
+                d, v = c[i]
+                dd = parse_date(d)
+                cells.append(f"{dd.isoformat() if dd else 'undated'} & {v['ham']} & {v['positive']}")
+            else:
+                cells.append(" & & ")
+        buf.write(" & ".join(cells) + " \\\\\n")
+    buf.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
+    write_generated(out, buf.getvalue())
+    return out
+
+
+def tab_flow(msgs, out):
+    """Every evaluation subset in the paper, in one place, with where it comes from."""
+    need = (FUSION, ROB, TEMPORAL, BATCH, PREDEC["ft"], FUSION_PSL)
+    if not all(os.path.exists(p) for p in need):
+        return None
+    fr = json.load(open(FUSION, encoding="utf-8"))
+    rb = json.load(open(ROB, encoding="utf-8"))["split"]
+    tp = json.load(open(TEMPORAL, encoding="utf-8"))["runs"]
+    ba = json.load(open(BATCH, encoding="utf-8"))
+    ps = json.load(open(FUSION_PSL, encoding="utf-8"))
+    rows = collections.Counter((m["split"], m["label"]) for m in msgs)
+    texts = {s: len({m["text_sha1"] for m in msgs if m["split"] == s}) for s in ("train", "test")}
+    d = fr["diagnostics"]
+    lines = [
+        ("Corpus", f"{_fmt(len(msgs))} rows, {_fmt(len({m['text_sha1'] for m in msgs}))} distinct texts",
+         "\\S\\ref{sec:corpus}"),
+        ("Registered split, train", f"{_fmt(rows[('train', '0')] + rows[('train', '1')])} rows "
+         f"({rows[('train', '1')]} pos.), {_fmt(texts['train'])} texts", "all registered arms"),
+        ("Registered split, test", f"{rows[('test', '0')] + rows[('test', '1')]} rows "
+         f"({rows[('test', '1')]} pos.), {texts['test']} texts", "Table~\\ref{tab:sms_fusion}"),
+        ("\\quad test rows with a URL", f"{d['url/has_url']['n']} ({d['url/has_url']['n_pos']} pos.); "
+         f"{ps['diagnostics']['url/has_url']['n']} under the suffix rule", "has-URL diagnostic"),
+        ("\\quad test rows without a URL", f"{d['url/no_url']['n']} ({d['url/no_url']['n_pos']} pos.)",
+         "no-URL diagnostic"),
+        ("\\quad shortened positive rows", f"{d['url/shortened_phish']['n']}", "registered stratum"),
+        ("Similarity-grouped split", f"train {_fmt(rb['n_train'])}, test {rb['n_test']} "
+         f"({rb['test_phishing']} pos.)", "\\S\\ref{sec:robust}"),
+        ("Batch check 1", f"train {_fmt(tp['registered_august']['n_train'])}, test "
+         f"{tp['registered_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
+        ("Batch check 2", f"train {_fmt(tp['without_august']['n_train'])}, test "
+         f"{tp['without_august']['n_test']}", "\\S\\ref{sec:sms_batches}"),
+        ("Batch check 3", f"train {_fmt(tp['forward_august']['n_train'])}, test "
+         f"{tp['forward_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
+        ("Leave-batches-out", f"train {_fmt(ba['leave_batches_out']['train_rows'])}, test "
+         f"{ba['leave_batches_out']['held_out_texts']} pos. texts", "\\S\\ref{sec:sms_batches}"),
+        ("Pure batches $\\rightarrow$ mixed", f"train {_fmt(ba['pure_to_mixed']['train_rows'])}, "
+         f"test {_fmt(ba['pure_to_mixed']['test_rows'])} ({ba['pure_to_mixed']['test_positive']} pos.)",
+         "\\S\\ref{sec:sms_batches}"),
+    ]
+    buf = io.StringIO()
+    buf.write("\\begin{table}[htbp]\n\\centering\\footnotesize\n"
+              "\\caption{Every evaluation set in the paper and where it is used. Pos.\\ counts "
+              "positive (spam/scam) rows.}\n\\label{tab:sms_flow}\n"
+              "\\begin{tabular}{p{30mm}p{30mm}p{18mm}}\n\\toprule\n"
+              "Set & Size & Used in \\\\\n\\midrule\n")
+    for a_, b_, c_ in lines:
+        buf.write(f"{a_} & {b_} & {c_} \\\\\n")
+    buf.write("\\bottomrule\n\\end{tabular}\n\\end{table}\n")
+    write_generated(out, buf.getvalue())
+    return out
 
 
 PREDEC = {"ft": os.path.join(ROOT, "data", "processed", "sms", "phobert_ft.json"),
@@ -438,15 +659,21 @@ def fig_ladder(cues, fus, out):
     # earlier version drew the taller one (word TF-IDF) in pale blue while PhoBERT took full-strength
     # orange, so the picture ranked them opposite to their numbers and put a text model in the URL
     # arm's hue. Fusion stays pale because it is the arm that buys nothing.
+    nf = (cues.get("language") or {}).get("nonlinear_floor", {})
+    ft = (json.load(open(PREDEC["ft"], encoding="utf-8"))["arms"]["text_ft"]["f1"]
+          if os.path.exists(PREDEC["ft"]) else 0.0)
     arms = [("URL only\n(CompPhish-21)", fus["arms"]["url"]["f1"], BLUE),
-            ("bracketed tokens\n(not language)", cues["baselines"]["tokens"]["f1"], GRAY),
-            ("diacritics + length\n+ tokens", floor, GRAY),
-            ("word TF-IDF\n(linear)", cues.get("language", {}).get("tfidf", {}).get("word", 0.0),
+            ("bracketed tokens\n(no words read)", cues["baselines"]["tokens"]["f1"], GRAY),
+            ("diacritics + length\n+ tokens, linear", floor, GRAY),
+            ("same + message format,\nboosted trees",
+             nf.get("all_shallow_format_gbm", {}).get("f1", 0.0), GRAY),
+            ("word TF-IDF\n(linear, 1 seed)", cues.get("language", {}).get("tfidf", {}).get("word", 0.0),
              ORANGE),
-            ("text only\n(PhoBERT)", fus["arms"]["text"]["f1"], ORANGE),
+            ("text only\n(frozen PhoBERT)", fus["arms"]["text"]["f1"], ORANGE),
+            ("fine-tuned PhoBERT\n(post-hoc, 5 seeds)", ft, ORANGE),
             ("fusion\n(text + URL)", fus["arms"]["fusion"]["f1"], FILL_O)]
     arms = [a for a in arms if a[1] > 0]
-    fig, ax = plt.subplots(figsize=(5.6, 3.2))
+    fig, ax = plt.subplots(figsize=(5.6, 3.9))
     y = np.arange(len(arms))[::-1]
     ax.barh(y, [a[1] for a in arms], 0.62,
             color=[a[2] for a in arms], edgecolor=INK, linewidth=0.7)
@@ -482,7 +709,7 @@ def tab_logodds(cues, out):
     ph, ha = lang["log_odds"]["phishing"][:10], lang["log_odds"]["ham"][:10]
     buf = io.StringIO()
     buf.write("\\begin{table}[htbp]\n\\centering\\small\n"
-              "\\caption{What the wording is, per class.}\n\\label{tab:sms_logodds}\n"
+              "\\caption{The ten words that most mark each class (log-odds with an informative prior).}\n\\label{tab:sms_logodds}\n"
               "\\begin{tabular}{lrrr@{\\qquad}lrrr}\n\\toprule\n"
               "\\multicolumn{4}{c}{marks the positive class} & \\multicolumn{4}{c}{marks ham} \\\\\n"
               "\\cmidrule(lr){1-4}\\cmidrule(lr){5-8}\n"
@@ -495,10 +722,11 @@ def tab_logodds(cues, out):
               "\\\\[4pt]\n\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Log-odds ratio with an informative Dirichlet prior, over the whole corpus. The score $z$ is\n"
               "prior-regularised, and the two count columns are raw occurrences. The positive\n"
-              "column is led by function words written with diacritics. The ham column is led by\n"
-              "unaccented forms of the same language, plus carrier boilerplate (\\texttt{lh}, \\texttt{viettel}),\n"
-              "the regulated brand-SMS prefix \\texttt{[TB]} (\\texttt{tb}) and the publisher's\n"
-              "redaction tokens (\\texttt{time}). Post-hoc and unregistered.\n"
+              "column mixes accented Vietnamese words with \\texttt{http}: the text arm sees the URL\n"
+              "scheme as a word. The ham column is led by unaccented forms of the same language,\n"
+              "carrier boilerplate (\\texttt{lh}, \\texttt{viettel}) and \\texttt{tb}, which is the\n"
+              "\\texttt{[TB]} notice prefix in about half of its ham messages and the abbreviation of\n"
+              "\\vntext{thuê bao} (subscriber) in the rest. Post-hoc and unregistered.\n"
               "\\end{minipage}\n\\end{table}\n")
     write_generated(out, buf.getvalue())
     return out
@@ -705,7 +933,7 @@ def tab_examples(raw, msgs, out):
     buf.write("%% generated by scripts/make_smishing_assets.py from "
               "full_dataset.csv; do not edit\n")
     buf.write("\\begin{table*}[t]\n\\centering\n"
-              "\\caption{Positive-labelled rows quoted from the corpus.}\n"
+              "\\caption{Five positive-labelled rows quoted from the corpus, chosen by the host they carry.}\n"
               "\\label{tab:sms_examples}\n\\footnotesize\n\\setlength{\\tabcolsep}{3pt}\n"
               "\\begin{tabular}{p{26mm}p{20mm}p{72mm}p{46mm}}\n\\toprule\n"
               "Pretext (gloss) & Row & Message, first %d characters & Embedded host \\\\\n\\midrule\n"
@@ -716,8 +944,9 @@ def tab_examples(raw, msgs, out):
     buf.write("\\bottomrule\n\\end{tabular}\n\\\\[4pt]\n"
               "\\begin{minipage}{0.94\\linewidth}\\footnotesize\n"
               "Each row is the first positive-labelled message in the published file that carries\n"
-              "the host in the last column, quoted verbatim and cut at a word boundary. Bracketed\n"
-              "tokens are the publisher's. The pretext is a gloss added in this study. The table illustrates\n"
+              "the host in the last column, quoted verbatim and cut at a word boundary. Upper-case\n"
+              "bracketed placeholders such as [MONEY] are the publisher's; other brackets are part of\n"
+              "the message. The pretext is a gloss added in this study. The table illustrates\n"
               "measured corpus properties and does not estimate pretext frequency.\n"
               "\\end{minipage}\n\\end{table*}\n")
     write_generated(out, buf.getvalue())
@@ -729,7 +958,10 @@ def main() -> int:
         if not os.path.exists(p):
             print(f"[!] {p} missing — run scripts/sms_corpus_import.py", file=sys.stderr)
             return 1
-    msgs, urls = read(MSG), read(URLS)
+    msgs = read(MSG)
+    # the corpus description uses URLs that end in a real public suffix; the registered
+    # extractor's sentence fragments stay in sms_urls.csv with valid = 0
+    urls = [u for u in read(URLS) if u.get("valid", "1") == "1"]
     raw = read_raw()
     os.makedirs(FIG, exist_ok=True)
 
@@ -737,7 +969,9 @@ def main() -> int:
     fig_hosts(urls, os.path.join(FIG, "sms_hosts.pdf"))
     TLD_TABLE_N, TLD_FIG_N = 5, 8    # Table 2 ranks five suffixes, Figure 3 draws eight
     per_tld = fig_tld(urls, os.path.join(FIG, "sms_tld.pdf"), top=TLD_FIG_N)
-    short = fig_shortener(urls, os.path.join(FIG, "sms_shortener.pdf"))
+    snap = json.load(open(SNAP, encoding="utf-8"))
+    short = fig_shortener(urls, os.path.join(FIG, "sms_shortener.pdf"),
+                          set(snap.get("operator_deep_links", [])))
 
     # the temporal confound, as a number the prose can cite
     dead = [m for m, h_, p_ in zip(months, ham, ph) if p_ == 0]
@@ -783,6 +1017,7 @@ def main() -> int:
     tab_examples(raw, msgs, os.path.join(SEC, "tab_sms_examples.tex"))
 
     emit_results()
+    tab_flow(msgs, os.path.join(SEC, "tab_sms_flow.tex"))
 
     print(f"  timeline {months[0]}..{months[-1]} ({len(months)} months); "
           f"{len(dead)} month(s) with zero phishing: {dead}")

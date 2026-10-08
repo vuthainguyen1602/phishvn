@@ -186,3 +186,47 @@ section records where the paper now departs from what was registered, and why.
 - **Source revision.** The corpus is analysed at Hugging Face revision
   `a90e2bd7e8df2376939658075ba8094dcee488ad`; on 2026-10-07 the Hub copy of
   `full_dataset.csv` matched the local file byte for byte (SHA-1 7dcbfdbd…).
+
+### Deviation record, 2026-10-08 (appended; nothing above is edited)
+
+Written after the manuscript was audited against the corpus a second time. The registered
+contrasts, split, seeds and arms are unchanged and were refitted only to retain quantities the
+first run did not store; their F1 values reproduce exactly (0.607 / 0.929 / 0.927).
+
+- **URL extractor.** The ingestion code bound above (`c3c913b`) takes any host-like regex match as
+  a URL. 109 of its 1,802 matches end in no Public Suffix List suffix (sentence fragments such as
+  `ngay.tcqc` ×23 and `tp.hcm` ×9), and 56 messages count as URL-bearing only because of them. The
+  registered arms keep the registered extractor. The corpus description now uses a suffix rule
+  (`has_public_suffix`), and a sensitivity refit with that rule (`train_sms_fusion.py --url-rule
+  psl`, `fusion_results_psl.json`) is reported beside the registered numbers: URL-only 0.604,
+  fusion 0.934, fusion − text +0.005 [−0.002, +0.013]. No conclusion changes.
+- **Shortener list.** The bound list counted `zalo.me`, a Zalo profile/chat link (16 positive,
+  3 ham URLs), and missed app deep-link services that send a short opaque path to a redirect
+  (`go.link`, `onelink.me`, `onelink.to`, `lzd.co`, `grb.to`, `lnkd.in`). The registered
+  shortened-URL stratum keeps the bound list (4 test messages, as recorded above). The corpus
+  description uses the corrected list: positive 7 of 510 URLs (1.4%), ham 206 of 1,183 (17.4%), of
+  which 177 are Viettel's own app deep links; without them ham is 2.9%. The "shortening is three
+  times commoner in ham" statement in "What was already known at registration" described the
+  bound list and is not repeated in the paper. The premise this study was designed around still
+  fails, for a narrower reason: positive-labelled URLs are rarely shortened.
+- **Confusion counts (registered diagnostic, previously not reported).** `train_sms_fusion.py`
+  now stores per-seed TP/FP/FN/TN, FPR and threshold-free scores, and the paper reports the mean
+  counts and FPR for all three arms. The 2026-10-03 entry saying they were not retained no longer
+  describes the paper.
+- **Shortened stratum and no-URL rows (registered diagnostics).** The paper now prints every arm on
+  both: on the 4 shortened positive test messages URL-only flags 1 on average, text and fusion 4;
+  on the 256 no-URL test rows text-only scores 0.937 and fusion 0.940.
+- **Late-fusion stack.** Its out-of-fold probabilities were fitted on folds stratified over rows,
+  so repeated texts could sit in the fold that scored them. The folds are now grouped by message
+  text; the stack moves from 0.9305 to 0.9308 and its interval still includes zero.
+- **Post-hoc analyses added, all labelled post-hoc in the paper.** Batch × class and a
+  leave-batches-out test (`sms_batch_audit.py`: two batches hold 528 of 798 positive rows; text
+  models fitted without them flag 0.47 (frozen-PhoBERT head) and 0.13 (TF–IDF probe) of their
+  positive texts, against 0.80–0.84 and 0.70–0.74 for a random hold-out of the same size); a
+  non-linear and format-feature shallow floor (boosted trees 0.794 and 0.885); a character n-gram
+  URL probe and truncation shares (`sms_extra_diagnostics.py`); the URL arm's ceiling on the
+  registered split (38.5% of positive test messages carry no URL, so URL-only F1 ≤ 0.762); and an
+  error analysis of the text arm's false positives.
+- **Registered rule for T1.** The paper now states the registered success rule (≥ 3 points with an
+  interval excluding zero) where T1 is reported, and reads it descriptively because the registered
+  test is withdrawn.
