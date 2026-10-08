@@ -164,7 +164,8 @@ def fig_deltas(r, boot, why, out):
     for yy, (_lab, m, ci) in zip(y, rows):
         ax.plot([ci[0], ci[1]], [yy, yy], color=BLUE, lw=2.2, solid_capstyle="butt", zorder=2)
         ax.plot([m], [yy], "o", ms=6, color=ORANGE, mec=INK, mew=0.7, zorder=3)
-        ax.text(ci[1] + 0.0012, yy, f"{m:+.3f}\n[{ci[0]:+.3f}, {ci[1]:+.3f}]",
+        sg = lambda v: f"{v:+.3f}".replace("-", "\u2212")
+        ax.text(ci[1] + 0.0012, yy, f"{sg(m)}\n[{sg(ci[0])}, {sg(ci[1])}]",
                 va="center", ha="left", fontsize=6.5, color=INK)
     ax.set_yticks(y, [r_[0] for r_ in rows], fontsize=7)
     ax.set_ylim(-0.6, len(rows) - 0.4)
@@ -173,6 +174,7 @@ def fig_deltas(r, boot, why, out):
     pad = (hi - lo) * 0.10
     ax.set_xlim(lo - pad, hi + (hi - lo) * 0.75)
     ax.set_xlabel("difference in positive-class F1", fontsize=7.5)
+    ax.set_xticks([t for t in (-0.01, 0.0, 0.01, 0.02, 0.03, 0.04) if lo - pad <= t <= hi + (hi - lo) * 0.75])
     ax.tick_params(axis="x", labelsize=7)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
@@ -433,6 +435,15 @@ def audit_macros() -> str:
               + "\\newcommand{\\SmsRevAuc}{%.3f}\n" % rv["probe"]["roc_auc"]
               + "\\newcommand{\\SmsRevRecTwo}{%.2f}\n" % rv["probe"]["recall_at_2pct_fpr"]
               + "\\newcommand{\\SmsRevTexts}{%d}\n" % rv["eval_positive_texts"]
+              + "\\newcommand{\\SmsRevCtlAuc}{%s}\n" % rng_(rv["control_span"]["roc_auc"], 3)
+              + "\\newcommand{\\SmsRevCtlRecTwo}{%s}\n" % rng_(rv["control_span"]["recall_at_2pct_fpr"])
+              + "".join("\\newcommand{\\SmsLo%s%s}{%.3f}\n" % (gn, mn, lo[gk][mk])
+                        for gk, gn in (("by_batch", "b"), ("by_component_5fold", "c"))
+                        for mk, mn in (("precision_at_0.5", "P"), ("recall_at_0.5", "R"),
+                                       ("recall_at_2pct_fpr", "RecTwo"),
+                                       ("recall_at_2pct_fpr_two_batches", "RecTwoTwo"),
+                                       ("recall_at_2pct_fpr_other", "RecTwoOther")))
+              + "\\newcommand{\\SmsLobSpan}{%d}\n" % lo["components_spanning_batches"]
               + "\\newcommand{\\SmsLobAuc}{%.3f}\n" % lo["by_batch"]["roc_auc"]
               + "\\newcommand{\\SmsLobF}{%.3f}\n" % lo["by_batch"]["f1_at_0.5"]
               + "\\newcommand{\\SmsLocAuc}{%.3f}\n" % lo["by_component_5fold"]["roc_auc"]
@@ -710,7 +721,9 @@ def fig_ladder(cues, fus, out):
     ax.barh(y, [a[1] for a in arms], 0.62,
             color=[a[2] for a in arms], edgecolor=INK, linewidth=0.7)
     for yy, (_, v, _c) in zip(y, arms):
-        ax.text(v + 0.012, yy, f"{v:.3f}", va="center", ha="left", fontsize=8, color=INK)
+        # white box: the dashed floor line runs through the labels of the short bars
+        ax.text(v + 0.012, yy, f"{v:.3f}", va="center", ha="left", fontsize=8, color=INK,
+                bbox=dict(boxstyle="square,pad=0.1", fc="white", ec="none"), zorder=3)
     ax.axvline(floor, color=GRAY, ls="--", lw=0.9, zorder=0)
     ax.set_yticks(y, [a[0] for a in arms], fontsize=8)
     ax.set_xlabel("positive-class F1")

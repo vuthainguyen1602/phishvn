@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Post-hoc, NOT registered: three checks a referee asked for on 2026-10-08.
+"""Post-hoc, NOT registered: URL-character probe, truncation, error analysis and floor intervals.
 
   url_char     Is "the URL channel is weak" a statement about URLs or about the 21 CompPhish
                columns? A character 2-5-gram TF-IDF over the first URL (public-suffix rule),

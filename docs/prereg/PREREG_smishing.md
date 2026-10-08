@@ -259,3 +259,21 @@ Written after a second audit of the revised manuscript. Registered quantities ar
   and the strict one by +0.082 [+0.040, +0.128] (cluster bootstrap over distinct test texts).
 - **Suffix-rule deltas** are now the seed-paired means, the same estimator as the registered ones
   (T1 +0.330, T2 +0.325).
+
+### Deviation record, 2026-10-08, third entry (appended; nothing above is edited)
+
+- **The second entry's reading is withdrawn.** It read leave-one-batch-out as "held-out batches
+  are still ranked well, but the default threshold no longer separates them". Recall at a 2% ham
+  false-positive rate on the pooled out-of-group scores falls from 0.924 (component-grouped
+  five-fold) to 0.385, so the loss sits in the low false-positive region a detector uses and is a
+  ranking loss there, not only a misplaced cut-off. The paper now says that ROC-AUC stays high but
+  recall at a low false-positive rate falls by more than half (0.248 for the two positive batches,
+  0.612 for the other positives).
+- **Leave-one-batch-out grouping corrected.** The second entry said every design kept
+  near-duplicates together; leave-one-batch-out grouped by batch only, and 79 near-duplicate
+  components span more than one batch. Each component now goes whole to the batch most of its
+  texts belong to, and the undated rows form one group (22 groups). Results move slightly against
+  the batch: F1 0.699 → 0.682, ROC-AUC 0.958 → 0.952.
+- **Reverse direction controlled.** A matched random hold-out of the same number of positive texts
+  (five draws) gives ROC-AUC 0.988–0.993 and recall at 2% FPR 0.88–0.93, against 0.971 and 0.61
+  for the reverse direction.

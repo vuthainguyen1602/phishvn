@@ -5,14 +5,15 @@ WHY THIS EXISTS. The publisher's `date` column behaves as a batch (entry) date, 
 is not spread across batches: two batches, 2026-07-22 and 2026-07-24, hold 528 of the 798
 positive-labelled rows and one ham row between them. A random split, even one keyed on the text,
 puts rows of those batches on both sides, so a model can score well by recognising what is
-specific to them. This script measures that and the related confounds a referee raised on
-2026-10-08:
+specific to them. This script measures that and related corpus properties:
 
   * batch x class, and how many rows sit in batches that are >= 95% one class
   * the diacritic rate inside and outside the two positive-only batches
-  * a leave-batches-out test: fit without the two batches, score on their positive rows, against a
-    control that holds out the same number of positive texts at random
-  * pure batches -> mixed batches
+  * every batch held out in turn, against five folds grouped by near-duplicate component, with
+    ROC-AUC, precision/recall at 0.5 and recall at a matched 2% ham false-positive rate
+  * the two positive batches held out, against a random hold-out matched on positive training
+    rows, scored on a fixed held-out ham set
+  * the reverse direction (only the two batches' positives in training), with a matched control
   * the ceiling the URL arm had on the registered split (positives with no URL score zero)
   * test rows whose text differs from a training text only in whitespace, case or punctuation
   * message_id prefix x class
@@ -202,33 +203,70 @@ def main() -> int:
                          for k in ("probe", "text_arm")},
         "control_train_positive_rows": [c["train_positive_rows"] for c in controls]}
 
-    # --- the reverse direction: trained on the two batches' positives only (plus ham)
+    # --- the reverse direction: trained on the two batches' positives only (plus ham), against a
+    # control that holds out random positive components until as many positive texts are held out
     other_pos = sorted({h for h in sha[~inb & (y == 1)]} - set(held_txt))
-    tr_rev = ~np.isin(row_comp, list({comp_of[h] for h in other_pos} | eval_ham_comps))
-    ev = [first[h] for h in other_pos] + [first[h] for h in eval_ham]
-    yev = np.array([1] * len(other_pos) + [0] * len(eval_ham))
-    out["reverse"] = {"train_positive_rows": int((tr_rev & (y == 1)).sum()),
-                      "eval_positive_texts": len(other_pos),
-                      "probe": scores(yev, probe().fit(texts[tr_rev], y[tr_rev])
-                                      .predict_proba(texts[ev])[:, 1])}
 
-    # --- every batch held out in turn (texts assigned to the batch of their first row), against
-    # a five-fold split grouped by near-duplicate component; pooled out-of-fold scores
+    def score_held(held_pos):
+        held_c = {comp_of[h] for h in held_pos} | eval_ham_comps
+        tr_ = ~np.isin(row_comp, list(held_c))
+        ev_ = [first[h] for h in held_pos] + [first[h] for h in eval_ham]
+        yev_ = np.array([1] * len(held_pos) + [0] * len(eval_ham))
+        return int((tr_ & (y == 1)).sum()), scores(
+            yev_, probe().fit(texts[tr_], y[tr_]).predict_proba(texts[ev_])[:, 1])
+
+    n_tr, sc_rev = score_held(other_pos)
+    rev_ctl = []
+    for s_ in CONTROL_SEEDS:
+        order = np.random.default_rng(200 + s_).permutation(pos_comps)
+        held_c, hp = set(), []
+        for c in order:
+            held_c.add(c)
+            hp = [h for h in utxt if comp_of[h] in held_c and lab_of[h] == 1]
+            if len(hp) >= len(other_pos):
+                break
+        n_c, sc_c = score_held(hp)
+        rev_ctl.append({"train_positive_rows": n_c, "eval_positive_texts": len(hp), "probe": sc_c})
+    out["reverse"] = {"train_positive_rows": n_tr, "eval_positive_texts": len(other_pos),
+                      "probe": sc_rev, "controls": rev_ctl,
+                      "control_span": {m_: [round(min(c["probe"][m_] for c in rev_ctl), 3),
+                                            round(max(c["probe"][m_] for c in rev_ctl), 3)]
+                                       for m_ in ("roc_auc", "recall_at_2pct_fpr")}}
+
+    # --- every batch held out in turn, against five folds grouped by near-duplicate component.
+    # Groups: each near-duplicate component goes whole to the batch most of its texts come from
+    # (a text's batch is the batch of its first row), so no near-twin of a held-out text is
+    # trained on. Rows without a date form one group of their own.
     from sklearn.model_selection import GroupKFold
     from sklearn.metrics import roc_auc_score
     T = np.array([texts[first[h]] for h in utxt], dtype=object)
     Y = np.array([lab_of[h] for h in utxt])
-    B = np.array([date[first[h]] or "(undated)" for h in utxt])
+    B0 = np.array([date[first[h]] or "(undated)" for h in utxt])
     C = np.array([comp_of[h] for h in utxt])
+    maj = {c: collections.Counter(B0[C == c]).most_common(1)[0][0] for c in set(C.tolist())}
+    B = np.array([maj[c] for c in C])
+    two = np.isin(B0, POS_BATCHES)
+
     def pooled(groups, k):
         oof = np.zeros(len(Y))
         for a_, b_ in GroupKFold(k).split(T, Y, groups):
             oof[b_] = probe().fit(T[a_], Y[a_]).predict_proba(T[b_])[:, 1]
+        thr = np.quantile(oof[Y == 0], 0.98)
+        pred = (oof >= 0.5).astype(int)
         return {"roc_auc": round(float(roc_auc_score(Y, oof)), 3),
-                "f1_at_0.5": round(float(f1_score(Y, (oof >= 0.5).astype(int))), 3)}
+                "f1_at_0.5": round(float(f1_score(Y, pred)), 3),
+                "precision_at_0.5": round(float(precision_score(Y, pred)), 3),
+                "recall_at_0.5": round(float(recall_score(Y, pred)), 3),
+                "ham_fpr_at_0.5": round(float(pred[Y == 0].mean()), 3),
+                "recall_at_2pct_fpr": round(float((oof[Y == 1] > thr).mean()), 3),
+                "recall_at_2pct_fpr_two_batches": round(float((oof[(Y == 1) & two] > thr).mean()), 3),
+                "recall_at_2pct_fpr_other": round(float((oof[(Y == 1) & ~two] > thr).mean()), 3)}
     out["leave_one_batch_out"] = {"by_batch": pooled(B, len(set(B))),
                                   "by_component_5fold": pooled(C, 5),
-                                  "batches": len(set(B)), "unit": "distinct text"}
+                                  "batches": len(set(B)), "undated_is_one_group": True,
+                                  "components_spanning_batches": int(sum(
+                                      1 for c in set(C.tolist()) if len(set(B0[C == c])) > 1)),
+                                  "unit": "distinct text; near-duplicate components kept whole"}
 
     # --- positives without a URL: how many sit in the two batches (registered extractor)
     nurl = np.array([int(r["n_urls"]) for r in rows])
