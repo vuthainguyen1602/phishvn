@@ -207,14 +207,16 @@ def fig_robust(cues, fus, out):
     y = np.arange(len(labels))[::-1]
     for ax, (title, vals, floor, tok) in zip(axes, panels):
         ax.barh(y, vals, 0.58, color=cols, edgecolor=INK, linewidth=0.7, zorder=2)
-        ax.axvline(floor, color=GRAY, ls="--", lw=1.0, zorder=3)
-        ax.axvline(tok, color=GRAY, ls=":", lw=1.2, zorder=3)
+        # Drawn over the bars only: full-height axvlines ran through the panel title.
+        ax.vlines(floor, y.min() - 0.45, y.max() + 0.45, color=GRAY, ls="--", lw=1.0, zorder=3)
+        ax.vlines(tok, y.min() - 0.45, y.max() + 0.45, color=GRAY, ls=":", lw=1.2, zorder=3)
         # Values ride at a fixed x, clear of both floor lines: printed at the bar end they
         # collided with whichever line the bar happened to stop near.
         for yy, v in zip(y, vals):
             ax.text(1.03, yy, f"{v:.3f}", va="center", ha="left", fontsize=7.5, color=INK)
         ax.set_title(title, fontsize=8, color=INK, pad=4)
         ax.set_xlim(0, 1.20)
+        ax.set_ylim(y.min() - 0.6, y.max() + 0.75)
         ax.set_xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         ax.set_xlabel("positive-class F1", fontsize=8)
         ax.spines[["top", "right"]].set_visible(False)

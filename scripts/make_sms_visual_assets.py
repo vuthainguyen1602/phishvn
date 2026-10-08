@@ -97,13 +97,17 @@ def build_sms_examples_figure(out_path: str) -> None:
                 bbox=dict(boxstyle="round,pad=0.25", facecolor=BADGE_BG[r["label"]],
                           edgecolor=accent, lw=0.6))
 
-        ax.add_patch(patches.FancyBboxPatch((3.5, 17), 93, 57, boxstyle="round,pad=0.5,rounding_size=2.5",
+        ax.add_patch(patches.FancyBboxPatch((3.5, 21), 93, 53, boxstyle="round,pad=0.5,rounding_size=2.5",
                                             facecolor="#ffffff", edgecolor="#e2e8f0", linewidth=0.75))
         ax.text(5.5, 70, card_lines(r["message"]), fontsize=6.9, color="#1e293b", va="top",
                 linespacing=1.3)
 
+        # Host and suffix sit on separate lines: on one line the longest host
+        # (techcombank.huy-the-visa-vn.com) pushed the suffix past the card edge.
         suffix = host.rsplit(".", 1)[-1]
-        ax.text(4.5, 8.5, f"embedded host: {host}   |   suffix .{suffix}", fontsize=6.4,
+        ax.text(4.5, 14.5, f"embedded host: {host}", fontsize=6.4,
+                fontweight="bold", color="#475569", va="center")
+        ax.text(4.5, 8.0, f"suffix: .{suffix}", fontsize=6.4,
                 fontweight="bold", color="#475569", va="center")
 
     plt.savefig(out_path, format="pdf", bbox_inches="tight")
