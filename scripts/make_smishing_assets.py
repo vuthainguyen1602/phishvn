@@ -458,10 +458,13 @@ def audit_macros() -> str:
               + "\\newcommand{\\SmsLobArmPm}{%.3f}\n" % lo["text_arm_by_batch"]["recall_at_2pct_fpr_per_model"]
               + "\\newcommand{\\SmsLocArmPool}{%.3f}\n" % lo["text_arm_by_component_5fold"]["recall_at_2pct_fpr"]
               + "\\newcommand{\\SmsLocArmPm}{%.3f}\n" % lo["text_arm_by_component_5fold"]["recall_at_2pct_fpr_per_model"]
-              + "\\newcommand{\\SmsMixedBatchN}{%d}\n" % sum(1 for v in lo["per_batch_auc_mixed"].values() if v["positive_texts"] >= 5)
+              + "\\newcommand{\\SmsMixedBatchN}{%d}\n" % sum(1 for v in lo["per_batch_auc_mixed"].values() if min(v["positive_texts"], v["ham_texts"]) >= 5)
               + "\\newcommand{\\SmsMixedBatchAuc}{%s}\n" % rng_([
-                  min(v["auc"] for v in lo["per_batch_auc_mixed"].values() if v["positive_texts"] >= 5),
-                  max(v["auc"] for v in lo["per_batch_auc_mixed"].values() if v["positive_texts"] >= 5)], 3)
+                  min(v["auc"] for v in lo["per_batch_auc_mixed"].values() if min(v["positive_texts"], v["ham_texts"]) >= 5),
+                  max(v["auc"] for v in lo["per_batch_auc_mixed"].values() if min(v["positive_texts"], v["ham_texts"]) >= 5)], 3)
+              + "\\newcommand{\\SmsPseudoAllRecTwo}{%s}\n" % rng_([
+                  min(lo["pseudo_span"]["recall_at_2pct_fpr"][0], lo["pseudo_balanced_span"][0], lo["pseudo_per_model_span"][0]),
+                  max(lo["pseudo_span"]["recall_at_2pct_fpr"][1], lo["pseudo_balanced_span"][1], lo["pseudo_per_model_span"][1])])
               + "\\newcommand{\\SmsPseudoBalRecTwo}{%s}\n" % rng_(lo["pseudo_balanced_span"])
               + "\\newcommand{\\SmsPseudoPmRecTwo}{%s}\n" % rng_(lo["pseudo_per_model_span"])
               + "\\newcommand{\\SmsLobAuc}{%.3f}\n" % lo["by_batch"]["roc_auc"]

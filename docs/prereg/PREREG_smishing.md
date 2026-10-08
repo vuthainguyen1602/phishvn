@@ -314,3 +314,10 @@ Written after a second audit of the revised manuscript. Registered quantities ar
 - **Within-batch ROC-AUC** is now reported for groups with at least five positive texts (8 groups,
   0.980–1.000). The earlier 0.81–1.00 over 13 groups counted groups with one to three positives,
   after near-duplicate components were moved to their majority batch.
+
+### Deviation record, 2026-10-08, seventh entry (appended; nothing above is edited)
+
+- **Within-batch ROC-AUC** is now reported for groups with at least five texts of each class
+  (7 groups, 0.987–1.000); the sixth entry's 8 groups included one with a single ham text.
+- **Pseudo-batches** match each real batch's class counts approximately (greedy assignment of whole
+  components), and the paper now says so.
