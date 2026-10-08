@@ -247,10 +247,20 @@ def main() -> int:
     B = np.array([maj[c] for c in C])
     two = np.isin(B0, POS_BATCHES)
 
-    def pooled(groups, k):
+    def bal_probe():
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import make_pipeline
+        return make_pipeline(TfidfVectorizer(analyzer="word", ngram_range=(1, 2), min_df=2,
+                                             sublinear_tf=True),
+                             LogisticRegression(max_iter=3000, C=4, random_state=0,
+                                                class_weight="balanced"))
+
+    def pooled(groups, k, model=probe):
+        """Out-of-group scores from k fold models, pooled under one 2% ham threshold."""
         oof = np.zeros(len(Y))
         for a_, b_ in GroupKFold(k).split(T, Y, groups):
-            oof[b_] = probe().fit(T[a_], Y[a_]).predict_proba(T[b_])[:, 1]
+            oof[b_] = model().fit(T[a_], Y[a_]).predict_proba(T[b_])[:, 1]
         thr = np.quantile(oof[Y == 0], 0.98)
         pred = (oof >= 0.5).astype(int)
         return {"roc_auc": round(float(roc_auc_score(Y, oof)), 3),
@@ -261,8 +271,51 @@ def main() -> int:
                 "recall_at_2pct_fpr": round(float((oof[Y == 1] > thr).mean()), 3),
                 "recall_at_2pct_fpr_two_batches": round(float((oof[(Y == 1) & two] > thr).mean()), 3),
                 "recall_at_2pct_fpr_other": round(float((oof[(Y == 1) & ~two] > thr).mean()), 3)}
+
+    def per_model(groups, k):
+        """Each fold model gets its own 2% threshold on a fixed held-out ham set (the 20% of ham
+        components held out of every fit), so no score is compared across fold models."""
+        ev_ham = np.isin(C, list(eval_ham_comps)) & (Y == 0)
+        hit = np.zeros(len(Y), dtype=bool)
+        for a_, b_ in GroupKFold(k).split(T, Y, groups):
+            a_ = a_[~ev_ham[a_]]
+            m_ = probe().fit(T[a_], Y[a_])
+            thr = np.quantile(m_.predict_proba(T[ev_ham])[:, 1], 0.98)
+            b_ = b_[Y[b_] == 1]
+            if len(b_):
+                hit[b_] = m_.predict_proba(T[b_])[:, 1] > thr
+        return {"recall_at_2pct_fpr": round(float(hit[Y == 1].mean()), 3),
+                "recall_at_2pct_fpr_two_batches": round(float(hit[(Y == 1) & two].mean()), 3)}
+
+    def pseudo_batches(seed):
+        """Random groups with each real group's class counts, near-duplicate components whole."""
+        rng = np.random.default_rng(300 + seed)
+        target = {g: [int(((B == g) & (Y == 0)).sum()), int(((B == g) & (Y == 1)).sum())]
+                  for g in sorted(set(B.tolist()))}
+        comps = list(set(C.tolist()))
+        rng.shuffle(comps)
+        out_g = np.empty(len(Y), dtype=object)
+        for c in comps:
+            idx = np.where(C == c)[0]
+            lab = int(round(Y[idx].mean()))
+            g = max(target, key=lambda g_: (target[g_][lab], rng.random()))
+            target[g][lab] -= len(idx)
+            out_g[idx] = g
+        return out_g
+    pseudo = []
+    for s_ in CONTROL_SEEDS:
+        pg = pseudo_batches(s_)
+        pseudo.append(pooled(pg, len(set(pg.tolist()))))
     out["leave_one_batch_out"] = {"by_batch": pooled(B, len(set(B))),
                                   "by_component_5fold": pooled(C, 5),
+                                  "by_batch_balanced": pooled(B, len(set(B)), bal_probe),
+                                  "by_component_5fold_balanced": pooled(C, 5, bal_probe),
+                                  "by_batch_per_model": per_model(B, len(set(B))),
+                                  "by_component_5fold_per_model": per_model(C, 5),
+                                  "pseudo_batches": pseudo,
+                                  "pseudo_span": {m_: [round(min(p_[m_] for p_ in pseudo), 3),
+                                                       round(max(p_[m_] for p_ in pseudo), 3)]
+                                                  for m_ in ("roc_auc", "recall_at_2pct_fpr")},
                                   "batches": len(set(B)), "undated_is_one_group": True,
                                   "components_spanning_batches": int(sum(
                                       1 for c in set(C.tolist()) if len(set(B0[C == c])) > 1)),

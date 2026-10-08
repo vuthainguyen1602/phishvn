@@ -221,21 +221,23 @@ def fig_robust(cues, fus, out):
         # Values ride at a fixed x, clear of both floor lines: printed at the bar end they
         # collided with whichever line the bar happened to stop near.
         for yy, v in zip(y, vals):
-            ax.text(1.03, yy, f"{v:.3f}", va="center", ha="left", fontsize=7.5, color=INK)
-        ax.set_title(title, fontsize=8, color=INK, pad=4)
-        ax.set_xlim(0, 1.20)
+            ax.text(v + 0.015, yy, f"{v:.3f}", va="center", ha="left", fontsize=8.5, color=INK,
+                    bbox=dict(boxstyle="square,pad=0.1", fc="white", ec="none"), zorder=4)
+        ax.set_title(title, fontsize=9, color=INK, pad=4)
+        ax.set_xlim(0, 1.12)
         ax.set_ylim(y.min() - 0.6, y.max() + 0.75)
         ax.set_xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.set_xlabel("positive-class F1", fontsize=8)
+        ax.set_xlabel("positive-class F1", fontsize=9)
+        ax.tick_params(labelsize=8.5)
         ax.spines[["top", "right"]].set_visible(False)
-    axes[0].set_yticks(y, labels, fontsize=8)
+    axes[0].set_yticks(y, labels, fontsize=9)
     # The two lines are the whole point of the panel and were unlabelled.
     from matplotlib.lines import Line2D
     fig.legend(handles=[Line2D([], [], color=GRAY, ls="--", lw=1.0,
                                label="shallow-cue floor (diacritics + length + tokens)"),
                         Line2D([], [], color=GRAY, ls=":", lw=1.2,
                                label="bracketed tokens alone")],
-               loc="lower center", ncol=2, fontsize=7.2, frameon=False,
+               loc="lower center", ncol=2, fontsize=8.5, frameon=False,
                bbox_to_anchor=(0.5, -0.015))
     fig.tight_layout(rect=(0, 0.10, 1, 1))
     fig.savefig(out)
@@ -444,6 +446,12 @@ def audit_macros() -> str:
                                        ("recall_at_2pct_fpr_two_batches", "RecTwoTwo"),
                                        ("recall_at_2pct_fpr_other", "RecTwoOther")))
               + "\\newcommand{\\SmsLobSpan}{%d}\n" % lo["components_spanning_batches"]
+              + "\\newcommand{\\SmsLobBalRecTwo}{%.3f}\n" % lo["by_batch_balanced"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsLobPmRecTwo}{%.3f}\n" % lo["by_batch_per_model"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsLocPmRecTwo}{%.3f}\n" % lo["by_component_5fold_per_model"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsLocBalRecTwo}{%.3f}\n" % lo["by_component_5fold_balanced"]["recall_at_2pct_fpr"]
+              + "\\newcommand{\\SmsPseudoRecTwo}{%s}\n" % rng_(lo["pseudo_span"]["recall_at_2pct_fpr"])
+              + "\\newcommand{\\SmsPseudoAuc}{%s}\n" % rng_(lo["pseudo_span"]["roc_auc"], 3)
               + "\\newcommand{\\SmsLobAuc}{%.3f}\n" % lo["by_batch"]["roc_auc"]
               + "\\newcommand{\\SmsLobF}{%.3f}\n" % lo["by_batch"]["f1_at_0.5"]
               + "\\newcommand{\\SmsLocAuc}{%.3f}\n" % lo["by_component_5fold"]["roc_auc"]

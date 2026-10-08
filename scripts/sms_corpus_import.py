@@ -52,10 +52,11 @@ SHORTENERS_REG = {"bit.ly", "tinyurl.com", "goo.gl", "t.co", "rb.gy", "shorturl.
 # zalo.me is out (it opens a Zalo profile or chat). Every such domain that occurs in the corpus is
 # in, whichever class carries it: the public shorteners t.ly, ln.run and qrco.de (positive class),
 # the app deep-link services go.link and AppsFlyer OneLink, and the brand short domains lzd.co,
-# grb.to and lnkd.in. Look-alikes registered by a sender (ibit.ly) are not services and stay out.
+# grb.to and lnkd.in, and the short-link domains cps.onl, o2o.vn (l.o2o.vn) and id.vin seen in
+# ham. Look-alikes registered by a sender (ibit.ly) are not services and stay out.
 SHORTENERS = (SHORTENERS_REG - {"zalo.me"}) | {"t.ly", "ln.run", "qrco.de", "onelink.me",
                                               "onelink.to", "go.link", "lzd.co", "grb.to",
-                                              "lnkd.in"}
+                                              "lnkd.in", "cps.onl", "o2o.vn", "id.vin"}
 # Viettel's own app deep links carry most ham shortening; the snapshot reports shortening with and
 # without them so no reader has to take the pooled rate.
 OPERATOR_DEEP_LINKS = {"myvt.page.link", "viettelmoney.go.link", "myviettel.go.link",

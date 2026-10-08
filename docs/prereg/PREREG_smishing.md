@@ -277,3 +277,22 @@ Written after a second audit of the revised manuscript. Registered quantities ar
 - **Reverse direction controlled.** A matched random hold-out of the same number of positive texts
   (five draws) gives ROC-AUC 0.988–0.993 and recall at 2% FPR 0.88–0.93, against 0.971 and 0.61
   for the reverse direction.
+
+### Deviation record, 2026-10-08, fourth entry (appended; nothing above is edited)
+
+- **Size of the leave-one-batch-out loss depends on calibration.** The third entry pooled the
+  out-of-group scores of 22 fold models under one threshold and read the fall in recall at 2% ham
+  FPR (0.924 → 0.385) as "more than half" and as a ranking loss. The fold models train on positive
+  shares from about 0.20 to 0.35, so their scores are not on one scale. With balanced class
+  weights recall is 0.495, and with each fold model thresholded on a fixed held-out ham set it is
+  0.748; component-grouped five-fold stays at 0.924 under all three. Random pseudo-batches with
+  each real batch's class counts, pooled the same way, keep 0.85–0.88, so the batch effect is not
+  class composition. The paper now reports the range 0.385–0.748 and drops "more than half" and
+  "ranking loss".
+- **Headline floor.** The abstract and conclusion now lead with the strict surface floor (0.847,
+  diacritics, length and format, no token names) instead of 0.885, since bracketed tokens include
+  abbreviated words and brand names.
+- **August false-positive rates.** The 2.50% and 9.12% rates come from different test rows and
+  training class shares; the paper no longer reads their difference as the size of a batch effect.
+- **Shortener list, fourth version.** `cps.onl`, `o2o.vn` (`l.o2o.vn`) and `id.vin`, short-link
+  domains with opaque paths in ham, are added. Ham shortening without Viettel's links is 3.3%.
