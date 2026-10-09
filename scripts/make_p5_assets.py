@@ -112,7 +112,7 @@ def make_overtime_table(strat, counts, n, spans, dated_pct):
     n_pretty = f"{n:,}".replace(",", "{,}")  # LaTeX thin thousands separator, matches budget table
     tex = f"""\\begin{{table}}[h]
 \\centering
-\\caption{{\\textbf{{Preliminary}} per-strategy performance over {WINDOWS} windows of the
+\\caption{{Per-strategy performance over {WINDOWS} windows of the released
 temporally-ordered stream ({n_pretty} records, {dated_pct:.0f}\\% event-dated). AUTC = mean
 per-window F1; static rows never retrain.}}
 \\label{{tab:overtime}}
@@ -140,7 +140,7 @@ def make_drift_table(truth, fires):
     npos = sum(truth)
     tex = f"""\\begin{{table}}[h]
 \\centering
-\\caption{{\\textbf{{Preliminary}} drift-detection accuracy and lag (in windows). Ground truth:
+\\caption{{Drift-monitor accuracy and lag (in windows). Ground truth:
 consecutive-window KS shift (Bonferroni $p<0.01$, $D>0.15$), giving
 {npos}/{len(truth)} drift windows; the PSI detector fires at $0.10$.}}
 \\label{{tab:drift}}
@@ -236,7 +236,7 @@ def make_budget_table(bud):
     head = " & ".join(f"\\textbf{{{names[k]}}}" for k in order)
     tex = f"""\\begin{{table}}[h]
 \\centering
-\\caption{{\\textbf{{Preliminary}} labelling-budget frontier: AUTC (total labels spent in
+\\caption{{Labelling-budget frontier: AUTC (total labels spent in
 parentheses) per strategy and per-retrain budget $B$.}}
 \\label{{tab:budget}}
 \\small
