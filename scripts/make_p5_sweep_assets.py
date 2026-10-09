@@ -99,8 +99,7 @@ def main():
         f"fitted on a window that is {100 * u['w1_prior'].iloc[0]:.0f}\\% phishing and scored on "
         f"windows that are mostly phishing. Three defensible constructions of one corpus therefore "
         f"give staleness gaps from ${min(gap(c) for c in g):.3f}$ to ${max(gap(c) for c in g):.3f}$ "
-        f"AUTC, and none of them measures how a detector ages: each measures how the stream was "
-        f"assembled.")
+        f"AUTC, so none of them can be read as the rate at which a detector ages.")
     write_generated(os.path.join(SEC, "gen_sweep.tex"), body)
 
     # PSI against the drift trigger's reference window on the released stream, beside the
