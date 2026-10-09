@@ -200,7 +200,7 @@ def p5(reps):
 \\caption{{Label-noise sensitivity: in each of {reps} Monte Carlo reruns, 12.1\\% of
 bronze-positive stream rows are randomly relabelled benign before fitting and scoring. This
 audit-rate stress test does not identify which individual rows are wrong. AUTC is mean
-per-window F1.}}
+per-window F1; values are mean $\\pm$ SD over the {reps} reruns.}}
 \\label{{tab:noise-sensitivity}}
 \\small
 \\resizebox{{\\linewidth}}{{!}}{{%
