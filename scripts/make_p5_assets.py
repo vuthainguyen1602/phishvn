@@ -66,7 +66,7 @@ def make_figure(strat, psi_trace):
     for k in ("static", "periodic", "drift"):
         m, col = styles[k]
         ax.plot(x, strat[k], m, color=col, lw=1.3, ms=3.5, label=labels[k])
-    ax.set_xlabel("stream window (time-ordered, 2020$\\to$2025)")
+    ax.set_xlabel("stream window (time-ordered, 2020$\\to$2026)")
     ax.set_ylabel("F1 on the incoming window")
     # the window index is an integer: fractional ticks (2.5, 5.0, ...) named windows that do
     # not exist

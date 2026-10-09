@@ -64,6 +64,13 @@ def window_composition():
              "prior": float(cur.y.mean())}
         if w > 0:
             pred = static.predict(cur[feats])
+            # recall split by whether the positive row carries its own date: the two halves of the
+            # stream are recorded in different URL formats (see format_split below)
+            pos = cur.y.to_numpy() == 1
+            dm = dated[i]
+            for tag, m in (("dated", pos & dm), ("spread", pos & ~dm)):
+                r[f"static_recall_{tag}"] = float(pred[m].mean()) if m.any() else float("nan")
+                r[f"positives_{tag}"] = int(m.sum())
             r.update({"static_precision": precision_score(cur.y, pred, zero_division=0),
                       "static_recall": recall_score(cur.y, pred, zero_division=0),
                       "static_f1": f1_score(cur.y, pred, zero_division=0),
@@ -72,6 +79,49 @@ def window_composition():
     out = pd.DataFrame(rows)
     out.to_csv(os.path.join(OUT, "p5_window_composition.csv"), index=False)
     print(out.round(3).to_string(index=False))
+
+
+def format_split():
+    """Dated and undated phishing rows of the community feed are recorded differently: the
+    undated rows carry the full host, subdomain included, the dated ones mostly the registrable
+    domain. Measured on the stream's own rows, by source."""
+    df, _ = load(DRIFT_CSV, "collected_at", spread_undated=True)
+    src = pd.read_csv(os.path.join(ROOT, "data", "processed", "dataset_url.csv"),
+                      low_memory=False, usecols=["id", "source"])
+    df = df.merge(src, on="id", how="left")
+    dated = dated_mask(df)
+    rows = []
+    for source, g in df[df.y == 1].groupby("source"):
+        for tag, m in (("dated", dated[g.index]), ("undated", ~dated[g.index])):
+            x = g[m]
+            if len(x):
+                rows.append({"source": source, "rows_kind": tag, "rows": len(x),
+                             "subdomain_share": float((x.subdom_cnt > 0).mean()),
+                             "median_url_len": float(x.url_len.median())})
+    out = pd.DataFrame(rows)
+    out.to_csv(os.path.join(OUT, "p5_format_split.csv"), index=False)
+    print(out.round(3).to_string(index=False))
+
+
+def shap_trace():
+    """The SHAP-shift total-variation trace the detector thresholds, window by window, beside the
+    KS proxy label. Same deployed model, subsample and proxy as run_detection."""
+    from drift_detectors import fit as dfit, ks_ground_truth, shap_share
+    df, feats = load(DRIFT_CSV, "collected_at", spread_undated=True)
+    idx = [i for i in np.array_split(np.arange(len(df)), WINDOWS) if len(i)]
+    chunks = [df.iloc[i] for i in idx]
+    model = dfit(chunks[0], feats)
+    prev, s_prev, rows = chunks[0], shap_share(model, chunks[0][feats]), []
+    for w in range(1, len(chunks)):
+        cur = chunks[w]
+        proxy, _ = ks_ground_truth(prev, cur, feats)
+        s_cur = shap_share(model, cur[feats])
+        rows.append({"window": w + 1, "proxy_shift": int(proxy),
+                     "tv_distance": 0.5 * float(np.abs(s_cur - s_prev).sum())})
+        prev, s_prev = cur, s_cur
+    out = pd.DataFrame(rows)
+    out.to_csv(os.path.join(OUT, "p5_shap_trace.csv"), index=False)
+    print(out.round(4).to_string(index=False))
 
 
 def dated_only():
@@ -87,6 +137,10 @@ def dated_only():
     win = pd.DataFrame({k: v for k, v in strat.items()})
     win.insert(0, "window", range(2, 2 + len(win)))
     win.to_csv(os.path.join(OUT, "p5_dated_only_windows.csv"), index=False)
+    idx = [i for i in np.array_split(np.arange(len(df)), WINDOWS) if len(i)]
+    pd.DataFrame({"window": range(1, len(idx) + 1),
+                  "prior": [float(df.y.iloc[i].mean()) for i in idx]}).to_csv(
+        os.path.join(OUT, "p5_dated_only_priors.csv"), index=False)
 
 
 def budget_seeds(seeds):
@@ -111,12 +165,16 @@ def budget_seeds(seeds):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=5)
-    ap.add_argument("--only", default="window,dated,budget")
+    ap.add_argument("--only", default="window,format,shap,dated,budget")
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     parts = set(a.only.split(","))
     if "window" in parts:
         window_composition()
+    if "format" in parts:
+        format_split()
+    if "shap" in parts:
+        shap_trace()
     if "dated" in parts:
         dated_only()
     if "budget" in parts:

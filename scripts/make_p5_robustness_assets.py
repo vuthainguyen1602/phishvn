@@ -39,23 +39,26 @@ def floor(p):
 
 
 def tab_windows(w):
+    f = lambda v: "--" if (v is None or (isinstance(v, float) and np.isnan(v))) else f"{v:.3f}"
     rows = []
     for r in w.itertuples():
         cells = [f"{r.window}", f"{100 * r.spread_share:.0f}", f"{r.prior:.2f}"]
         if np.isnan(r.static_f1):
-            cells += ["--"] * 5
+            cells += ["--"] * 7
         else:
-            cells += [f"{r.static_precision:.3f}", f"{r.static_recall:.3f}", f"{r.static_f1:.3f}",
-                      f"{r.periodic_f1:.3f}", f"{r.drift_f1:.3f}"]
+            rd = r.static_recall_dated if r.positives_dated >= 50 else float("nan")
+            cells += [f(r.static_precision), f(r.static_recall), f(rd), f(r.static_recall_spread),
+                      f(r.static_f1), f(r.periodic_f1), f(r.drift_f1)]
         rows.append(" & ".join(cells) + " \\\\")
-    tex = ("\\begin{table}[t]\n\\centering\n\\caption{The constructed stream window by window: "
-           "the share of hash-spread (undated) rows, the class prior, the static model's precision, "
-           "recall and F1, and the F1 of the two updating policies. Window 1 is the training "
+    tex = ("\\begin{table*}[t]\n\\centering\n\\caption{The constructed stream window by window: the "
+           "share of hash-spread (undated) rows, the class prior, the static model's precision, "
+           "recall overall and on dated and spread positives separately (blank under 50 dated "
+           "positives), its F1, and the F1 of the two updating policies. Window 1 is the training "
            "window.}\n\\label{tab:windows}\n\\small\n\\setlength{\\tabcolsep}{4pt}\n"
-           "\\begin{tabular}{rrrrrrrr}\n\\toprule\n"
-           "Window & Spread (\\%) & Prior & \\multicolumn{3}{c}{Static} & Periodic & Drift \\\\\n"
-           "\\cmidrule(lr){4-6}\n & & & P & R & F1 & F1 & F1 \\\\\n\\midrule\n"
-           + "\n".join(rows) + "\n\\bottomrule\n\\end{tabular}\n\\end{table}")
+           "\\begin{tabular}{rrrrrrrrrr}\n\\toprule\n"
+           "Window & Spread (\\%) & Prior & \\multicolumn{5}{c}{Static} & Periodic & Drift \\\\\n"
+           "\\cmidrule(lr){4-8}\n & & & P & R & R dated & R spread & F1 & F1 & F1 \\\\\n\\midrule\n"
+           + "\n".join(rows) + "\n\\bottomrule\n\\end{tabular}\n\\end{table*}")
     write_generated(os.path.join(SEC, "tab_windows.tex"), tex)
 
 
@@ -71,38 +74,86 @@ def _windows(g):
     return " and ".join(parts)
 
 
-def gen_window_reading(w, d):
-    sc = w.dropna()
-    mid = sc[sc.spread_share < 0.7]
-    late = sc[sc.spread_share >= 0.7]
+def gen_window_reading(w, d, fmt, dw, dprior):
+    sc = w.dropna(subset=["static_f1"])
     rho = float(np.corrcoef(sc.spread_share, sc.static_recall)[0, 1])
-    pol = d.set_index("policy")
-    gap = float(pol.loc[["periodic", "drift"], "autc"].max() - pol.loc["static", "autc"])
+    rd = sc.dropna(subset=["static_recall_dated"])
+    rd = rd[rd.positives_dated >= 300]           # windows with enough dated positives to read
+    rs = sc.static_recall_spread
+    c = fmt[fmt.source == "chongluadao"].set_index("rows_kind")
     first_spread = float(w.iloc[0].spread_share)
-    # the dated-only stream is mostly phishing: the floor is what any F1 there has to clear
-    df, prior = int(pol["rows"].iloc[0]), float(pol["prior"].iloc[0])
+    pol = d.set_index("policy")
+    # the dated-only stream, read against its own per-window all-positive floor
+    fl = floor(dprior.iloc[1:].to_numpy())
+    below = {k: int((dw[k].to_numpy() < fl).sum()) for k in ("static", "periodic", "drift")}
+    gap_w = (dw[["periodic", "drift"]].max(axis=1) - dw["static"]).to_numpy()
+    last_share = float(gap_w[-1] / gap_w.sum()) if gap_w.sum() > 0 else float("nan")
+    n = len(dw)
+    rows_txt = f"{int(pol['rows'].iloc[0]):,}".replace(",", "{,}")
     body = (
         f"Table~\\ref{{tab:windows}} shows where that gap comes from. The static model is fitted "
         f"on window 1, whose rows are {100 * first_spread:.0f}\\% hash-spread, and its precision "
         f"stays at ${sc.static_precision.min():.3f}$--${sc.static_precision.max():.3f}$ in every "
-        f"later window; what moves is recall. In the {len(mid)} windows where dated rows are the "
-        f"majority or close to it (spread share ${mid.spread_share.min():.2f}$--"
-        f"${mid.spread_share.max():.2f}$) its recall is ${mid.static_recall.min():.3f}$--"
-        f"${mid.static_recall.max():.3f}$, and in the {len(late)} windows that are mostly spread "
-        f"rows ({_windows(late)}) it is ${late.static_recall.min():.3f}$--"
-        f"${late.static_recall.max():.3f}$; across "
-        f"the scored windows the correlation between spread share and static recall is "
-        f"${rho:.2f}$. The static model misses the dated phishing and recognises the background "
-        f"it was fitted on. Run on the dated rows alone ($" + f"{df:,}".replace(",", "{,}")
-        + f"$ rows, cut into the same number of equal-count windows), the gap between the "
-        f"static model and the better updating policy is ${gap:.3f}$ AUTC "
-        f"(static ${pol.loc['static', 'autc']:.3f}$, periodic ${pol.loc['periodic', 'autc']:.3f}$, "
-        f"drift-triggered ${pol.loc['drift', 'autc']:.3f}$). That stream is "
-        f"{100 * prior:.0f}\\% phishing, so every policy sits close to the all-positive floor "
-        f"(${floor(prior):.3f}$ F1 at that prior) and the comparison has little room to separate anything. It does "
-        f"show that the twenty-point gap of Table~\\ref{{tab:overtime}} does not survive "
-        f"without the spreading scheme.")
+        f"later window; what moves is recall, and the correlation between a window's spread share "
+        f"and the static model's recall is ${rho:.2f}$. Split by row, the pattern is sharper: on "
+        f"spread positives the static model's recall is ${rs.min():.3f}$--${rs.max():.3f}$ in every "
+        f"window, and on dated positives it is ${rd.static_recall_dated.min():.3f}$--"
+        f"${rd.static_recall_dated.max():.3f}$ wherever a window holds enough of them to read. The "
+        f"two kinds of row are recorded differently. In the community feed, "
+        f"{100 * c.loc['undated', 'subdomain_share']:.1f}\\% of the undated phishing rows carry a "
+        f"subdomain (median URL length {c.loc['undated', 'median_url_len']:.0f} characters) against "
+        f"{100 * c.loc['dated', 'subdomain_share']:.1f}\\% of the dated ones (median "
+        f"{c.loc['dated', 'median_url_len']:.0f}), so a model fitted on the spread background learns "
+        f"a URL format and misses the other. The twenty-point gap is a property of that split, not "
+        f"an estimate of drift. Run on the dated rows alone ($" + rows_txt + f"$ rows, the same "
+        f"number of equal-count windows), the stream is {100 * float(pol['prior'].iloc[0]):.0f}\\% "
+        f"phishing and every policy sits at or near the all-positive floor of its window (mean "
+        f"${fl.mean():.3f}$ F1): the static model scores below that floor in {below['static']} of "
+        f"{n} windows, the drift-triggered policy in {below['drift']} and periodic retraining in "
+        f"{below['periodic']}. Static AUTC is ${pol.loc['static', 'autc']:.3f}$ against "
+        f"${pol.loc['periodic', 'autc']:.3f}$ periodic and ${pol.loc['drift', 'autc']:.3f}$ "
+        f"drift-triggered, with {pol.loc['periodic', 'retrains']} and {pol.loc['drift', 'retrains']} "
+        f"retrains, and {100 * last_share:.0f}\\% of the static model's shortfall comes from the "
+        f"last window alone, whose prior is ${float(dprior.iloc[-1]):.2f}$. This stream sits too close "
+        f"to its ceiling to measure staleness, so it neither confirms nor bounds the gap.")
     write_generated(os.path.join(SEC, "gen_window_reading.tex"), body)
+
+
+def gen_shap_trace(t):
+    """The SHAP-shift separation, read off the exported trace instead of typed."""
+    prox, non = t[t.proxy_shift == 1], t[t.proxy_shift == 0]
+    tau = 0.05
+    fired = prox[prox.tv_distance > tau]
+    missed = prox[prox.tv_distance <= tau]
+    body = (
+        f"The separation behind the result is thin. The exported trace gives total-variation "
+        f"distances of ${non.tv_distance.min():.3f}$--${non.tv_distance.max():.3f}$ on the "
+        f"{len(non)} non-proxy windows and ${prox.tv_distance.min():.3f}$--"
+        f"${prox.tv_distance.max():.3f}$ on the {len(prox)} proxy windows. "
+        + (f"{'The proxy window' if len(missed) == 1 else 'Proxy windows'} at "
+           + ", ".join(f"${v:.3f}$" for v in missed.tv_distance)
+           + f" {'is' if len(missed) == 1 else 'are'} missed at onset and credited only through the "
+             f"next window's alarm inside the horizon, so {len(fired)} of the {len(prox)} are "
+             f"caught at onset, and " if len(missed) else "")
+        + f"$\\tau_{{\\mathrm{{SHAP}}}}={tau}$ lies ${tau - non.tv_distance.max():.4f}$ above the "
+        f"highest non-proxy value and ${fired.tv_distance.min() - tau:.4f}$ below the lowest proxy "
+        f"value that fires.")
+    write_generated(os.path.join(SEC, "gen_shap_trace.tex"), body)
+
+
+def _label_note(s):
+    """The trigger and the schedule spend the same labels only where their retrain counts agree;
+    the trigger's F1-drop term reads each window's full labels, which the budget does not count."""
+    lab = s.pivot_table(index=["seed", "budget"], columns="policy", values="labels")
+    diff = lab[lab.drift != lab.periodic]
+    if diff.empty:
+        return "The two spend the same labels in every cell."
+    num = lambda v: f"{int(v):,}".replace(",", "{,}")
+    cells = "; ".join(f"seed {sd}, $B={b}$: {num(r.drift)} against {num(r.periodic)}"
+                      for (sd, b), r in diff.iterrows())
+    return (f"They spend the same labels in all but {len(diff)} of the {len(lab)} seed-budget "
+            f"cells ({cells}), and the trigger's F1-drop term reads each window's full labels, "
+            f"which the budget does not count, so the trigger's label cost is understated.")
 
 
 def gen_budget_seeds(s):
@@ -129,7 +180,8 @@ def gen_budget_seeds(s):
         f"{pm(ap, hi)} at $B={hi}$. The drift trigger trails the fixed schedule at the cheapest "
         f"budgets ({pm(dp, lo)} at $B={lo}$ and {pm(dp, second)} at $B={second}$, ahead on "
         f"{dp_lo_wins} and {dp_2_wins} of {k} seeds) and leads at the dearest ({pm(dp, hi)} at "
-        f"$B={hi}$, ahead on {dp_hi_wins} of {k}); between them the sign depends on the seed.")
+        f"$B={hi}$, ahead on {dp_hi_wins} of {k}); between them the sign depends on the seed. "
+        + _label_note(s))
     write_generated(os.path.join(SEC, "gen_budget_seeds.tex"), body)
 
 
@@ -138,8 +190,12 @@ def main():
     if missing:
         raise SystemExit("run run_p5_robustness.py first; missing: " + ", ".join(missing))
     w, d, s = pd.read_csv(WIN), pd.read_csv(DATED), pd.read_csv(SEEDS)
+    fmt = pd.read_csv(os.path.join(P5, "p5_format_split.csv"))
+    dw = pd.read_csv(os.path.join(P5, "p5_dated_only_windows.csv"))
+    dprior = pd.read_csv(os.path.join(P5, "p5_dated_only_priors.csv"))["prior"]
     tab_windows(w)
-    gen_window_reading(w, d)
+    gen_window_reading(w, d, fmt, dw, dprior)
+    gen_shap_trace(pd.read_csv(os.path.join(P5, "p5_shap_trace.csv")))
     gen_budget_seeds(s)
 
 
