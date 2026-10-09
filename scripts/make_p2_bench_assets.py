@@ -925,6 +925,78 @@ def gen_weighting_verdict():
         f"of the configuration. Every result below fits all seven families unweighted.")
 
 
+DEDUP = "data/processed/p2/dedup_audit/"
+
+
+def gen_dedup_sensitivity():
+    """The duplicated-host sensitivity arm (run_p2_dedup_audit.py), read off its CSVs.
+
+    The released corpus records most undated community-feed phishing hosts twice, once with a
+    "www." prefix and no date and once dated without it. Keeping one row per host is the arm a
+    referee will ask for; this paragraph says what it moves and what it leaves alone."""
+    need = ["p2_benchmark", "p2_temporal_strict", "p2_temporal_strict_guarded",
+            "cross_dataset_F1", "cross_dataset_ROC-AUC", "cross_dataset_F1_CatBoost",
+            "p2_dup_leakage", "p2_shap_weighting", "dataset_url_dedup"]
+    if not all(os.path.exists(DEDUP + n + ".csv") for n in need):
+        return "% dedup arm absent -- run run_p2_dedup_audit.py\n"
+    P = "data/processed/p2/"
+
+    def fam(path, proto, met="F1"):
+        d = pd.read_csv(path)
+        return d[d.protocol == proto].groupby("family")[met].mean()
+
+    def mat(path):
+        m = pd.read_csv(path, index_col=0).values.astype(float)
+        e = np.eye(len(m), dtype=bool)
+        return m[e].mean() - m[~e].mean(), m[~e].mean(), int((m[~e] < 0.5).sum())
+
+    u = pd.read_csv("data/processed/dataset_url.csv", usecols=["url_norm"], low_memory=False)
+    n_all, n_dd = len(u), len(pd.read_csv(DEDUP + "dataset_url_dedup.csv", usecols=["url_norm"]))
+    full0, full1 = fam(P + "p2_benchmark.csv", "random"), fam(DEDUP + "p2_benchmark.csv", "random")
+    dr0, dr1 = (fam(P + "p2_temporal_strict.csv", "random_same_rows"),
+                fam(DEDUP + "p2_temporal_strict.csv", "random_same_rows"))
+    t0, t1 = (fam(P + "p2_temporal_strict.csv", "temporal_strict"),
+              fam(DEDUP + "p2_temporal_strict.csv", "temporal_strict"))
+    comp0, comp1 = full0 - dr0, full1 - dr1
+    mv1 = (pd.concat([full1, dr1, t1], axis=1).max(axis=1) - pd.concat([full1, dr1, t1], axis=1).min(axis=1))
+    sp = lambda x: float(x.max() - x.min())
+    g0, o0, b0 = mat(P + "cross_dataset_ROC-AUC.csv")
+    g1, o1, b1 = mat(DEDUP + "cross_dataset_ROC-AUC.csv")
+    f0 = mat(P + "cross_dataset_F1.csv")[0]
+    f1 = mat(DEDUP + "cross_dataset_F1.csv")[0]
+    c0, c1 = mat(P + "cross_dataset_F1_CatBoost.csv")[0], mat(DEDUP + "cross_dataset_F1_CatBoost.csv")[0]
+    sh = pd.read_csv(DEDUP + "p2_shap_weighting.csv")
+    sh = sh[sh.weighting == "none"].sort_values("share", ascending=False)
+    top = ", ".join("\\texttt{" + r.feature.replace("_", "\\_") + "}" for r in sh.head(3).itertuples())
+    lk0, lk1 = pd.read_csv(P + "p2_dup_leakage.csv").iloc[0], pd.read_csv(DEDUP + "p2_dup_leakage.csv").iloc[0]
+    num = lambda v: f"{int(v):,}".replace(",", "{,}")
+    return (
+        f"\\textbf{{Duplicated hosts.}} The released corpus records {num(n_all - n_dd)} hosts twice: "
+        f"almost every undated community-feed phishing row is the \\texttt{{www.}}-prefixed copy "
+        f"of a dated row for the same host, so the prefix itself sits on phishing rows. Keeping one "
+        f"row per host (the dated row where there is one) leaves {num(n_dd)} rows, and rerunning the "
+        f"arms those rows enter changes one part of the picture and leaves the rest. The "
+        f"full-corpus random split loses most of its level: its best family scores "
+        f"${full1.max():.3f}$ F1 against ${full0.max():.3f}$, the composition step costs each family "
+        f"${comp1.min():.3f}$--${comp1.max():.3f}$ F1 instead of ${comp0.min():.3f}$--"
+        f"${comp0.max():.3f}$, and a family's F1 moves by at most ${mv1.max():.3f}$ across the three "
+        f"same-corpus designs, about the size of the between-family spreads (${sp(full1):.3f}$, "
+        f"${sp(dr1):.3f}$ and ${sp(t1):.3f}$). The test rows that share a registrable domain with "
+        f"training fall from {100 * lk0.test_regdom_shared_rate:.0f}\\% to "
+        f"{100 * lk1.test_regdom_shared_rate:.0f}\\%. The cross-design movement of "
+        f"Figure~\\ref{{fig:evaldesign}} is therefore largely the duplicated hosts, not the design. "
+        f"The dated-row results do not move, because dated rows are not duplicated: the temporal "
+        f"spread is ${sp(t1):.3f}$ against ${sp(t0):.3f}$, logistic regression still leads "
+        f"CatBoost (${t1['CatBoost'] - t1['LogReg']:+.3f}$ against ${t0['CatBoost'] - t0['LogReg']:+.3f}$), "
+        f"and the protocol step is unchanged. Nor does transfer: the random forest's F1 gap is "
+        f"${f1:.3f}$ against ${f0:.3f}$, CatBoost's ${c1:.3f}$ against ${c0:.3f}$, and the forest's "
+        f"off-diagonal ROC-AUC ${o1:.3f}$ against ${o0:.3f}$ with {b1} of 12 cells below chance "
+        f"rather than {b0}. TreeSHAP's top three become {top} "
+        f"(${100 * sh.share.head(3).sum():.1f}\\%$ of attribution): subdomain count, which the "
+        f"prefix inflates, leaves the top three, so the pruning arm's choice of features is partly "
+        f"a choice of the duplicate's marker.")
+
+
 def gen_strict_verdict():
     """Paired-by-seed CatBoost-vs-LogReg under phishing-temporal, on ALL FOUR recorded metrics.
 
@@ -2452,6 +2524,7 @@ def main(shap_too: bool = False):
                      ("gen_charcnn", gen_charcnn),
                      ("gen_strict_verdict", gen_strict_verdict),
                      ("gen_weighting_verdict", gen_weighting_verdict),
+                     ("gen_dedup_sensitivity", gen_dedup_sensitivity),
                      ("tab_stacking", tab_stacking),
                      ("gen_stacking_verdict", gen_stacking_verdict),
                      ("tab_shiftmatrix", tab_shiftmatrix),
