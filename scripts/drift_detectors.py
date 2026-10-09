@@ -110,8 +110,8 @@ class ADWIN:
 
 
 # ----------------------------- stream + detectors -----------------------------
-def fit(df, feats):
-    m = RandomForestClassifier(n_estimators=200, class_weight="balanced", n_jobs=-1, random_state=0)
+def fit(df, feats, seed=0):
+    m = RandomForestClassifier(n_estimators=200, class_weight="balanced", n_jobs=-1, random_state=seed)
     m.fit(df[feats], df.y)
     return m
 
@@ -226,7 +226,7 @@ def score_detector(truth, fire, horizon=2):
 
 
 # ----------------------------- budget frontier -----------------------------
-def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1):
+def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1, seed=0):
     """AUTC (mean per-window F1) and total labels spent per strategy at each per-retrain budget B.
     The four columns isolate two design axes against a common backbone:
       static   : never retrain (labels = 0 after init).
@@ -238,7 +238,8 @@ def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1)
                  (budget-capped) model, its retrain count can differ from the full-label experiment.
       active   : retrain every `period` windows, labelling the B most-UNCERTAIN samples per retrain
                  (same trigger as periodic, different SELECTION -> label efficiency).
-    So periodic-vs-active isolates sample selection; periodic-vs-drift isolates the trigger."""
+    So periodic-vs-active isolates sample selection; periodic-vs-drift isolates the trigger.
+    `seed` sets the forest and the random draws together; seed 0 is the run the paper's grid prints."""
     idx = np.array_split(np.arange(len(df)), windows)
     chunks = [df.iloc[i] for i in idx if len(i)]
     base = chunks[0]
@@ -246,12 +247,12 @@ def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1)
     for B in budgets:
         f1s = {k: [] for k in ("static", "periodic", "drift", "active")}
         labels = {k: 0 for k in f1s}
-        models = {k: fit(base, feats) for k in f1s}
+        models = {k: fit(base, feats, seed) for k in f1s}
         pools = {k: base.copy() for k in f1s}
         ref = {k: base for k in f1s}
         last_f1 = {k: 1.0 for k in f1s}
         # per-strategy RNG so a column's random draws never depend on how often another retrains
-        rngs = {k: np.random.RandomState(0) for k in f1s}
+        rngs = {k: np.random.RandomState(seed) for k in f1s}
         for w in range(1, len(chunks)):
             cur = chunks[w]
             for k in f1s:
@@ -282,7 +283,7 @@ def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1)
                     take = cur.sample(min(B, len(cur)), random_state=rngs[k])
                 pools[k] = pd.concat([pools[k], take])
                 labels[k] += len(take)
-                models[k] = fit(pools[k], feats)
+                models[k] = fit(pools[k], feats, seed)
                 ref[k] = cur
         out[B] = {k: (float(np.mean(f1s[k])), labels[k]) for k in f1s}
     return out
