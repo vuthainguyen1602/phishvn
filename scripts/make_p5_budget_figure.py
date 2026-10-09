@@ -201,25 +201,22 @@ def make_tex(rows: list[dict]) -> None:
                     f"${gap_hi:+.3f}$ at the dearest, crossing over {flip_txt}. ")
     body = (
         f"Figure~\\ref{{fig:budgetfrontier}} runs the same experiment across {len(bs)} budgets "
-        f"rather than the three Table~\\ref{{tab:budget}} prices, and two things the table cannot "
-        "resolve become visible. " + trig_txt + "Uncertainty sampling is the second negative "
-        f"result: it is worse than random selection at {act_loses} of the {len(bs)} budgets "
+        f"rather than the three Table~\\ref{{tab:budget}} prices. " + trig_txt + "Uncertainty "
+        f"sampling is worse than random selection at {act_loses} of the {len(bs)} budgets "
         f"({act_small} of them by less than $0.01$ AUTC, a margin the seed repeat below shows "
         "is not seed noise), so on this stream choosing \\emph{which} examples "
         "to label costs accuracy rather than saving labels. On the dense grid the "
         + (f"penalty shrinks monotonically from ${act_gap_lo:+.3f}$ at $B={bs[0]}$ to "
            f"${act_gap_hi:+.3f}$ at $B={bs[-1]}$, which is what convergence of the two selections "
-           "under a growing budget looks like and not what a constant handicap would. "
+           "under a growing budget would produce; a constant handicap would not close. "
            if act_monotone else
            f"penalty closes from ${act_gap_lo:+.3f}$ at $B={bs[0]}$ to ${act_gap_hi:+.3f}$ at "
            f"$B={bs[-1]}$, though not at every step: it widens to ${act_worst:+.3f}$ at "
-           f"$B={act_worst_b}$ first. The closing is what convergence of the two selections under "
-           "a growing budget looks like and not what a constant handicap would. ")
+           f"$B={act_worst_b}$ first, as the two selections converge under a growing budget. ")
         + "Every policy beats "
         f"the static baseline's ${stat:.3f}$ from the first budget onward, and the best point "
         f"anywhere on the grid is ${best['autc']:.3f}$ at "
-        f"${tex_int(best['labels'])}$ labels, so the question is never whether to maintain the "
-        "model but how to spend the labels"
+        f"${tex_int(best['labels'])}$ labels"
     )
     write_generated(os.path.join(SEC, "gen_budget_frontier.tex"), body.rstrip() + "%")
 

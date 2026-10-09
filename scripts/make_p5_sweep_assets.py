@@ -52,7 +52,7 @@ def construction():
         f"{100 * dated.mean():.0f}\\% of records that carry an event date, can be placed in time. "
         f"The undated remainder includes ${num(und.sum())}$ phishing rows, and ${num(copy.sum())}$ of "
         f"them ({100 * copy.sum() / und.sum():.1f}\\%) are the \\texttt{{www.}}-prefixed copy of a "
-        f"host that also appears as a dated row; keeping one row per URL removes ${num(removed)}$ rows "
+        f"URL that also appears as a dated row; keeping one row per URL removes ${num(removed)}$ rows "
         f"in all.")
     write_generated(os.path.join(SEC, "gen_construction.tex"), body)
 
@@ -148,7 +148,7 @@ def main():
         f"${gaps(r, 'autc'):.3f}$ AUTC. Removing a leading \\texttt{{www.}} from every URL, and nothing "
         f"else, closes that to ${gaps(w, 'autc'):.3f}$: the static model rises from "
         f"${r.loc['static', 'autc']:.3f}$ to ${w.loc['static', 'autc']:.3f}$, because it can no longer "
-        f"tell the two copies of a host apart by their format. Keeping one row per URL instead opens "
+        f"tell the two copies of a URL apart by their format. Keeping one row per URL instead opens "
         f"the gap to ${gaps(u, 'autc'):.3f}$, for a different reason: the undated background that is "
         f"left is mostly benign, so the per-window phishing share swings from "
         f"${u['prior_min'].iloc[0]:.2f}$ to ${u['prior_max'].iloc[0]:.2f}$ and the static model is "

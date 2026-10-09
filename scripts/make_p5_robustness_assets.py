@@ -189,8 +189,7 @@ def gen_budget_seeds(s):
                 f"ahead on {dp_hi_wins} of {k}); between them the sign depends on the seed. ")
     body = (
         f"Repeating the grid over {k} model seeds (the seed sets the forest and the random label "
-        f"draws together; mean $\\pm$ SD over seeds) settles what the single seed "
-        f"left open. Uncertainty sampling is {act_txt}: {pm(ap, lo)} AUTC against periodic "
+        f"draws together; mean $\\pm$ SD over seeds) gives the same reading. Uncertainty sampling is {act_txt}: {pm(ap, lo)} AUTC against periodic "
         f"retraining at $B={lo}$, widest at $B={worst_b}$ ({pm(ap, worst_b)}), and "
         f"{pm(ap, hi)} at $B={hi}$. " + trig + _label_note(s))
     write_generated(os.path.join(SEC, "gen_budget_seeds.tex"), body)

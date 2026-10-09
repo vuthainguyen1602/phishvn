@@ -63,7 +63,9 @@ def main():
              r"Policy & AUTC & End F1 & Retrains \\", r"\midrule"]
     for policy in ("static", "periodic", "drift"):
         d = summary[summary.policy.eq(policy)]
-        cells = [f"${d[c].mean():.4f} \\pm {d[c].std(ddof=1):.4f}$" for c in ("autc", "end_f1", "retrains")]
+        cells = [f"${d[c].mean():.4f} \\pm {d[c].std(ddof=1):.4f}$" for c in ("autc", "end_f1")]
+        cells.append(f"${d.retrains.mean():.0f}$" if d.retrains.nunique() == 1
+                     else f"${d.retrains.mean():.1f} \\pm {d.retrains.std(ddof=1):.1f}$")
         lines.append(policy.capitalize() + " & " + " & ".join(cells) + r" \\")
     lines += [r"\midrule", r"\multicolumn{4}{l}{Paired AUTC, drift minus periodic: " +
               f"${delta.mean():+.4f} \\pm {delta.std(ddof=1):.4f}$" + r"} \\",
