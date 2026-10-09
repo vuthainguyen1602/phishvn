@@ -928,6 +928,45 @@ def gen_weighting_verdict():
 DEDUP = "data/processed/p2/dedup_audit/"
 
 
+def _dedup_transfer_txt():
+    """The transfer interventions on one row per URL, once run_p2_dedup_audit.py --arms transfer
+    has written them; until then the paragraph says they were run on the released rows only."""
+    files = {k: DEDUP + f"cross_dataset_{k}.csv" for k in (
+        "ROC-AUC_LogReg", "ROC-AUC_HistGB", "ROC-AUC_pruned", "F1_pruned", "F1_coral",
+        "ROC-AUC_coral", "ROC-AUC_CharCNN", "ROC-AUC_LogReg_pruned")}
+    pool = DEDUP + "combined_training.csv"
+    if not all(os.path.exists(p) for p in files.values()) or not os.path.exists(pool):
+        return ("The pruning, pooling and CORAL arms of Sections~\\ref{ssec:pruning}--"
+                "\\ref{ssec:adapt} and the character-CNN matrix were run on the released rows only.")
+    def m(p):
+        x = pd.read_csv(p, index_col=0)
+        e = np.eye(len(x), dtype=bool)
+        return x, e
+    def stats(p):
+        x, e = m(p)
+        v = x.values.astype(float)
+        return v[e].mean() - v[~e].mean(), v[~e].mean(), int((v[~e] < 0.5).sum())
+    rf, e = m(DEDUP + "cross_dataset_ROC-AUC.csv")
+    learners = [rf] + [m(files[k])[0] for k in ("ROC-AUC_LogReg", "ROC-AUC_HistGB", "ROC-AUC_pruned")]
+    off = [(i, j) for i in rf.index for j in rf.columns if i != j]
+    agree = sum(1 for i, j in off if all((L.loc[i, j] < 0.5) == (rf.loc[i, j] < 0.5) for L in learners))
+    gp, op, bp = stats(files["ROC-AUC_pruned"])
+    fp = stats(files["F1_pruned"])[0]
+    fc, gc = stats(files["F1_coral"])[0], stats(files["ROC-AUC_coral"])
+    gl, ol, _ = stats(files["ROC-AUC_LogReg_pruned"])
+    cn = stats(files["ROC-AUC_CharCNN"])
+    pl = pd.read_csv(pool)
+    full = pl[pl.config == "full"]
+    return (f"With one row per URL the transfer interventions still repair nothing: the four learners "
+            f"agree on which side of chance {agree} of the 12 cells fall, pruning the three named "
+            f"features leaves the forest's F1 gap at ${fp:.3f}$ and its ROC-AUC gap at ${gp:.3f}$ "
+            f"({bp} cells below chance), pruned logistic regression ranks at ${ol:.3f}$ off-diagonal, "
+            f"CORAL narrows the F1 gap to ${fc:.3f}$ with its off-diagonal ROC-AUC at ${gc[1]:.3f}$, "
+            f"and pooling three corpora averages ${full.F1.mean():.3f}$ F1 and ${full['ROC-AUC'].mean():.3f}$ "
+            f"ROC-AUC on the held-out corpus. The character-CNN is the one arm that gains: it ranks at "
+            f"${cn[1]:.3f}$ off-diagonal with {cn[2]} cells below chance.")
+
+
 def gen_dedup_sensitivity():
     """The duplicated-host sensitivity arm (run_p2_dedup_audit.py), read off its CSVs.
 
@@ -1013,9 +1052,7 @@ def gen_dedup_sensitivity():
         f"{"all" if vn == len(flips) else vn} of them involving PhishVN) and {b1} of 12 stay below it "
         f"rather than {b0}. TreeSHAP's top three become {top} "
         f"(${100 * sh.share.head(3).sum():.1f}\\%$ of attribution): subdomain count, which the "
-        f"prefix inflates, leaves the top three. The pruning, pooling and CORAL arms of "
-        f"Sections~\\ref{{ssec:pruning}}--\\ref{{ssec:adapt}} and the character-CNN matrix were "
-        f"run on the released rows only.")
+        f"prefix inflates, leaves the top three. " + _dedup_transfer_txt())
 
 
 def gen_strict_verdict():

@@ -1140,6 +1140,27 @@ def fig_shap_null():
     print(f"[+] {out}")
 
 
+def gen_dedup_note():
+    """Limitation (ix): the corpus's duplicated URLs, and why the suffix strata do not move.
+
+    The released corpus records 16,855 URLs twice once the scheme and a leading "www." are set
+    aside (the undated www-copies of dated community-feed rows). P2's run_p2_dedup_audit.py keeps
+    one row per URL; this study's suffix measurement was rerun on that corpus and its strata are
+    read here beside the released-row ones."""
+    a = pd.read_csv("data/processed/p6/p6_suffix_strata.csv")
+    b = pd.read_csv("data/processed/p6/dedup_audit/p6_suffix_strata.csv")
+    fa, fb = a.groupby("stratum").fnr.mean(), b.groupby("stratum").fnr.mean()
+    name = {"cc_short": "other two-letter ccTLDs", "vn_short": "bare \\texttt{.vn}",
+            "vn_compound": "compound \\texttt{.vn}", "long": "longer suffixes"}
+    parts = "; ".join(f"{name.get(k, k)} ${fa[k]:.3f}$ against ${fb[k]:.3f}$" for k in name if k in fa)
+    worst = float((fa - fb).abs().max())
+    return ("(ix)~The released corpus records many phishing URLs twice, once with a leading "
+            "\\texttt{www.} and no date and once dated without it. The suffix strata are read on "
+            "the phishing-temporal split, whose phishing rows are dated, so keeping one row per URL "
+            f"barely moves them (miss rate on the released rows against one row per URL: {parts}; "
+            f"no stratum moves by more than ${worst:.3f}$).")
+
+
 def main():
     os.makedirs(SEC, exist_ok=True)
     assets = [("tab_shap_contrast", tab_shap_contrast), ("tab_tld", tab_tld),
@@ -1157,6 +1178,8 @@ def main():
         assets.append(("tab_rules", tab_rules))
     if os.path.exists("data/processed/p6/p6_group_threshold.csv"):
         assets.append(("gen_balanced_strata", gen_balanced_strata))
+    if os.path.exists("data/processed/p6/dedup_audit/p6_suffix_strata.csv"):
+        assets.append(("gen_dedup_note", gen_dedup_note))
     if os.path.exists("data/processed/p6/p6_leakage.csv"):
         assets += [("gen_leakage", gen_leakage), ("gen_collide", gen_collide)]
     if os.path.exists("data/processed/p6/p6_brand_locus.csv"):

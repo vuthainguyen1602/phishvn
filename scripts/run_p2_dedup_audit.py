@@ -42,6 +42,13 @@ OUT = os.path.join(PROC, "p2", "dedup_audit")
 COPIED = ["p2_benchmark", "p2_temporal_strict", "p2_temporal_strict_guarded", "cross_dataset_F1",
           "cross_dataset_ROC-AUC", "cross_dataset_F1_CatBoost", "p2_dup_leakage",
           "p2_shap_weighting"]
+# The transfer arms that read the matrices above: the learners the polarity verdict pools, the
+# pruning, CORAL and pooling interventions, and the character-CNN refitted in the same matrix.
+TRANSFER = ["cross_dataset_" + m + t for m in ("F1", "ROC-AUC")
+            for t in ("_LogReg", "_HistGB", "_pruned", "_LogReg_pruned", "_HistGB_pruned",
+                      "_coral", "_LogReg_coral")] + [
+    "cross_dataset_F1_CharCNN", "cross_dataset_ROC-AUC_CharCNN", "p2_charcnn_xdata",
+    "combined_training"]
 
 
 def bare_host(urls: pd.Series) -> pd.Series:
@@ -92,7 +99,7 @@ def build_tree(tree: str, ud: pd.DataFrame, cd: pd.DataFrame) -> None:
                         os.path.join(tree, "papers", p, "sections"), dirs_exist_ok=True)
 
 
-def run_arms(tree: str) -> None:
+def run_arms(tree: str, which: str = "core", device: str = "cpu") -> None:
     env = dict(os.environ, OPENBLAS_NUM_THREADS="1", P2_UNWEIGHTED="1")
     xc = ["PhishVN=data/processed/vn_compphish.csv",
           "PhiUSIIL=data/processed/external/phiusiil_compphish.csv",
@@ -112,6 +119,21 @@ def run_arms(tree: str) -> None:
              "--out", "data/processed/p2/cross_dataset_F1_CatBoost.csv"],
             [b + "p2_dup_leakage.py"],
             [b + "run_p2_shap_weighting.py"]]
+    prune = ["--drop", "tld_len,subdom_cnt,dot_cnt"]
+    transfer = []
+    for metric in ("F1", "ROC-AUC"):
+        for model, suf in (("LogReg", "_LogReg"), ("HistGB", "_HistGB")):
+            transfer.append([x, "--corpora", *xc, "--seeds", "5", "--metric", metric, "--model", model,
+                             "--out", f"data/processed/p2/cross_dataset_{metric}{suf}.csv"])
+        for model, suf in (("RandomForest", ""), ("LogReg", "_LogReg"), ("HistGB", "_HistGB")):
+            transfer.append([x, "--corpora", *xc, "--seeds", "5", "--metric", metric, "--model", model,
+                             *prune, "--out", f"data/processed/p2/cross_dataset_{metric}{suf}_pruned.csv"])
+        for model, suf in (("RandomForest", ""), ("LogReg", "_LogReg")):
+            transfer.append([x, "--corpora", *xc, "--seeds", "5", "--metric", metric, "--model", model,
+                             "--adapt", "coral", "--out", f"data/processed/p2/cross_dataset_{metric}{suf}_coral.csv"])
+    transfer += [["scripts/run_combined_training.py"],
+                 [b + "run_p2_charcnn_xdata.py", "--seeds", "5", "--device", device]]
+    arms = arms if which == "core" else transfer if which == "transfer" else arms + transfer
     for a in arms:
         print("[run]", " ".join(a), flush=True)
         subprocess.run([sys.executable, "-u", *a], cwd=tree, env=env, check=True)
@@ -120,6 +142,10 @@ def run_arms(tree: str) -> None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tree", default="", help="scratch directory (default: a new temp dir)")
+    ap.add_argument("--arms", default="core", choices=["core", "transfer", "all"],
+                    help="core: the arms of the first audit; transfer: the matrices the transfer "
+                         "interventions and the char-CNN read (needs the core outputs in the tree)")
+    ap.add_argument("--device", default="cpu", help="torch device for the char-CNN arm")
     ap.add_argument("--corpus-only", action="store_true",
                     help="write the deduplicated corpus to dedup_audit/ and stop")
     a = ap.parse_args()
@@ -132,11 +158,12 @@ def main():
         return
     tree = a.tree or tempfile.mkdtemp(prefix="p2dedup_")
     build_tree(tree, ud, cd)
-    run_arms(tree)
-    for f in COPIED:
+    run_arms(tree, a.arms, a.device)
+    names = COPIED if a.arms == "core" else TRANSFER if a.arms == "transfer" else COPIED + TRANSFER
+    for f in names:
         shutil.copy(os.path.join(tree, "data", "processed", "p2", f + ".csv"),
                     os.path.join(OUT, f + ".csv"))
-    print(f"[+] {len(COPIED)} outputs -> {OUT}")
+    print(f"[+] {len(names)} outputs -> {OUT}")
 
 
 if __name__ == "__main__":
