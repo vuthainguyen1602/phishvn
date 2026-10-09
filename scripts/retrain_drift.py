@@ -37,7 +37,7 @@ def psi(expected, actual, bins=10):
     return float(np.sum((a - e) * np.log(a / e)))
 
 
-def load(path, time_col, spread_undated=False, seed=42):
+def load(path, time_col, spread_undated=False, seed=42, salt=""):
     df = pd.read_csv(path, low_memory=False)
     df["y"] = (df["label"].astype(str).str.lower().isin(["phishing", "1", "spam", "smishing"])).astype(int) \
         if df["label"].dtype == object else pd.to_numeric(df["label"], errors="coerce").fillna(0).astype(int)
@@ -54,6 +54,7 @@ def load(path, time_col, spread_undated=False, seed=42):
             span = (hi - lo).days or 1
             miss = df["_t"].isna()
             key = df.loc[miss, "id"].astype(str) if "id" in df else df.loc[miss].index.astype(str)
+            key = salt + key  # salt="" is the released placement; other salts re-draw it
             frac = key.map(lambda k: int(__import__("hashlib").sha1(k.encode()).hexdigest(), 16) % 10000 / 10000)
             df.loc[miss, "_t"] = lo + pd.to_timedelta((frac * span).round().astype(int), unit="D")
         df = df.sort_values("_t", na_position="first")
@@ -94,7 +95,9 @@ def fit(df, feats, kind="rf", seed=0):
 STATIC_ARCH = {"static_cb": "cb", "static_cblr": "cblr"}
 
 
-def run(df, feats, windows, period, psi_tau, f1_drop, include_static_arch=True, seed=0):
+def run(df, feats, windows, period, psi_tau, f1_drop, include_static_arch=True, seed=0, trace=None):
+    """trace: optional dict, filled per strategy with per-window ROC-AUC, balanced accuracy and
+    the F1 on rows whose feature vector does not occur in window 1 (the static training window)."""
     idx = np.array_split(np.arange(len(df)), windows)
     chunks = [df.iloc[i] for i in idx if len(i)]
     strategies = {"static": [], "periodic": [], "drift": []}
@@ -113,6 +116,10 @@ def run(df, feats, windows, period, psi_tau, f1_drop, include_static_arch=True, 
     ref = {k: base for k in strategies}  # reference window per strategy (for PSI)
     last_f1 = {k: 1.0 for k in strategies}
     psi_trace = []
+    if trace is not None:
+        seen = set(map(tuple, base[feats].round(6).to_numpy()))
+        for k in strategies:
+            trace[k] = {"auc": [], "bacc": [], "novel_f1": [], "novel_share": []}
 
     for w in range(1, len(chunks)):
         cur = chunks[w]
@@ -123,6 +130,16 @@ def run(df, feats, windows, period, psi_tau, f1_drop, include_static_arch=True, 
             pred = m.predict(cur[feats])
             f1 = f1_score(cur.y, pred, zero_division=0)
             strategies[strat].append(round(f1, 3))
+            if trace is not None:
+                from sklearn.metrics import balanced_accuracy_score, roc_auc_score
+                sc = m.predict_proba(cur[feats])[:, 1]
+                both = cur.y.nunique() == 2
+                nov = ~np.array([tuple(r) in seen for r in cur[feats].round(6).to_numpy()])
+                t = trace[strat]
+                t["auc"].append(roc_auc_score(cur.y, sc) if both else np.nan)
+                t["bacc"].append(balanced_accuracy_score(cur.y, pred) if both else np.nan)
+                t["novel_f1"].append(f1_score(cur.y[nov], pred[nov], zero_division=0) if nov.any() else np.nan)
+                t["novel_share"].append(float(nov[cur.y.to_numpy() == 1].mean()) if (cur.y == 1).any() else np.nan)
             # decide retraining for NEXT window
             retrain = False
             if strat == "periodic" and w % period == 0:

@@ -13,10 +13,15 @@ other. This runner rebuilds the stream from P2's one-row-per-URL corpus
 (data/processed/p2/dedup_audit/, written by run_p2_dedup_audit.py --corpus-only) and reruns the
 over-time policies, the window composition and the label-free budget frontier on it.
 
-Writes data/processed/p5/dedup/: p5_dedup_overtime.csv (per-window F1 per policy),
-p5_dedup_summary.csv (AUTC, end F1, retrains), p5_dedup_windows.csv and p5_dedup_budget.csv.
+A fourth construction, the dated rows alone, is run in the sweep for reference, and the three
+placed constructions are re-drawn under nine further hash salts.
 
-RUN:  python scripts/run_p5_dedup.py [--skip-budget]
+Writes data/processed/p5/dedup/: p5_construction_sweep.csv (four constructions; F1, ROC-AUC,
+balanced-accuracy and unseen-vector AUTC per policy), p5_construction_salts.csv, p5_psi_traces.csv,
+p5_dedup_overtime.csv (per-window F1 per policy), p5_dedup_summary.csv (AUTC, end F1, retrains),
+p5_dedup_windows.csv and p5_dedup_budget.csv.
+
+RUN:  python scripts/run_p5_dedup.py [--skip-budget] [--no-salts]
 """
 from __future__ import annotations
 
@@ -85,28 +90,57 @@ def build_nowww():
     c.to_csv(NOWWW, index=False)
 
 
-def sweep():
-    """The three constructions side by side: AUTC, end F1, retrains, and the window-1 makeup."""
+SALTS = [""] + [f"s{k}:" for k in range(1, 10)]  # "" is the released placement
+
+
+def _one(name, path, salt):
+    df, feats = load(path, "collected_at", spread_undated=(name != "dated"), salt=salt)
+    if name == "dated":
+        df = df[df["_t"].notna()].reset_index(drop=True)
+    tr = {}
+    strat, counts, psi_trace = run(df, feats, WINDOWS, PERIOD, PSI_TAU, F1_DROP,
+                                   include_static_arch=False, trace=tr)
+    idx = [i for i in np.array_split(np.arange(len(df)), WINDOWS) if len(i)]
+    pri = [float(df.y.iloc[i].mean()) for i in idx]
+    dated = dated_mask(df)
+    rows = []
+    for k, v in strat.items():
+        t = tr[k]
+        rows.append({"construction": name, "salt": salt, "rows": len(df), "policy": k,
+                     "autc": float(np.mean(v)), "end_f1": float(v[-1]), "retrains": counts[k],
+                     "auc_autc": float(np.nanmean(t["auc"])), "bacc_autc": float(np.nanmean(t["bacc"])),
+                     "novel_autc": float(np.nanmean(t["novel_f1"])),
+                     "novel_pos_share": float(np.nanmean(t["novel_share"])),
+                     "w1_prior": pri[0], "w1_spread": float(1 - dated[idx[0]].mean()),
+                     "prior_min": min(pri), "prior_max": max(pri)})
+    return rows, psi_trace
+
+
+def sweep(salts=True):
+    """The constructions side by side under the released placement (salt ""), then the three
+    placed constructions re-drawn under nine further salts. Per policy: AUTC on F1, ROC-AUC and
+    balanced accuracy, AUTC on rows whose feature vector window 1 never held, and window priors."""
     from make_p5_assets import DRIFT_CSV
+    cons = (("released", DRIFT_CSV), ("nowww", NOWWW), ("dedup", STREAM), ("dated", DRIFT_CSV))
     rows, traces = [], []
-    for name, path in (("released", DRIFT_CSV), ("nowww", NOWWW), ("dedup", STREAM)):
-        df, feats = load(path, "collected_at", spread_undated=True)
-        strat, counts, psi_trace = run(df, feats, WINDOWS, PERIOD, PSI_TAU, F1_DROP,
-                                       include_static_arch=False)
+    for name, path in cons:
+        r, psi_trace = _one(name, path, "")
+        rows += r
         traces.append(pd.DataFrame({"construction": name, "window": range(2, 2 + len(psi_trace)),
                                     "psi_vs_reference": psi_trace}))
-        idx = [i for i in np.array_split(np.arange(len(df)), WINDOWS) if len(i)]
-        pri = [float(df.y.iloc[i].mean()) for i in idx]
-        dated = dated_mask(df)
-        for k, v in strat.items():
-            rows.append({"construction": name, "rows": len(df), "policy": k, "autc": float(np.mean(v)),
-                         "end_f1": float(v[-1]), "retrains": counts[k],
-                         "w1_prior": pri[0], "w1_spread": float(1 - dated[idx[0]].mean()),
-                         "prior_min": min(pri), "prior_max": max(pri)})
+        print(f"[sweep] {name} done", flush=True)
     out = pd.DataFrame(rows)
     out.to_csv(os.path.join(OUT, "p5_construction_sweep.csv"), index=False)
     pd.concat(traces).to_csv(os.path.join(OUT, "p5_psi_traces.csv"), index=False)
     print(out.round(3).to_string(index=False))
+    if not salts:
+        return
+    srows = [r for r in rows if r["construction"] != "dated"]
+    for salt in SALTS[1:]:
+        for name, path in cons[:3]:
+            srows += _one(name, path, salt)[0]
+        print(f"[salt {salt}] done", flush=True)
+        pd.DataFrame(srows).to_csv(os.path.join(OUT, "p5_construction_salts.csv"), index=False)
 
 
 def dated_mask(df):
@@ -162,11 +196,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-budget", action="store_true")
     ap.add_argument("--seeds", type=int, default=5)
+    ap.add_argument("--no-salts", action="store_true", help="skip the nine re-drawn placements")
     a = ap.parse_args()
     build_stream()
     build_nowww()
     overtime()
-    sweep()
+    sweep(salts=not a.no_salts)
     if not a.skip_budget:
         budget(a.seeds)
 
