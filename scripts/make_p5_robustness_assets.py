@@ -142,18 +142,24 @@ def gen_shap_trace(t):
 
 
 def _label_note(s):
-    """The trigger and the schedule spend the same labels only where their retrain counts agree;
-    the trigger's F1-drop term reads each window's full labels, which the budget does not count."""
+    """Which labels each policy buys, and the trigger against the schedule at equal spend."""
     lab = s.pivot_table(index=["seed", "budget"], columns="policy", values="labels")
-    diff = lab[lab.drift != lab.periodic]
-    if diff.empty:
+    auc = s.pivot_table(index=["seed", "budget"], columns="policy", values="autc")
+    if (lab.drift == lab.periodic).all():
         return "The two spend the same labels in every cell."
-    num = lambda v: f"{int(v):,}".replace(",", "{,}")
-    cells = "; ".join(f"seed {sd}, $B={b}$: {num(r.drift)} against {num(r.periodic)}"
-                      for (sd, b), r in diff.iterrows())
-    return (f"They spend the same labels in all but {len(diff)} of the {len(lab)} seed-budget "
-            f"cells ({cells}), and the trigger's F1-drop term reads each window's full labels, "
-            f"which the budget does not count, so the trigger's label cost is understated.")
+    pairs = []
+    for (sd, b), r in lab.iterrows():
+        for (sd2, h), r2 in lab.xs(sd, level="seed", drop_level=False).iterrows():
+            if r.drift == r2.periodic and r.drift > 0:
+                pairs.append((b, h, auc.loc[(sd, b), "drift"] - auc.loc[(sd2, h), "periodic"]))
+    p = pd.DataFrame(pairs, columns=["b", "h", "d"])
+    g = p.groupby("b").d
+    share = float((lab.drift / lab.periodic).median())
+    worse = int((p.d < 0).sum())
+    return (f"The label-free trigger buys {100 * share:.0f}\\% of the schedule's labels in every cell. "
+            f"Matched on labels bought (the trigger at $B$ against the schedule at the budget that "
+            f"buys as many), it is behind on {worse} of {len(p)} seed-budget pairs, by "
+            f"${g.mean().max():+.3f}$ to ${g.mean().min():+.3f}$ AUTC on average.")
 
 
 def gen_budget_seeds(s):
@@ -172,16 +178,21 @@ def gen_budget_seeds(s):
     pm = lambda g, b: f"${g.mean()[b]:+.3f} \\pm {g.std()[b]:.3f}$"
     act_txt = ("below random selection at every budget on every seed" if act_all else
                "below random selection on most seeds")
+    dmean = dp.mean()
+    if (dmean < 0).all() and dp_hi_wins == 0 and dp_lo_wins == 0:
+        trig = (f"The label-free trigger trails the fixed schedule at every budget, from "
+                f"{pm(dp, lo)} at $B={lo}$ to {pm(dp, hi)} at $B={hi}$, on every seed. ")
+    else:
+        trig = (f"The drift trigger trails the fixed schedule at the cheapest budgets ({pm(dp, lo)} "
+                f"at $B={lo}$ and {pm(dp, second)} at $B={second}$, ahead on {dp_lo_wins} and "
+                f"{dp_2_wins} of {k} seeds) and leads at the dearest ({pm(dp, hi)} at $B={hi}$, "
+                f"ahead on {dp_hi_wins} of {k}); between them the sign depends on the seed. ")
     body = (
         f"Repeating the grid over {k} model seeds (the seed sets the forest and the random label "
-        f"draws together; mean $\\pm$ SD over seeds) settles the two readings the single seed "
+        f"draws together; mean $\\pm$ SD over seeds) settles what the single seed "
         f"left open. Uncertainty sampling is {act_txt}: {pm(ap, lo)} AUTC against periodic "
         f"retraining at $B={lo}$, widest at $B={worst_b}$ ({pm(ap, worst_b)}), and "
-        f"{pm(ap, hi)} at $B={hi}$. The drift trigger trails the fixed schedule at the cheapest "
-        f"budgets ({pm(dp, lo)} at $B={lo}$ and {pm(dp, second)} at $B={second}$, ahead on "
-        f"{dp_lo_wins} and {dp_2_wins} of {k} seeds) and leads at the dearest ({pm(dp, hi)} at "
-        f"$B={hi}$, ahead on {dp_hi_wins} of {k}); between them the sign depends on the seed. "
-        + _label_note(s))
+        f"{pm(ap, hi)} at $B={hi}$. " + trig + _label_note(s))
     write_generated(os.path.join(SEC, "gen_budget_seeds.tex"), body)
 
 

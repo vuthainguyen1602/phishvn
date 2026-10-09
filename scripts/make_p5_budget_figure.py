@@ -182,12 +182,27 @@ def make_tex(rows: list[dict]) -> None:
 
     flip_txt = (f"between $B={bs[bs.index(flip) - 1]}$ and $B={flip}$"
                 if flip is not None else "nowhere on this grid")
+    dri = {r["budget"]: r["autc"] for r in rows if r["policy"] == "drift"}
+    lab = {(r["policy"], r["budget"]): r["labels"] for r in rows}
+    # equal label spend: the trigger at B against the schedule at the budget that buys as many labels
+    eq = [(b, h, dri[b] - per[h]) for b in bs for h in bs
+          if lab[("drift", b)] == lab[("periodic", h)] and lab[("drift", b)] > 0]
+    ratio = lab[("drift", bs[-1])] / lab[("periodic", bs[-1])]
+    if flip is None and all(dri[b] < per[b] for b in bs):
+        trig_txt = (f"The label-free trigger retrains less often than the schedule (it buys "
+                    f"{100 * ratio:.0f}\\% of the schedule's labels at every budget) and is behind "
+                    f"it at every budget, by ${gap_lo:+.3f}$ AUTC at the cheapest and ${gap_hi:+.3f}$ "
+                    f"at the dearest. Matched on labels bought instead (the trigger at $B$ against "
+                    f"the schedule at the budget that buys as many), it is still behind on every "
+                    f"pair, by ${max(e[2] for e in eq):+.3f}$ to ${min(e[2] for e in eq):+.3f}$. ")
+    else:
+        trig_txt = (f"The drift trigger is not uniformly better than a fixed schedule: it is worth "
+                    f"${gap_lo:+.3f}$ AUTC against periodic retraining at the cheapest budget and "
+                    f"${gap_hi:+.3f}$ at the dearest, crossing over {flip_txt}. ")
     body = (
         f"Figure~\\ref{{fig:budgetfrontier}} runs the same experiment across {len(bs)} budgets "
         f"rather than the three Table~\\ref{{tab:budget}} prices, and two things the table cannot "
-        "resolve become visible. The drift trigger is not uniformly better than a fixed schedule: "
-        f"it is worth ${gap_lo:+.3f}$ AUTC against periodic retraining at the cheapest budget and "
-        f"${gap_hi:+.3f}$ at the dearest, crossing over {flip_txt}. Uncertainty sampling is the sharper negative "
+        "resolve become visible. " + trig_txt + "Uncertainty sampling is the second negative "
         f"result: it is worse than random selection at {act_loses} of the {len(bs)} budgets "
         f"({act_small} of them by less than $0.01$ AUTC, a margin the seed repeat below shows "
         "is not seed noise), so on this stream choosing \\emph{which} examples "

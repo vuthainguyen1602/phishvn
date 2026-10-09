@@ -231,11 +231,12 @@ def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1,
     The four columns isolate two design axes against a common backbone:
       static   : never retrain (labels = 0 after init).
       periodic : retrain every `period` windows, labelling B RANDOM samples per retrain.
-      drift    : retrain on the same PSI-or-F1-drop trigger as the over-time experiment, labelling B
-                 RANDOM samples per retrain (same selection as periodic, different TRIGGER — the
-                 hypothesis is fewer retrains/labels; the current cut spends the same, which the
-                 paper reports as a null). Because the F1-drop half of the trigger depends on the
-                 (budget-capped) model, its retrain count can differ from the full-label experiment.
+      drift    : retrain when the window's mean PSI against the last refit window exceeds psi_tau,
+                 labelling B RANDOM samples per retrain (same selection as periodic, different
+                 TRIGGER). The trigger is label-free here: until 2026-10-09 it also fired on an F1
+                 drop computed from the window's FULL labels, which the budget never counted, so the
+                 trigger spent labels the frontier did not charge. Every label it uses is now one it
+                 pays for: B per retrain, exactly as periodic and active.
       active   : retrain every `period` windows, labelling the B most-UNCERTAIN samples per retrain
                  (same trigger as periodic, different SELECTION -> label efficiency).
     So periodic-vs-active isolates sample selection; periodic-vs-drift isolates the trigger.
@@ -264,9 +265,9 @@ def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1,
                     continue
                 if k in ("periodic", "active"):
                     fire = (w % period == 0)
-                else:  # drift: PSI alarm OR F1 drop, matching run() in retrain_drift.py
+                else:  # drift: the label-free PSI term of the trigger (see the docstring)
                     psi_mean = float(np.mean([psi(ref[k][c].values, cur[c].values) for c in feats]))
-                    fire = psi_mean > psi_tau or (last_f1[k] - f1) > f1_drop
+                    fire = psi_mean > psi_tau
                 last_f1[k] = f1
                 if not fire:
                     continue
