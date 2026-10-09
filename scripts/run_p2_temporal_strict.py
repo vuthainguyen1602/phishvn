@@ -53,7 +53,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH, add_label
-from run_p2_benchmark import (FAMILIES, pr_curve_row, run_one,
+from run_p2_benchmark import (FAMILIES, pr_curve_row, run_one, refuse_canonical,
                               write_curves)
 from psl import registered_domain
 
@@ -123,6 +123,8 @@ def main():
                          "variable. Writes protocols temporal_strict + random_same_rows_guarded.")
     args = ap.parse_args()
 
+    refuse_canonical(args.out, OUT, "data/processed/p2/p2_temporal_strict_guarded.csv")
+    refuse_canonical(args.curves, CURVES)
     df = load()
     feats = [c for c in COMPPHISH if c in df.columns]
     ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)

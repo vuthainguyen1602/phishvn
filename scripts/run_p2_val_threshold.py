@@ -39,7 +39,7 @@ except ImportError:
     ROOT = os.path.dirname(_HERE)
 
 from train_url_baseline import COMPPHISH, _metrics
-from run_p2_benchmark import FAMILIES, make_any_model
+from run_p2_benchmark import FAMILIES, make_any_model, refuse_canonical, weighting_params
 from run_p2_temporal_strict import load, split_phishing
 
 OUT = "data/processed/p2/p2_val_threshold.csv"
@@ -86,6 +86,7 @@ def main():
     ap.add_argument("--cut", type=float, default=0.70)
     ap.add_argument("--out", default=OUT)
     a = ap.parse_args()
+    refuse_canonical(a.out, OUT)
     os.chdir(ROOT)
 
     df = load()
@@ -112,7 +113,7 @@ def main():
                     te = pd.concat([pool[~pmask], be[~bmask]])
             fit, val = carve(tr, design, s)
             for name in a.families:
-                m = make_any_model(name, s)
+                m = make_any_model(name, s, weighting_params(name))
                 m.fit(fit[feats].to_numpy(float), fit.y.to_numpy(int))
                 sv = m.predict_proba(val[feats].to_numpy(float))[:, 1]
                 tau = best_threshold(val.y.to_numpy(int), sv)

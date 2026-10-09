@@ -49,6 +49,25 @@ CURVES = "data/processed/p2/p2_pr_curves.csv"
 
 FAMILIES = ["LogReg", "RandomForest", "HistGB", "MLP", "XGBoost", "LightGBM", "CatBoost"]
 DETERMINISTIC = {"LogReg"}
+# The three families the shared baseline module trains with class_weight="balanced"; the four
+# others are unweighted. --unweighted refits these three without it, so every family is fitted
+# the same way (the sensitivity arm for the tab_families margin, 2026-10-09).
+WEIGHTED = {"LogReg", "RandomForest", "HistGB"}
+# The other P2 runners import run_one; P2_UNWEIGHTED=1 switches all of them to the uniform arm at
+# once, and refuse_canonical() stops any of them writing that arm over its canonical CSV.
+UNWEIGHTED = os.environ.get("P2_UNWEIGHTED") == "1"
+
+
+def weighting_params(name, unweighted=None):
+    u = UNWEIGHTED if unweighted is None else unweighted
+    return {"class_weight": None} if (u and name in WEIGHTED) else None
+
+
+def refuse_canonical(out, canonical, *extra):
+    if UNWEIGHTED:
+        for path in (canonical,) + extra:
+            if path and out and os.path.abspath(out) == os.path.abspath(path):
+                raise SystemExit(f"P2_UNWEIGHTED=1 must not write the canonical {path}; pass --out")
 
 
 def make_any_model(name: str, seed: int, params: dict | None = None):
@@ -123,9 +142,10 @@ def write_curves(curves, path):
     print(f"[+] {len(acc)} curve(s) -> {path}")
 
 
-def run_one(name, Xtr, ytr, Xte, yte, seed, return_scores=False):
+def run_one(name, Xtr, ytr, Xte, yte, seed, return_scores=False, unweighted=None):
     t0 = time.time()
-    m = make_any_model(name, seed)
+    params = weighting_params(name, unweighted)
+    m = make_any_model(name, seed, params)
     m.fit(Xtr, ytr)
     fit_s = time.time() - t0
     score = m.predict_proba(Xte)[:, 1]
@@ -141,7 +161,15 @@ def main():
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--curves", default=CURVES)
+    ap.add_argument("--unweighted", action="store_true",
+                    help="refit the class-weighted families without class weights; needs its own "
+                         "--out so the canonical CSV is never overwritten")
     args = ap.parse_args()
+    args.unweighted = args.unweighted or UNWEIGHTED
+    if args.unweighted and os.path.abspath(args.out) == os.path.abspath(OUT):
+        raise SystemExit("--unweighted must write to its own --out, not the canonical " + OUT)
+    if args.unweighted:
+        args.curves = None
 
     df = add_label(pd.read_csv(args.inp))
     feats = [c for c in COMPPHISH if c in df.columns]
@@ -169,8 +197,11 @@ def main():
             seeds = [0] if (name in DETERMINISTIC and proto == "temporal") else range(args.seeds)
             for s in seeds:
                 Xtr, Xte, ytr, yte = splitter(s)
-                met, y_t, sc = run_one(name, Xtr, ytr, Xte, yte, s, return_scores=True)
+                met, y_t, sc = run_one(name, Xtr, ytr, Xte, yte, s, return_scores=True,
+                                       unweighted=args.unweighted)
                 met["protocol"] = proto
+                if args.unweighted:
+                    met["weighting"] = "none" if name in WEIGHTED else "none (unchanged)"
                 rows.append(met)
                 curves.append({"family": name, "protocol": proto, "seed": s,
                                "precision": pr_curve_row(y_t, sc)})

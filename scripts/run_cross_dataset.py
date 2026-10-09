@@ -120,6 +120,9 @@ class CoralAligner:
         return (np.asarray(X, float) - self.mu_t) / self.sd_t
 
 
+UNWEIGHTED = os.environ.get("P2_UNWEIGHTED") == "1"
+
+
 def cell_score(train_df, test_df, same, metric, seeds, model="RandomForest", tune=False,
                feats=COMPPHISH, adapt="none"):
     n_seed = 1 if model in DETERMINISTIC else seeds
@@ -133,6 +136,10 @@ def cell_score(train_df, test_df, same, metric, seeds, model="RandomForest", tun
         else:
             tr, te = train_df, test_df
         if model in MODEL_NAMES:
+            # P2_UNWEIGHTED=1: the uniform-weighting arm P2's family runners share (2026-10-09);
+            # the baseline module's class_weight=balanced is dropped for the families that carry it.
+            if UNWEIGHTED and model in {"LogReg", "RandomForest", "HistGB"}:
+                params = {**params, "class_weight": None}
             m = make_model(model, s, params)
         else:  # P2's booster additions; default hyperparameters, no tune_params support
             from run_p2_benchmark import make_any_model
@@ -211,6 +218,8 @@ def main():
     print(f"generalisation gap              = {diag.mean() - np.nanmean(off):.3f}  "
           f"(smaller = features transfer better)")
 
+    if UNWEIGHTED and args.out and "_unweighted" not in os.path.basename(args.out):
+        raise SystemExit("P2_UNWEIGHTED=1 writes only to an *_unweighted output, not " + args.out)
     if args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
         mat.to_csv(args.out)

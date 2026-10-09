@@ -52,7 +52,10 @@ def _fit(model: str, seed: int):
     """The matrix's own factory. RandomForest (P3's matrix) comes from the shared baseline
     module; P2's F1 matrix is CatBoost, which only run_p2_benchmark knows how to build."""
     if model == "RandomForest":
-        return make_model(model, seed, {})
+        # P2_UNWEIGHTED=1 (P2's uniform-weighting arm, 2026-10-09) drops the baseline module's
+        # class_weight="balanced"; unset, P3's matrix is reproduced unchanged.
+        unweighted = os.environ.get("P2_UNWEIGHTED") == "1"
+        return make_model(model, seed, {"class_weight": None} if unweighted else {})
     from run_p2_benchmark import make_any_model
     return make_any_model(model, seed)
 

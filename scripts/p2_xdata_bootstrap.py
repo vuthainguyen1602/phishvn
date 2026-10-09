@@ -58,9 +58,14 @@ def main():
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--out", default=OUT)
     args = ap.parse_args()
+    unweighted = os.environ.get("P2_UNWEIGHTED") == "1"
+    if unweighted and os.path.abspath(args.out) == os.path.abspath(OUT):
+        raise SystemExit("P2_UNWEIGHTED=1 must not write the canonical " + OUT + "; pass --out")
+    # CatBoost carries no class weight, so only the forest's arm differs under uniform weighting
+    arms = [a for a in ARMS if a[0] == "RandomForest"] if unweighted else ARMS
 
     frames = []
-    for model, metric in ARMS:
+    for model, metric in arms:
         print(f"\n=== {model} ({metric} matrix) ===", flush=True)
         names, held = collect_scores(args.seeds, model=model)
         reps = bootstrap(names, held, args.boot)
@@ -74,7 +79,8 @@ def main():
     out = pd.concat(frames, ignore_index=True)
     out.to_csv(args.out, index=False)
     print(f"[+] {args.out}")
-    emit(out, args.boot)
+    if not unweighted:  # the sensitivity arm never rewrites the paper's CI sentences
+        emit(out, args.boot)
 
 
 if __name__ == "__main__":

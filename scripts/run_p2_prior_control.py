@@ -42,7 +42,7 @@ except ImportError:
     ROOT = os.path.dirname(_HERE)
 
 from train_url_baseline import COMPPHISH
-from run_p2_benchmark import FAMILIES, run_one
+from run_p2_benchmark import FAMILIES, refuse_canonical, run_one
 from run_p2_temporal_strict import load
 
 OUT = "data/processed/p2/p2_prior_control.csv"
@@ -82,6 +82,7 @@ def main():
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--out", default=OUT)
     a = ap.parse_args()
+    refuse_canonical(a.out, OUT)
     os.chdir(ROOT)
 
     df = load()
