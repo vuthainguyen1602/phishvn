@@ -933,7 +933,8 @@ def gen_dedup_sensitivity():
 
     The released corpus records most undated community-feed phishing hosts twice, once with a
     "www." prefix and no date and once dated without it. Keeping one row per host is the arm a
-    referee will ask for; this paragraph says what it moves and what it leaves alone."""
+    referee will ask for; this paragraph says what it moves, what it leaves, and what its own
+    construction decides."""
     need = ["p2_benchmark", "p2_temporal_strict", "p2_temporal_strict_guarded",
             "cross_dataset_F1", "cross_dataset_ROC-AUC", "cross_dataset_F1_CatBoost",
             "p2_dup_leakage", "p2_shap_weighting", "dataset_url_dedup"]
@@ -945,56 +946,76 @@ def gen_dedup_sensitivity():
         d = pd.read_csv(path)
         return d[d.protocol == proto].groupby("family")[met].mean()
 
-    def mat(path):
-        m = pd.read_csv(path, index_col=0).values.astype(float)
-        e = np.eye(len(m), dtype=bool)
-        return m[e].mean() - m[~e].mean(), m[~e].mean(), int((m[~e] < 0.5).sum())
+    def dated_of(path):
+        d = pd.read_csv(path, usecols=["label", "collected_at"], low_memory=False)
+        t = d["collected_at"].astype(str).str.strip().str.slice(0, 10)
+        ok = (pd.to_datetime(t, format="%d/%m/%Y", errors="coerce")
+              .fillna(pd.to_datetime(t, format="%Y-%m-%d", errors="coerce"))).notna()
+        return d, ok
 
-    u = pd.read_csv("data/processed/dataset_url.csv", usecols=["url_norm"], low_memory=False)
-    n_all, n_dd = len(u), len(pd.read_csv(DEDUP + "dataset_url_dedup.csv", usecols=["url_norm"]))
+    u, du = dated_of("data/processed/dataset_url.csv")
+    v, dv = dated_of(DEDUP + "dataset_url_dedup.csv")
+    n_all, n_dd = len(u), len(v)
+    ph = v.label.astype(str).str.lower() == "phishing"
+    dated_dropped = int(du.sum() - dv.sum())
+    undated_ph_left = int((ph & ~dv).sum())
     full0, full1 = fam(P + "p2_benchmark.csv", "random"), fam(DEDUP + "p2_benchmark.csv", "random")
     dr0, dr1 = (fam(P + "p2_temporal_strict.csv", "random_same_rows"),
                 fam(DEDUP + "p2_temporal_strict.csv", "random_same_rows"))
     t0, t1 = (fam(P + "p2_temporal_strict.csv", "temporal_strict"),
               fam(DEDUP + "p2_temporal_strict.csv", "temporal_strict"))
     comp0, comp1 = full0 - dr0, full1 - dr1
-    mv1 = (pd.concat([full1, dr1, t1], axis=1).max(axis=1) - pd.concat([full1, dr1, t1], axis=1).min(axis=1))
+    stk = pd.concat([full1, dr1, t1], axis=1)
+    mv1 = stk.max(axis=1) - stk.min(axis=1)
     sp = lambda x: float(x.max() - x.min())
-    g0, o0, b0 = mat(P + "cross_dataset_ROC-AUC.csv")
-    g1, o1, b1 = mat(DEDUP + "cross_dataset_ROC-AUC.csv")
-    f0 = mat(P + "cross_dataset_F1.csv")[0]
-    f1 = mat(DEDUP + "cross_dataset_F1.csv")[0]
-    c0, c1 = mat(P + "cross_dataset_F1_CatBoost.csv")[0], mat(DEDUP + "cross_dataset_F1_CatBoost.csv")[0]
+    r0 = pd.read_csv(P + "cross_dataset_ROC-AUC.csv", index_col=0)
+    r1 = pd.read_csv(DEDUP + "cross_dataset_ROC-AUC.csv", index_col=0)
+    e = np.eye(len(r0), dtype=bool)
+    o0, o1 = r0.values[~e].mean(), r1.values[~e].mean()
+    b0, b1 = int((r0.values[~e] < 0.5).sum()), int((r1.values[~e] < 0.5).sum())
+    flips = [(i, j) for i in r0.index for j in r0.columns
+             if i != j and (r0.loc[i, j] < 0.5) != (r1.loc[i, j] < 0.5)]
+    vn = sum(1 for i, j in flips if "PhishVN" in (i, j))
+    gap = lambda p: (lambda m: m[e].mean() - m[~e].mean())(pd.read_csv(p, index_col=0).values.astype(float))
+    f0, f1 = gap(P + "cross_dataset_F1.csv"), gap(DEDUP + "cross_dataset_F1.csv")
+    c0, c1 = gap(P + "cross_dataset_F1_CatBoost.csv"), gap(DEDUP + "cross_dataset_F1_CatBoost.csv")
     sh = pd.read_csv(DEDUP + "p2_shap_weighting.csv")
     sh = sh[sh.weighting == "none"].sort_values("share", ascending=False)
     top = ", ".join("\\texttt{" + r.feature.replace("_", "\\_") + "}" for r in sh.head(3).itertuples())
     lk0, lk1 = pd.read_csv(P + "p2_dup_leakage.csv").iloc[0], pd.read_csv(DEDUP + "p2_dup_leakage.csv").iloc[0]
-    num = lambda v: f"{int(v):,}".replace(",", "{,}")
+    num = lambda x: f"{int(x):,}".replace(",", "{,}")
     return (
-        f"\\textbf{{Duplicated hosts.}} The released corpus records {num(n_all - n_dd)} hosts twice: "
-        f"almost every undated community-feed phishing row is the \\texttt{{www.}}-prefixed copy "
-        f"of a dated row for the same host, so the prefix itself sits on phishing rows. Keeping one "
-        f"row per host (the dated row where there is one) leaves {num(n_dd)} rows, and rerunning the "
-        f"arms those rows enter changes one part of the picture and leaves the rest. The "
-        f"full-corpus random split loses most of its level: its best family scores "
-        f"${full1.max():.3f}$ F1 against ${full0.max():.3f}$, the composition step costs each family "
-        f"${comp1.min():.3f}$--${comp1.max():.3f}$ F1 instead of ${comp0.min():.3f}$--"
-        f"${comp0.max():.3f}$, and a family's F1 moves by at most ${mv1.max():.3f}$ across the three "
-        f"same-corpus designs, about the size of the between-family spreads (${sp(full1):.3f}$, "
-        f"${sp(dr1):.3f}$ and ${sp(t1):.3f}$). The test rows that share a registrable domain with "
-        f"training fall from {100 * lk0.test_regdom_shared_rate:.0f}\\% to "
-        f"{100 * lk1.test_regdom_shared_rate:.0f}\\%. The cross-design movement of "
-        f"Figure~\\ref{{fig:evaldesign}} is therefore largely the duplicated hosts, not the design. "
-        f"The dated-row results do not move, because dated rows are not duplicated: the temporal "
-        f"spread is ${sp(t1):.3f}$ against ${sp(t0):.3f}$, logistic regression still leads "
-        f"CatBoost (${t1['CatBoost'] - t1['LogReg']:+.3f}$ against ${t0['CatBoost'] - t0['LogReg']:+.3f}$), "
-        f"and the protocol step is unchanged. Nor does transfer: the random forest's F1 gap is "
-        f"${f1:.3f}$ against ${f0:.3f}$, CatBoost's ${c1:.3f}$ against ${c0:.3f}$, and the forest's "
-        f"off-diagonal ROC-AUC ${o1:.3f}$ against ${o0:.3f}$ with {b1} of 12 cells below chance "
+        f"\\textbf{{Duplicated hosts.}} The released corpus records {num(n_all - n_dd)} URLs twice, "
+        f"once the scheme and a leading \\texttt{{www.}} are set aside: almost every undated "
+        f"community-feed phishing row is the \\texttt{{www.}}-prefixed copy of a dated row, so the "
+        f"prefix itself sits on phishing rows. Keeping one row per such URL, the dated row where "
+        f"there is one, leaves {num(n_dd)} rows. That choice decides one result in advance: the "
+        f"deduplicated corpus keeps only {num(undated_ph_left)} undated phishing rows (and drops "
+        f"{num(dated_dropped)} dated ones), so it is nearly the dated design itself, and its "
+        f"composition step of ${comp1.min():.3f}$--${comp1.max():.3f}$ F1, against "
+        f"${comp0.min():.3f}$--${comp0.max():.3f}$ on the released rows, is close to zero by "
+        f"construction. What the arm does show is where the full-corpus level came from: the best "
+        f"family scores ${full1.max():.3f}$ F1 against ${full0.max():.3f}$, test rows that share a "
+        f"registrable domain with training fall from {100 * lk0.test_regdom_shared_rate:.0f}\\% to "
+        f"{100 * lk1.test_regdom_shared_rate:.0f}\\% (exact feature-vector twins only from "
+        f"{100 * lk0.test_twin_rate:.0f}\\% to {100 * lk1.test_twin_rate:.0f}\\%, the schema "
+        f"being coarse), and a family's F1 moves by at most ${mv1.max():.3f}$ across the three "
+        f"same-corpus designs, the size of the between-family spreads (${sp(full1):.3f}$, "
+        f"${sp(dr1):.3f}$ and ${sp(t1):.3f}$). The cross-design movement of "
+        f"Figure~\\ref{{fig:evaldesign}} is therefore largely the duplicated rows. The dated-row "
+        f"results barely move: the temporal spread is ${sp(t1):.3f}$ against ${sp(t0):.3f}$, "
+        f"logistic regression still leads CatBoost (${t1['CatBoost'] - t1['LogReg']:+.3f}$ against "
+        f"${t0['CatBoost'] - t0['LogReg']:+.3f}$), and the protocol step is unchanged. Transfer "
+        f"moves at the level of cells more than of means: the random forest's F1 gap is "
+        f"${f1:.3f}$ against ${f0:.3f}$ and CatBoost's ${c1:.3f}$ against ${c0:.3f}$, but the "
+        f"forest's off-diagonal ROC-AUC rises from ${o0:.3f}$ to ${o1:.3f}$, {len(flips)} cells "
+        f"change side of chance ("
+        f"{"all" if vn == len(flips) else vn} of them involving PhishVN) and {b1} of 12 stay below it "
         f"rather than {b0}. TreeSHAP's top three become {top} "
         f"(${100 * sh.share.head(3).sum():.1f}\\%$ of attribution): subdomain count, which the "
-        f"prefix inflates, leaves the top three, so the pruning arm's choice of features is partly "
-        f"a choice of the duplicate's marker.")
+        f"prefix inflates, leaves the top three. The pruning, pooling and CORAL arms of "
+        f"Sections~\\ref{{ssec:pruning}}--\\ref{{ssec:adapt}} and the character-CNN matrix were "
+        f"run on the released rows only.")
 
 
 def gen_strict_verdict():
@@ -1519,9 +1540,7 @@ def gen_guard_control():
         f"The guard's cost is a near-constant offset, so the \\emph{{ordering}} of families by "
         f"$\\Delta_{{proto}}$ is preserved (Spearman $\\rho = {rho:.2f}$ between the two "
         f"controls, logistic regression smallest and {worst_name} largest under both); and the "
-        f"direction of the paper's argument is unaffected, since a "
-        f"smaller protocol step makes the composition step's level drop larger relative to it, "
-        f"not smaller. Table~\\ref{{tab:decomp}} keeps the unguarded control, because that is the "
+        f"protocol step is small with or without the guard. Table~\\ref{{tab:decomp}} keeps the unguarded control, because that is the "
         f"comparison the benchmark literature runs and the quantity a reader of that literature "
         f"needs; this arm is what says how much of it is protocol.")
 
