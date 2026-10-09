@@ -99,8 +99,8 @@ def gen_window_reading(w, d):
         f"(static ${pol.loc['static', 'autc']:.3f}$, periodic ${pol.loc['periodic', 'autc']:.3f}$, "
         f"drift-triggered ${pol.loc['drift', 'autc']:.3f}$). That stream is "
         f"{100 * prior:.0f}\\% phishing, so every policy sits close to the all-positive floor "
-        f"(${floor(prior):.3f}$ F1 at that prior) and the comparison has little room to separate anything; what it "
-        f"does show is that the twenty-point gap of Table~\\ref{{tab:overtime}} does not survive "
+        f"(${floor(prior):.3f}$ F1 at that prior) and the comparison has little room to separate anything. It does "
+        f"show that the twenty-point gap of Table~\\ref{{tab:overtime}} does not survive "
         f"without the spreading scheme.")
     write_generated(os.path.join(SEC, "gen_window_reading.tex"), body)
 
