@@ -730,7 +730,8 @@ def gen_stacking_verdict():
              f"(BH-adjusted ${fmt_p(q['Stack[CB+LR]'], 'q')}$) and Stack[CB+HGB+LR+MLP] "
              f"${res['Stack[CB+HGB+LR+MLP]']['mean']:+.4f}$ "
              f"(${fmt_p(q['Stack[CB+HGB+LR+MLP]'], 'q')}$). The significance claim therefore "
-             f"rests on the pre-planned 20-seed extension for the focal pair, adjusted over its "
+             f"rests on a 20-seed extension for the focal pair, run before the refresh-window "
+             f"registration and so exploratory, adjusted over its "
              f"own two tests: Stack[CB+LR] beats CatBoost under the phishing-temporal protocol "
              f"(paired $\\Delta$PR-AUC $= {t['mean']:+.4f}$, {t['wins']}/{t['k']} seeds, "
              f"corrected ${fmt_p(tq, 'q')}$) and loses to it under random-same-rows "
@@ -926,7 +927,7 @@ def gen_strict_verdict():
         f"${fmt_p(f1['p'])}$, $n={n}$ seeds). On threshold-fixed F1 the two families are"
         f" therefore tied, but that verdict is a property of the metric, not of the"
         f" families. On the other three quantities the same runs record, the booster is ahead"
-        " on every seed: " + "; ".join(parts) + ". The ranking advantage is real and small;"
+        " on every seed: " + "; ".join(parts) + ". The ranking advantage is consistent in direction and small;"
         " what the threshold-fixed comparison shows is that it does not convert into a"
         " better operating point at $\\tau = 0.5$.")
 
@@ -1255,12 +1256,20 @@ def gen_charcnn():
             if fam != "CharCNN" else cnn[cnn.protocol == "random_same_rows"]["F1"].mean()
         t = base[(base.protocol == "temporal_strict") & (base.family == fam)]["F1"].mean() \
             if fam != "CharCNN" else cnn[cnn.protocol == "temporal_strict"]["F1"].mean()
-        return r - t
+        return t - r  # temporal minus random, the sign convention of tab_decomp
 
     dp_cnn = dproto("CharCNN")
     dp_tab = {f: dproto(f) for f in fams}
-    dp_best = max(dp_tab.values())
-    dp_worst = min(dp_tab.values())
+    dp_best = min(dp_tab.values())   # most protocol-sensitive: the largest drop
+    dp_worst = max(dp_tab.values())
+
+    # The gain is compared with the tabular spread under the SAME protocol; comparing a
+    # temporal gain with the dated-random spread mixes two protocols.
+    def spread_gain(proto):
+        tab = base[base.protocol == proto].groupby("family")["F1"].mean()
+        return (cnn[cnn.protocol == proto]["F1"].mean() - tab.max(), tab.max() - tab.min())
+    g_t, s_t = spread_gain("temporal_strict")
+    g_r, s_r = spread_gain("random_same_rows")
 
     out = [
         f"Against the strongest tabular family ({best}) on identical rows and seeds, the "
@@ -1269,6 +1278,9 @@ def gen_charcnn():
         f"protocol, and reduces FPR at $90\\%$ recall by ${abs(d_fpr):.3f}$; all "
         f"{n_sig} paired comparisons across the seven families, three metrics and two protocols "
         f"survive Benjamini--Hochberg ({qfmt}). "
+        f"Measured against the spread of the seven under the same protocol, the F1 gain over the "
+        f"best tabular family is ${g_t:.3f}$ against a spread of ${s_t:.3f}$ under the temporal "
+        f"protocol and ${g_r:.3f}$ against ${s_r:.3f}$ under a random split of the same rows. "
         f"The gain is largest on the deployment metric, which is the one Section~"
         f"\\ref{{sec:discussion}} argues a benchmark should be read on.",
         f"Capacity is not free of the protocol, however: the character-CNN carries the largest "
@@ -1379,7 +1391,7 @@ def gen_guard_control():
         f"${shift:+.3f}$ F1, near-uniformly across families, and $\\Delta_{{proto}}$ falls from "
         f"${min(d_old.values()):+.3f}$--${max(d_old.values()):+.3f}$ to "
         f"${min(d_new.values()):+.4f}$--${max(d_new.values()):+.4f}$: roughly half of the "
-        f"published protocol step was the guard. For the leading families it is now "
+        f"unguarded protocol step was the guard. For the leading families it is now "
         f"indistinguishable from zero (CatBoost ${d_new['CatBoost']:+.4f}$ F1, "
         f"${pr_new:+.3f}$ PR-AUC against ${pr_old:+.3f}$ unguarded; logistic regression "
         f"${d_new['LogReg']:+.4f}$, the wrong sign for a temporal penalty), and what remains is "
@@ -1390,7 +1402,7 @@ def gen_guard_control():
         f"controls, logistic regression smallest and {worst_name} largest under both); and the "
         f"direction of the paper's argument is unaffected, since a "
         f"smaller protocol step makes the composition and threshold steps larger relative to it, "
-        f"not smaller. The published table keeps the unguarded control, because that is the "
+        f"not smaller. Table~\\ref{{tab:decomp}} keeps the unguarded control, because that is the "
         f"comparison the benchmark literature runs and the quantity a reader of that literature "
         f"needs; this arm is what says how much of it is protocol.")
 
@@ -2037,19 +2049,18 @@ def gen_prior_verdict():
     if total <= 0:
         raise SystemExit("gen_prior_verdict: the thresholded spread no longer collapses across "
                          "the composition step; the paragraph's premise is gone -- rewrite it.")
-    share_prior = prior_shrink / total
-    if share_prior >= 0.6:
-        verdict = ("So the collapse of the thresholded spread is mostly the class prior: matching "
-                   "the prior alone removes {:.0f}\\% of it, and which phishing rows are eligible "
-                   "accounts for the rest.".format(100 * share_prior))
-    elif share_prior <= 0.4:
-        verdict = ("So the collapse of the thresholded spread is mostly which phishing rows are "
-                   "eligible, not the prior: matching the prior alone removes only {:.0f}\\% of "
-                   "it.".format(100 * share_prior))
-    else:
-        verdict = ("So the two steps share the collapse of the thresholded spread: matching the "
-                   "prior alone removes {:.0f}\\% of it and the change of rows the rest."
-                   .format(100 * share_prior))
+    # The square has two paths from (full rows, full prior) to (dated rows, dated prior), and
+    # the factors interact, so "how much is the prior" depends on which step is taken first.
+    # Report both orders and their mean (the two-factor Shapley split), never one order alone.
+    share_prior = prior_shrink / total                                       # prior first
+    share_prior_late = (sp["dated_matched"] - sp["dated_natural"]) / total   # rows first
+    shapley = (share_prior + share_prior_late) / 2
+    verdict = ("The two steps interact, so their shares depend on the order: taking the prior "
+               "first credits it with {:.0f}\\% of the collapse of the thresholded spread, taking "
+               "the rows first credits it with {:.0f}\\%, and the mean of the two orders splits the "
+               "collapse {:.0f}/{:.0f} between the prior and which phishing rows are eligible."
+               .format(100 * share_prior, 100 * share_prior_late,
+                       100 * shapley, 100 * (1 - shapley)))
     level = ("At the full corpus's own prior the dated rows score ${:.3f}$ F1 for CatBoost against "
              "${:.3f}$ on the full corpus, so the level drop of Section~\\ref{{ssec:decomp}} is "
              "{}".format(dm["CatBoost"], fn["CatBoost"],
@@ -2275,7 +2286,7 @@ def gen_charcnn_xdata():
                    "and the sentence above can now be read without its scope.")
     best = c["best_cell"]
     return (
-        f"That baseline is now in the matrix. Table~\\ref{{tab:xdatasetcnn}} refits the "
+        f"Table~\\ref{{tab:xdatasetcnn}} refits the "
         f"character-CNN of Section~\\ref{{ssec:charcnn}} in the same four-corpus design "
         f"(grouped diagonal split, whole-corpus off-diagonal cells, the scheme stripped so that "
         f"every corpus presents a bare host). Its diagonal mean is ${c['f1_diag']:.3f}$ F1 "
