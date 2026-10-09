@@ -50,12 +50,12 @@ CURVES = "data/processed/p2/p2_pr_curves.csv"
 FAMILIES = ["LogReg", "RandomForest", "HistGB", "MLP", "XGBoost", "LightGBM", "CatBoost"]
 DETERMINISTIC = {"LogReg"}
 # The three families the shared baseline module trains with class_weight="balanced"; the four
-# others are unweighted. --unweighted refits these three without it, so every family is fitted
-# the same way (the sensitivity arm for the tab_families margin, 2026-10-09).
+# others are unweighted. Since 2026-10-09 P2 fits every family the same way, unweighted: mixing the
+# two produced the whole 5.3-point random-split margin the paper once led with (the spread was
+# 0.053 mixed and 0.005 uniform). P2_UNWEIGHTED=0 restores the mixed configuration as a legacy arm,
+# and refuse_canonical() stops that arm from writing over a canonical CSV.
 WEIGHTED = {"LogReg", "RandomForest", "HistGB"}
-# The other P2 runners import run_one; P2_UNWEIGHTED=1 switches all of them to the uniform arm at
-# once, and refuse_canonical() stops any of them writing that arm over its canonical CSV.
-UNWEIGHTED = os.environ.get("P2_UNWEIGHTED") == "1"
+UNWEIGHTED = os.environ.get("P2_UNWEIGHTED", "1") == "1"
 
 
 def weighting_params(name, unweighted=None):
@@ -64,10 +64,11 @@ def weighting_params(name, unweighted=None):
 
 
 def refuse_canonical(out, canonical, *extra):
-    if UNWEIGHTED:
+    if not UNWEIGHTED:
         for path in (canonical,) + extra:
             if path and out and os.path.abspath(out) == os.path.abspath(path):
-                raise SystemExit(f"P2_UNWEIGHTED=1 must not write the canonical {path}; pass --out")
+                raise SystemExit(f"P2_UNWEIGHTED=0 (the legacy mixed-weighting arm) must not write "
+                                 f"the canonical {path}; pass --out")
 
 
 def make_any_model(name: str, seed: int, params: dict | None = None):
@@ -137,8 +138,14 @@ def write_curves(curves, path):
         rows += [{"family": fam, "protocol": proto, "n_seeds": len(mats),
                   "recall": round(float(r), 4), "precision": round(float(pv), 6)}
                  for r, pv in zip(PR_GRID, mean)]
+    new = pd.DataFrame(rows)
+    if os.path.exists(path):
+        # a partial run (--families) refreshes only its own curves and keeps everyone else's
+        old = pd.read_csv(path)
+        keep = ~old.set_index(["family", "protocol"]).index.isin(list(acc))
+        new = pd.concat([old[keep], new], ignore_index=True)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    pd.DataFrame(rows).to_csv(path, index=False)
+    new.to_csv(path, index=False)
     print(f"[+] {len(acc)} curve(s) -> {path}")
 
 
@@ -162,14 +169,12 @@ def main():
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--curves", default=CURVES)
     ap.add_argument("--unweighted", action="store_true",
-                    help="refit the class-weighted families without class weights; needs its own "
-                         "--out so the canonical CSV is never overwritten")
+                    help="kept for old command lines; unweighted is the default (P2_UNWEIGHTED=0 "
+                         "selects the legacy mixed-weighting arm)")
     args = ap.parse_args()
     args.unweighted = args.unweighted or UNWEIGHTED
-    if args.unweighted and os.path.abspath(args.out) == os.path.abspath(OUT):
-        raise SystemExit("--unweighted must write to its own --out, not the canonical " + OUT)
-    if args.unweighted:
-        args.curves = None
+    refuse_canonical(args.out, OUT)
+    refuse_canonical(args.curves, CURVES)
 
     df = add_label(pd.read_csv(args.inp))
     feats = [c for c in COMPPHISH if c in df.columns]
@@ -200,8 +205,6 @@ def main():
                 met, y_t, sc = run_one(name, Xtr, ytr, Xte, yte, s, return_scores=True,
                                        unweighted=args.unweighted)
                 met["protocol"] = proto
-                if args.unweighted:
-                    met["weighting"] = "none" if name in WEIGHTED else "none (unchanged)"
                 rows.append(met)
                 curves.append({"family": name, "protocol": proto, "seed": s,
                                "precision": pr_curve_row(y_t, sc)})

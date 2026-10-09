@@ -31,6 +31,10 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH, _metrics, make_model
+
+# P2 (the only consumer of this table) fits every family unweighted since 2026-10-09; the default
+# follows it, and P2_UNWEIGHTED=0 reproduces the earlier class-weighted forest.
+UNWEIGHTED = os.environ.get("P2_UNWEIGHTED", "1") == "1"
 from run_cross_dataset import load_corpus
 
 PROC = os.path.join(ROOT, "data/processed")
@@ -63,7 +67,8 @@ def main():
             t0 = time.time()
             f1s, rocs = [], []
             for s in range(SEEDS):
-                m = make_model("RandomForest", s, {}).fit(union[feats], union["y"])
+                m = make_model("RandomForest", s, {"class_weight": None} if UNWEIGHTED else {}).fit(
+                    union[feats], union["y"])
                 score = m.predict_proba(te[feats])[:, 1]
                 met = _metrics(te["y"].to_numpy(), score)
                 f1s.append(met["F1"])

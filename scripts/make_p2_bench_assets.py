@@ -888,6 +888,43 @@ def gen_decomp_macros():
                     f"(spread {m['FullSpread']} -> {m['DatedSpread']} -> {m['TempSpread']})")
 
 
+MIXED_BENCH = "data/processed/p2/p2_benchmark_mixedweights.csv"
+MIXED_STRICT = "data/processed/p2/p2_temporal_strict_mixedweights.csv"
+
+
+def gen_weighting_verdict():
+    """What class weighting alone does to the family table (the 2026-10-09 finding).
+
+    The corpus' released baselines fit logistic regression, the random forest and HistGB with
+    class_weight="balanced"; the boosters and the MLP are unweighted. P2 now fits all seven
+    unweighted. The mixed configuration is kept as a sensitivity arm because it is what a benchmark
+    that reuses those baselines would publish, and what it produces is a threshold artefact."""
+    if not (os.path.exists(MIXED_BENCH) and os.path.exists(MIXED_STRICT)):
+        return "% mixed-weighting arm absent -- run run_p2_benchmark.py with P2_UNWEIGHTED=0\n"
+    def stats(path, proto):
+        d = pd.read_csv(path)
+        d = d[d.protocol == proto].groupby("family")[["F1", "PR-AUC"]].mean()
+        return (float(d.F1.max() - d.F1.min()), float(d.F1["CatBoost"] - d.F1["LogReg"]),
+                float(d["PR-AUC"].max() - d["PR-AUC"].min()))
+    mf, mc, mp = stats(MIXED_BENCH, "random")
+    uf, uc, up = stats("data/processed/p2/p2_benchmark.csv", "random")
+    tf, tc, _ = stats(MIXED_STRICT, "temporal_strict")
+    vf, vc, _ = stats("data/processed/p2/p2_temporal_strict.csv", "temporal_strict")
+    return (
+        f"\\textbf{{What class weighting alone does.}} The corpus' released baselines fit logistic "
+        f"regression, the random forest and HistGB with balanced class weights, while the boosters "
+        f"and the MLP are unweighted. Refitting the benchmark in that mixed configuration opens a "
+        f"${mf:.3f}$ F1 spread on the full-corpus random split (CatBoost ahead of logistic "
+        f"regression by ${mc:+.3f}$) where the uniform configuration of "
+        f"Table~\\ref{{tab:families}} has ${uf:.3f}$ (${uc:+.3f}$), while the PR-AUC spread barely "
+        f"moves (${mp:.3f}$ against ${up:.3f}$). Under the phishing-temporal protocol the mixed "
+        f"configuration ties the two families (${tc:+.3f}$) where the uniform one puts logistic "
+        f"regression ahead (${vc:+.3f}$). Reweighting changes where each family's scores fall "
+        f"relative to $\\tau = 0.5$ and nothing about how they rank, so a family table that mixes "
+        f"weighted and unweighted models reports a margin of several F1 points that is a property "
+        f"of the configuration. Every result below fits all seven families unweighted.")
+
+
 def gen_strict_verdict():
     """Paired-by-seed CatBoost-vs-LogReg under phishing-temporal, on ALL FOUR recorded metrics.
 
@@ -912,24 +949,35 @@ def gen_strict_verdict():
     n = f1["k"]
     # FPR is a loss: a negative difference is CatBoost winning, so the seed count is (k - wins).
     # Backwards, this prints "0 of 5 seeds" for a unanimous effect
-    parts = []
+    parts, all_wins, rank_sign = [], True, []
     for metric, label, lower_better in (("PR-AUC", "PR-AUC", False),
                                         ("ROC-AUC", "ROC-AUC", False),
                                         ("FPR@R0.90", "FPR@0.90", True)):
         s = pair(metric)
         w = (s["k"] - s["wins"]) if lower_better else s["wins"]
+        all_wins &= (w == s["k"])
+        rank_sign.append(-s["mean"] if lower_better else s["mean"])
         parts.append(f"{label} ${s['mean']:+.4f}$ (${fmt_p(s['p'])}$, {w}/{s['k']} seeds)")
-
+    booster_ranks = all(x > 0 for x in rank_sign)
+    if f1["p"] < 0.05 and f1["mean"] < 0:
+        f1_txt = "Logistic regression is therefore ahead on threshold-fixed F1."
+    elif f1["p"] < 0.05:
+        f1_txt = "CatBoost is therefore ahead on threshold-fixed F1."
+    else:
+        f1_txt = "On threshold-fixed F1 the two families are therefore tied."
+    if booster_ranks and f1["mean"] < 0:
+        close = (" The two families therefore order differently by metric: logistic regression "
+                 "scores the better F1 at $\\tau = 0.5$, CatBoost the better ranking and the lower "
+                 "false-alarm rate at $90\\%$ recall, and every difference is about a point or less.")
+    else:
+        close = " Every difference is about a point or less."
     return (
         f"Paired by seed (the benign split mask is shared within a seed), CatBoost minus"
         f" logistic regression under the phishing-temporal protocol is "
         f"${f1['mean']:+.4f}$ F1 (95\\% CI $\\pm{ci:.4f}$, corrected resampled $t$-test "
-        f"${fmt_p(f1['p'])}$, $n={n}$ seeds). On threshold-fixed F1 the two families are"
-        f" therefore tied, but that verdict is a property of the metric, not of the"
-        f" families. On the other three quantities the same runs record, the booster is ahead"
-        " on every seed: " + "; ".join(parts) + ". The ranking advantage is consistent in direction and small;"
-        " what the threshold-fixed comparison shows is that it does not convert into a"
-        " better operating point at $\\tau = 0.5$.")
+        f"${fmt_p(f1['p'])}$, $n={n}$ seeds). {f1_txt} On the other three quantities the same "
+        f"runs record, the booster is ahead" + (" on every seed" if all_wins else "") + ": "
+        + "; ".join(parts) + "." + close)
 
 
 CURVES_FULL = "data/processed/p2/p2_pr_curves.csv"
@@ -1033,23 +1081,22 @@ def gen_maxf1_verdict():
     # comparing the two finds "0.0055" next to "0.006" and has to work out that they agree.
     prose_name = {"LogReg": "logistic regression", "RandomForest": "random forest",
                   "MLP": "the MLP"}.get(best_temp, best_temp)
+    margin_txt = ""
+    if fixed_spread - sp[0] > 0.01:
+        margin_txt = (f" The fixed threshold opens a ${fixed_spread:.3f}$ full-corpus spread that "
+                      f"a chosen threshold does not; it is where $\\tau = 0.5$ falls for each "
+                      f"family, not a difference in what the families can achieve.")
     return (
         f"Table~\\ref{{tab:maxf1}} repeats the decomposition with the operating point chosen "
-        f"rather than fixed, and two things change. First, the between-family spread does not "
-        f"collapse at the composition step, because at a chosen threshold there was no spread "
-        f"to collapse: it is ${sp[0]:.3f}$ F1 at full-corpus random (against "
-        f"${fixed_spread:.3f}$ at $\\tau = 0.5$), and it \\emph{{widens}} to ${sp[1]:.3f}$ and "
-        f"then ${sp[2]:.3f}$ as the design tightens. Second, the composition step charges every "
-        f"family alike (${lo:+.3f}$ to ${hi:+.3f}$ F1, against "
-        f"${fixed_comp['CatBoost']:+.3f}$ for CatBoost and ${fixed_comp['LogReg']:+.3f}$ for "
-        f"logistic regression at the fixed threshold): the differential the thresholded table "
-        f"shows is sensitive to where $\\tau = 0.5$ falls for each family. This comparison "
-        f"does not isolate prior changes from within-class composition. The booster's advantage over logistic regression at a chosen "
-        f"threshold is ${cb_lr[0]:+.3f}$ F1 on the full corpus, ${cb_lr[1]:+.3f}$ on the dated "
-        f"rows and ${cb_lr[2]:+.3f}$ under the temporal protocol, where {prose_name} is the "
-        f"highest-scoring family in the table. Every one of those differences is smaller than "
-        f"the ${fixed_spread:.3f}$ the fixed threshold reports, and the last has the opposite "
-        f"sign.")
+        f"rather than fixed. The between-family spread is ${sp[0]:.3f}$ F1 at full-corpus random "
+        f"(against ${fixed_spread:.3f}$ at $\\tau = 0.5$), and it widens to ${sp[1]:.3f}$ and then "
+        f"${sp[2]:.3f}$ as the design tightens. The composition step charges every family alike "
+        f"(${lo:+.3f}$ to ${hi:+.3f}$ F1, against ${fixed_comp['CatBoost']:+.3f}$ for CatBoost and "
+        f"${fixed_comp['LogReg']:+.3f}$ for logistic regression at the fixed threshold), and this "
+        f"comparison does not isolate prior changes from within-class composition. CatBoost minus "
+        f"logistic regression at a chosen threshold is ${cb_lr[0]:+.3f}$ F1 on the full corpus, "
+        f"${cb_lr[1]:+.3f}$ on the dated rows and ${cb_lr[2]:+.3f}$ under the temporal protocol, "
+        f"where {prose_name} is the highest-scoring family in the table.{margin_txt}")
 
 
 def tab_trivial_floor():
@@ -1401,7 +1448,7 @@ def gen_guard_control():
         f"$\\Delta_{{proto}}$ is preserved (Spearman $\\rho = {rho:.2f}$ between the two "
         f"controls, logistic regression smallest and {worst_name} largest under both); and the "
         f"direction of the paper's argument is unaffected, since a "
-        f"smaller protocol step makes the composition and threshold steps larger relative to it, "
+        f"smaller protocol step makes the composition step's level drop larger relative to it, "
         f"not smaller. Table~\\ref{{tab:decomp}} keeps the unguarded control, because that is the "
         f"comparison the benchmark literature runs and the quantity a reader of that literature "
         f"needs; this arm is what says how much of it is protocol.")
@@ -1771,12 +1818,25 @@ def tab_shap(n_sample=2000, top_k=10, seeds=5):
         return
     from run_cross_dataset import load_corpus, in_dataset_split
     from train_url_baseline import COMPPHISH, make_model
+    from run_p2_benchmark import weighting_params
 
+    # run_p2_shap_weighting.py computes exactly this attribution (same seeds, same explained rows,
+    # same forest) for both weightings; when its arm for the current configuration exists, read it
+    # instead of spending another TreeSHAP pass.
+    cache = "data/processed/p2/p2_shap_weighting.csv"
+    arm = "none" if weighting_params("RandomForest") else "balanced"
+    if os.path.exists(cache) and (pd.read_csv(cache).weighting == arm).any():
+        c = pd.read_csv(cache)
+        c = c[c.weighting == arm].set_index("feature").loc[COMPPHISH]
+        imp_m, imp_s = c.mean_abs_shap.to_numpy(), c.sd_abs_shap.to_numpy()
+        sign_m = c.direction.to_numpy()
+        return _write_shap(COMPPHISH, imp_m, imp_s, sign_m, top_k, seeds)
     df = load_corpus(corpus)
     imps, signs = [], []
     for s in range(seeds):
         tr, te = in_dataset_split(df, s)
-        m = make_model("RandomForest", s).fit(tr[COMPPHISH], tr["y"])
+        # fitted the way every P2 family is (unweighted since 2026-10-09)
+        m = make_model("RandomForest", s, weighting_params("RandomForest")).fit(tr[COMPPHISH], tr["y"])
         sub = te.groupby("y", group_keys=False).apply(
             lambda g: g.sample(min(len(g), n_sample // 2), random_state=s))
         sv = shap.TreeExplainer(m).shap_values(sub[COMPPHISH])
@@ -1787,6 +1847,10 @@ def tab_shap(n_sample=2000, top_k=10, seeds=5):
                       for i, c in enumerate(COMPPHISH)])
     imp_m, imp_s = np.mean(imps, axis=0), np.std(imps, axis=0)
     sign_m = np.nanmean(np.array(signs, dtype=float), axis=0)
+    return _write_shap(COMPPHISH, imp_m, imp_s, sign_m, top_k, seeds)
+
+
+def _write_shap(COMPPHISH, imp_m, imp_s, sign_m, top_k, seeds):
     share = imp_m / imp_m.sum()
     order = np.argsort(-imp_m)
     top = order[:top_k]
@@ -2043,24 +2107,20 @@ def gen_prior_verdict():
     tab_dated = float(ts[(ts.protocol == "random_same_rows") & (ts.family == "CatBoost")]["F1"].mean())
     sp = {a: _spread(m[a]) for a, _ in PRIOR_ARMS}
     spx = {a: _spread(mx[a]) for a, _ in PRIOR_ARMS}
-    prior_shrink = sp["full_natural"] - sp["full_matched"]
-    comp_shrink = sp["full_matched"] - sp["dated_natural"]
+    # With every family fitted the same way (2026-10-09) the spread no longer collapses across the
+    # composition step, so the square has no family margin to apportion; what it still measures is
+    # whether the step's LEVEL drop is the prior or the rows. If a mixed configuration ever reopens
+    # a collapse, the verdict says so instead of apportioning it silently.
     total = sp["full_natural"] - sp["dated_natural"]
-    if total <= 0:
-        raise SystemExit("gen_prior_verdict: the thresholded spread no longer collapses across "
-                         "the composition step; the paragraph's premise is gone -- rewrite it.")
-    # The square has two paths from (full rows, full prior) to (dated rows, dated prior), and
-    # the factors interact, so "how much is the prior" depends on which step is taken first.
-    # Report both orders and their mean (the two-factor Shapley split), never one order alone.
-    share_prior = prior_shrink / total                                       # prior first
-    share_prior_late = (sp["dated_matched"] - sp["dated_natural"]) / total   # rows first
-    shapley = (share_prior + share_prior_late) / 2
-    verdict = ("The two steps interact, so their shares depend on the order: taking the prior "
-               "first credits it with {:.0f}\\% of the collapse of the thresholded spread, taking "
-               "the rows first credits it with {:.0f}\\%, and the mean of the two orders splits the "
-               "collapse {:.0f}/{:.0f} between the prior and which phishing rows are eligible."
-               .format(100 * share_prior, 100 * share_prior_late,
-                       100 * shapley, 100 * (1 - shapley)))
+    widest = max(sp.values())
+    if total > 0.01:
+        verdict = ("The thresholded spread falls by ${:.3f}$ across the composition step, a "
+                   "family margin this paragraph would have to apportion between prior and rows."
+                   .format(total))
+    else:
+        verdict = ("No cell of the square separates the seven families by more than ${:.3f}$ F1, "
+                   "so neither the prior nor the change of rows opens a family margin; what the "
+                   "square measures is the level.".format(widest))
     level = ("At the full corpus's own prior the dated rows score ${:.3f}$ F1 for CatBoost against "
              "${:.3f}$ on the full corpus, so the level drop of Section~\\ref{{ssec:decomp}} is "
              "{}".format(dm["CatBoost"], fn["CatBoost"],
@@ -2083,8 +2143,7 @@ def gen_prior_verdict():
         f"on the dated rows at that prior and ${sp['dated_matched']:.3f}$ on the dated rows at "
         f"the full corpus's prior. {verdict} At each family's oracle maximum the four spreads are "
         f"${spx['full_natural']:.3f}$, ${spx['full_matched']:.3f}$, ${spx['dated_natural']:.3f}$ "
-        f"and ${spx['dated_matched']:.3f}$, so the threshold reading of "
-        f"Table~\\ref{{tab:maxf1}} holds in every cell of the square. {level} (The square "
+        f"and ${spx['dated_matched']:.3f}$. {level} (The square "
         f"draws its own stratified splits, which is why its dated cell reads "
         f"${dn['CatBoost']:.3f}$ for CatBoost where Table~\\ref{{tab:decomp}} reads "
         f"${tab_dated:.3f}$; the contrasts, not the levels, are what it adds.)")
@@ -2178,9 +2237,11 @@ def gen_valthr_verdict():
         f"oracle for every family under every design. CatBoost minus logistic regression at "
         f"$\\tau^*$ is ${cb_lr[0]:+.3f}$, ${cb_lr[1]:+.3f}$ and ${cb_lr[2]:+.3f}$ across the "
         f"three designs; {lead_txt}. The oracle of Table~\\ref{{tab:maxf1}} was therefore not "
-        f"doing the work: a threshold selected without test access reproduces its reading, and "
-        f"the full-corpus margin the fixed threshold reports is gone at $\\tau^*$ as it was at "
-        f"the oracle.{temporal_note}")
+        f"doing the work: a threshold selected without test access reproduces its reading"
+        + (", and the full-corpus margin the fixed threshold reports is gone at $\\tau^*$ as it was "
+           "at the oracle." if sp_fix[0] - sp_val[0] > 0.01 else
+           ", and with every family fitted the same way the fixed threshold already gives the "
+           "same full-corpus spread.") + temporal_note)
 
 
 def _corpus_rates(names):
@@ -2390,6 +2451,7 @@ def main(shap_too: bool = False):
                      ("gen_guard_control", gen_guard_control),
                      ("gen_charcnn", gen_charcnn),
                      ("gen_strict_verdict", gen_strict_verdict),
+                     ("gen_weighting_verdict", gen_weighting_verdict),
                      ("tab_stacking", tab_stacking),
                      ("gen_stacking_verdict", gen_stacking_verdict),
                      ("tab_shiftmatrix", tab_shiftmatrix),

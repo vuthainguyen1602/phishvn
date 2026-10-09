@@ -218,8 +218,11 @@ def main():
     print(f"generalisation gap              = {diag.mean() - np.nanmean(off):.3f}  "
           f"(smaller = features transfer better)")
 
-    if UNWEIGHTED and args.out and "_unweighted" not in os.path.basename(args.out):
-        raise SystemExit("P2_UNWEIGHTED=1 writes only to an *_unweighted output, not " + args.out)
+    p2_dir = os.path.abspath(os.path.join(ROOT, "data", "processed", "p2"))
+    if (args.out and not UNWEIGHTED and args.model in {"LogReg", "RandomForest", "HistGB"}
+            and os.path.abspath(args.out).startswith(p2_dir + os.sep)):
+        raise SystemExit("P2's matrices are fitted unweighted since 2026-10-09: set P2_UNWEIGHTED=1 "
+                         "to write " + args.out)
     if args.out:
         os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
         mat.to_csv(args.out)

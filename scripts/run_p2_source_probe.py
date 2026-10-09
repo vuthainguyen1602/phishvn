@@ -45,7 +45,7 @@ except ImportError:
     ROOT = os.path.dirname(_HERE)
 
 from train_url_baseline import COMPPHISH, _metrics
-from run_p2_benchmark import make_any_model
+from run_p2_benchmark import make_any_model, weighting_params
 from run_p2_temporal_strict import load, split_phishing, URL_CSV
 from run_p2_charcnn import fit_predict
 
@@ -101,7 +101,7 @@ def main():
             Xte = te[feats].to_numpy(float)
             for fam in a.families:
                 t0 = time.time()
-                m = make_any_model(fam, s)
+                m = make_any_model(fam, s, weighting_params(fam))
                 m.fit(Xtr, ytr)
                 sc = m.predict_proba(Xte)[:, 1]
                 met = _metrics(yte, sc)

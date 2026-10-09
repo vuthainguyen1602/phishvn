@@ -35,7 +35,7 @@ except ImportError:  # flat public-mirror layout
 
 from genfile import write_generated
 from paired_eval import wilson
-from run_p2_benchmark import make_any_model
+from run_p2_benchmark import make_any_model, weighting_params
 from run_p2_temporal_strict import load as load_url, split_phishing
 from run_p6_prospective_ablation import split as split_p6, stratum as suffix_stratum
 from train_url_baseline import COMPPHISH
@@ -78,7 +78,7 @@ def p2(df):
                                      pd.concat([pool[~pmask], be[~bmask]])),
             }
             for protocol, (tr, te) in protocols.items():
-                model = make_any_model(family, seed)
+                model = make_any_model(family, seed, weighting_params(family))
                 model.fit(tr[feats].to_numpy(float), tr.y.to_numpy(int))
                 score = model.predict_proba(te[feats].to_numpy(float))[:, 1]
                 pred = score >= 0.5
@@ -99,7 +99,7 @@ def p2(df):
                      f"{vals['silver']} & {vals['gold']} \\\\")
     tex = """\\begin{table*}[t]
 \\centering
-\\caption{Tier-stratified sensitivity on the same dated rows as the P2 protocol contrast.
+\\caption{Tier-stratified sensitivity on the same dated rows as our protocol contrast.
 Overall is F1. Tier columns are positive-class recall, mean$\\pm$sd over five shared benign
 splits. Tier is label provenance and is confounded with source/time; these are diagnostics,
 not causal tier effects.}

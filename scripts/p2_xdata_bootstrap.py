@@ -58,11 +58,13 @@ def main():
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--out", default=OUT)
     args = ap.parse_args()
-    unweighted = os.environ.get("P2_UNWEIGHTED") == "1"
-    if unweighted and os.path.abspath(args.out) == os.path.abspath(OUT):
-        raise SystemExit("P2_UNWEIGHTED=1 must not write the canonical " + OUT + "; pass --out")
-    # CatBoost carries no class weight, so only the forest's arm differs under uniform weighting
-    arms = [a for a in ARMS if a[0] == "RandomForest"] if unweighted else ARMS
+    # P2 fits the forest unweighted since 2026-10-09; the shared P3 machinery reads the switch from
+    # the environment, so set it here unless the caller asked for the legacy arm (P2_UNWEIGHTED=0).
+    os.environ.setdefault("P2_UNWEIGHTED", "1")
+    unweighted = os.environ["P2_UNWEIGHTED"] == "1"
+    if not unweighted and os.path.abspath(args.out) == os.path.abspath(OUT):
+        raise SystemExit("P2_UNWEIGHTED=0 must not write the canonical " + OUT + "; pass --out")
+    arms = ARMS if unweighted else [a for a in ARMS if a[0] == "RandomForest"]
 
     frames = []
     for model, metric in arms:
@@ -79,7 +81,7 @@ def main():
     out = pd.concat(frames, ignore_index=True)
     out.to_csv(args.out, index=False)
     print(f"[+] {args.out}")
-    if not unweighted:  # the sensitivity arm never rewrites the paper's CI sentences
+    if unweighted:  # the legacy arm never rewrites the paper's CI sentences
         emit(out, args.boot)
 
 

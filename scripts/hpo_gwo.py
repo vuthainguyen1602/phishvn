@@ -53,7 +53,8 @@ def _factory(model, seed, params):
     if model in ("CatBoost", "XGBoost", "LightGBM"):
         from run_p2_benchmark import make_any_model
         return make_any_model(model, seed, params)
-    return make_model(model, seed, params)
+    from run_p2_benchmark import weighting_params
+    return make_model(model, seed, {**(weighting_params(model) or {}), **(params or {})})
 
 
 def _decode(pos, space):
