@@ -1,0 +1,5 @@
+tier,n_hosts,vn_pct,suspicious_tld_pct,sector_tagged_pct,bank_pct,ecommerce_pct,ecom_minus_bank_pp,ecom_minus_bank_ci_lo,ecom_minus_bank_ci_hi,sources
+bronze,17774,2.599302,19.989873,8.596827,3.280072,3.476989,0.196917,-0.174412,0.579498,chongluadao;openphish
+silver,897,4.570792,20.178372,26.644370,13.600892,6.911929,-6.688963,-9.698997,-3.787625,tinnhiemmang
+gold,1685,3.264095,26.409496,12.403561,10.860534,1.127596,-9.732938,-11.335312,-8.189911,tinnhiemmang
+verified,2580,3.720930,24.263566,17.325581,11.821705,3.100775,-8.720930,-10.193798,-7.325581,tinnhiemmang

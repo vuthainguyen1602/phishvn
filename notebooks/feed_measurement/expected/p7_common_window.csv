@@ -1,0 +1,3 @@
+condition,start,end,chongluadao_hosts,tinnhiemmang_hosts,overlap_hosts,union_hosts,jaccard,share_of_smaller,excluded_source,excluded_reason
+all_retrievable,source-specific,source-specific,17539,2580,496,19623,0.025276,0.192248,openphish,no per-indicator first-seen dates (0/296 dated)
+common_dated_window,2021-05-07,2024-05-16,17048,1833,25,18856,0.001326,0.013639,openphish,no per-indicator first-seen dates (0/296 dated)

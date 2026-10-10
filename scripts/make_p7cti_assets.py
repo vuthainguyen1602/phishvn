@@ -1006,6 +1006,11 @@ def tab_feed_composition(df: pd.DataFrame):
     tb = int((df.tier == "bronze").sum()); ts = int((df.tier == "silver").sum())
     tg = int((df.tier == "gold").sum())
     pph_all = 100 * (df.label == "phishing").mean()
+    STATS["feed_composition"] = [
+        {"source": s, "rows": n, "hosts": nh, "pct_corpus": round(float(pct), 4),
+         "pct_phish": round(float(pph), 4), "bronze": b, "silver": si, "gold": g}
+        for (s, n, nh, pct, pph, b, si, g) in rows]
+    STATS["tier_totals"] = {"bronze": tb, "silver": ts, "gold": tg}
     tex = f"""\\begin{{table}}[t]
 \\centering
 \\caption{{Per-source composition of the fused corpus: indicators, \\texttt{{www.}}-collapsed
@@ -1094,6 +1099,8 @@ def tab_infra(df: pd.DataFrame):
     body = "\n".join(
         f"\\texttt{{.{_esc(t)}}} & {pc:,} & {up:,} & {ub:,} & {ppct:.0f}\\% \\\\"
         for (t, pc, up, ub, ppct) in rows)
+    STATS["tld_table"] = [{"tld": t, "phish_rows": pc, "phish_hosts": up, "benign_hosts": ub,
+                           "phish_share_hosts": round(float(ppct), 4)} for (t, pc, up, ub, ppct) in rows]
     susp_ph = 100 * ph.suspicious_tld.mean()
     susp_be = 100 * be.suspicious_tld.mean()
     STATS["susp_tld_phish"] = round(float(susp_ph), 1)
@@ -1144,6 +1151,13 @@ def main():
     gen_bulk(df)
     gen_dating(df)
     gen_govtokens(df)
+    # Every number above, in one machine-readable file: the walkthrough notebook recomputes the
+    # analysis and compares against this rather than against the generated LaTeX.
+    out = os.path.join(PROC, "p7", "p7_results.json")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(STATS, f, indent=2, sort_keys=True,
+                  default=lambda v: v.item() if hasattr(v, "item") else str(v))
     print("\n===== HEADLINE NUMBERS (spot-check against the manuscript) =====")
     for k, v in STATS.items():
         print(f"  {k:24s} = {v}")

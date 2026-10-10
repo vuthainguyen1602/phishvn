@@ -1,0 +1,490 @@
+{
+  "bank_minus_ecom_host": [
+    0.846,
+    0.463,
+    1.249
+  ],
+  "bank_minus_ecom_row": [
+    0.305,
+    -0.065,
+    0.674
+  ],
+  "bronze_order_unresolved": true,
+  "bulk_days": [
+    "2021-05-07",
+    "2022-10-17",
+    "2022-11-04",
+    "2023-03-23"
+  ],
+  "bulk_mass_pct": 17.6,
+  "common_window": [
+    {
+      "chongluadao_hosts": 17539,
+      "condition": "all_retrievable",
+      "end": "source-specific",
+      "excluded_reason": "no per-indicator first-seen dates (0/296 dated)",
+      "excluded_source": "openphish",
+      "jaccard": 0.02527646129541864,
+      "overlap_hosts": 496,
+      "share_of_smaller": 0.19224806201550387,
+      "start": "source-specific",
+      "tinnhiemmang_hosts": 2580,
+      "union_hosts": 19623
+    },
+    {
+      "chongluadao_hosts": 17048,
+      "condition": "common_dated_window",
+      "end": "2024-05-16",
+      "excluded_reason": "no per-indicator first-seen dates (0/296 dated)",
+      "excluded_source": "openphish",
+      "jaccard": 0.001325837929571489,
+      "overlap_hosts": 25,
+      "share_of_smaller": 0.013638843426077468,
+      "start": "2021-05-07",
+      "tinnhiemmang_hosts": 1833,
+      "union_hosts": 18856
+    }
+  ],
+  "date_max": "2026-03-25",
+  "date_min": "2020-02-08",
+  "dated_coverage_pct": 40.8,
+  "dated_hosts_corpus": [
+    21625,
+    59.8
+  ],
+  "dated_hosts_phish": [
+    19603,
+    98.7
+  ],
+  "feed_composition": [
+    {
+      "bronze": 33823,
+      "gold": 0,
+      "hosts": 17539,
+      "pct_corpus": 63.6776,
+      "pct_phish": 100.0,
+      "rows": 33823,
+      "silver": 0,
+      "source": "chongluadao"
+    },
+    {
+      "bronze": 0,
+      "gold": 0,
+      "hosts": 5993,
+      "pct_corpus": 11.2829,
+      "pct_phish": 0.0,
+      "rows": 5993,
+      "silver": 5993,
+      "source": "tranco"
+    },
+    {
+      "bronze": 0,
+      "gold": 5879,
+      "hosts": 5877,
+      "pct_corpus": 11.0682,
+      "pct_phish": 0.0,
+      "rows": 5879,
+      "silver": 0,
+      "source": "tinnhiem_web"
+    },
+    {
+      "bronze": 0,
+      "gold": 1688,
+      "hosts": 2580,
+      "pct_corpus": 4.8705,
+      "pct_phish": 100.0,
+      "rows": 2587,
+      "silver": 899,
+      "source": "tinnhiemmang"
+    },
+    {
+      "bronze": 0,
+      "gold": 0,
+      "hosts": 2512,
+      "pct_corpus": 4.7293,
+      "pct_phish": 0.0,
+      "rows": 2512,
+      "silver": 2512,
+      "source": "tranco_vn"
+    },
+    {
+      "bronze": 0,
+      "gold": 2026,
+      "hosts": 2022,
+      "pct_corpus": 3.8143,
+      "pct_phish": 0.0,
+      "rows": 2026,
+      "silver": 0,
+      "source": "tinnhiem_org"
+    },
+    {
+      "bronze": 296,
+      "gold": 0,
+      "hosts": 235,
+      "pct_corpus": 0.5573,
+      "pct_phish": 100.0,
+      "rows": 296,
+      "silver": 0,
+      "source": "openphish"
+    }
+  ],
+  "feed_last_benign": {
+    "tinnhiem_org": "2026-03-25"
+  },
+  "feed_last_phishing": {
+    "chongluadao": "2024-05-16",
+    "tinnhiemmang": "2025-02-18"
+  },
+  "feed_pair_overlap": {
+    "chongluadao|openphish": 0,
+    "chongluadao|tinnhiemmang": 496,
+    "tinnhiemmang|openphish": 0
+  },
+  "feed_rows_vs_hosts": {
+    "chongluadao": [
+      92.14569825096714,
+      88.32208681639642
+    ],
+    "openphish": [
+      0.8064076717702828,
+      1.1834021553026488
+    ],
+    "tinnhiemmang": [
+      7.047894077262573,
+      12.992244939067378
+    ]
+  },
+  "feed_unique_hosts": {
+    "chongluadao": [
+      17043,
+      97.17201664861166
+    ],
+    "openphish": [
+      235,
+      100.0
+    ],
+    "tinnhiemmang": [
+      2084,
+      80.7751937984496
+    ]
+  },
+  "gov_token_hosts": {
+    "dichvucong": [
+      12,
+      12
+    ],
+    "gplx": [
+      5,
+      0
+    ],
+    "vssid": [
+      2,
+      0
+    ]
+  },
+  "h_other_pct": 90.29,
+  "h_tagged_pct": 9.71,
+  "n_benign": 16410,
+  "n_dated": 21661,
+  "n_dated_days": 502,
+  "n_dated_phishing": 19635,
+  "n_host_benign": 16328,
+  "n_host_phish": 19858,
+  "n_host_total": 36185,
+  "n_phish": 36706,
+  "n_tagged_hosts": 1929,
+  "n_tld": 385,
+  "n_total": 53116,
+  "ncsc_delta_bulk": [
+    29,
+    92.0
+  ],
+  "ncsc_delta_other": [
+    501,
+    6.0
+  ],
+  "num_subdomains_host_iqr_benign": [
+    0.0,
+    1.0
+  ],
+  "num_subdomains_host_iqr_phish": [
+    0.0,
+    0.0
+  ],
+  "num_subdomains_host_mean_benign": 0.507,
+  "num_subdomains_host_mean_phish": 0.119,
+  "num_subdomains_host_med_benign": 0.0,
+  "num_subdomains_host_med_phish": 0.0,
+  "num_subdomains_row_iqr_benign": [
+    0.0,
+    1.0
+  ],
+  "num_subdomains_row_iqr_phish": [
+    0.0,
+    1.0
+  ],
+  "num_subdomains_row_mean_benign": 0.508,
+  "num_subdomains_row_mean_phish": 0.51,
+  "num_subdomains_row_med_benign": 0.0,
+  "num_subdomains_row_med_phish": 1.0,
+  "peak_day": [
+    "2021-05-07",
+    856
+  ],
+  "peak_month": "2022-10",
+  "peak_month_n": 1761,
+  "raw_hosts_phish": 36657,
+  "sector_host_ci": {
+    "bank": [
+      4.32,
+      4.03,
+      4.61
+    ],
+    "delivery": [
+      0.16,
+      0.11,
+      0.21
+    ],
+    "ecommerce": [
+      3.47,
+      3.22,
+      3.73
+    ],
+    "gaming": [
+      1.1,
+      0.96,
+      1.25
+    ],
+    "gov": [
+      0.14,
+      0.09,
+      0.2
+    ],
+    "social": [
+      0.4,
+      0.32,
+      0.49
+    ],
+    "tax": [
+      0.03,
+      0.01,
+      0.05
+    ],
+    "telecom": [
+      0.1,
+      0.06,
+      0.15
+    ]
+  },
+  "sector_host_counts": {
+    "bank": 857,
+    "delivery": 31,
+    "ecommerce": 689,
+    "gaming": 219,
+    "gov": 28,
+    "social": 80,
+    "tax": 5,
+    "telecom": 20
+  },
+  "susp_tld_benign": 1.0,
+  "susp_tld_benign_host": 1.0,
+  "susp_tld_phish": 20.3,
+  "susp_tld_phish_host": 20.0,
+  "tier_sensitivity": [
+    {
+      "bank_pct": 3.280072015303252,
+      "ecom_minus_bank_ci_hi": 0.579498143355463,
+      "ecom_minus_bank_ci_lo": -0.1744120625632947,
+      "ecom_minus_bank_pp": 0.19691684482952623,
+      "ecommerce_pct": 3.4769888601327783,
+      "n_hosts": 17774,
+      "sector_tagged_pct": 8.596826825700461,
+      "sources": "chongluadao;openphish",
+      "suspicious_tld_pct": 19.989872847980195,
+      "tier": "bronze",
+      "vn_pct": 2.599302351749747
+    },
+    {
+      "bank_pct": 13.600891861761427,
+      "ecom_minus_bank_ci_hi": -3.7876254180602413,
+      "ecom_minus_bank_ci_lo": -9.698996655518394,
+      "ecom_minus_bank_pp": -6.688963210702341,
+      "ecommerce_pct": 6.911928651059086,
+      "n_hosts": 897,
+      "sector_tagged_pct": 26.644370122630995,
+      "sources": "tinnhiemmang",
+      "suspicious_tld_pct": 20.178372352285397,
+      "tier": "silver",
+      "vn_pct": 4.570791527313267
+    },
+    {
+      "bank_pct": 10.86053412462908,
+      "ecom_minus_bank_ci_hi": -8.189910979228486,
+      "ecom_minus_bank_ci_lo": -11.335311572700297,
+      "ecom_minus_bank_pp": -9.732937685459941,
+      "ecommerce_pct": 1.1275964391691393,
+      "n_hosts": 1685,
+      "sector_tagged_pct": 12.403560830860535,
+      "sources": "tinnhiemmang",
+      "suspicious_tld_pct": 26.409495548961427,
+      "tier": "gold",
+      "vn_pct": 3.2640949554896146
+    },
+    {
+      "bank_pct": 11.821705426356589,
+      "ecom_minus_bank_ci_hi": -7.325581395348837,
+      "ecom_minus_bank_ci_lo": -10.193798449612403,
+      "ecom_minus_bank_pp": -8.720930232558139,
+      "ecommerce_pct": 3.10077519379845,
+      "n_hosts": 2580,
+      "sector_tagged_pct": 17.325581395348838,
+      "sources": "tinnhiemmang",
+      "suspicious_tld_pct": 24.26356589147287,
+      "tier": "verified",
+      "vn_pct": 3.7209302325581395
+    }
+  ],
+  "tier_totals": {
+    "bronze": 34119,
+    "gold": 9593,
+    "silver": 9404
+  },
+  "tld_table": [
+    {
+      "benign_hosts": 2956,
+      "phish_hosts": 10170,
+      "phish_rows": 18769,
+      "phish_share_hosts": 77.4798,
+      "tld": "com"
+    },
+    {
+      "benign_hosts": 10029,
+      "phish_hosts": 541,
+      "phish_rows": 968,
+      "phish_share_hosts": 5.1183,
+      "tld": "vn"
+    },
+    {
+      "benign_hosts": 37,
+      "phish_hosts": 1336,
+      "phish_rows": 2533,
+      "phish_share_hosts": 97.3052,
+      "tld": "xyz"
+    },
+    {
+      "benign_hosts": 429,
+      "phish_hosts": 845,
+      "phish_rows": 1537,
+      "phish_share_hosts": 66.3265,
+      "tld": "net"
+    },
+    {
+      "benign_hosts": 8,
+      "phish_hosts": 795,
+      "phish_rows": 1494,
+      "phish_share_hosts": 99.0037,
+      "tld": "vip"
+    },
+    {
+      "benign_hosts": 20,
+      "phish_hosts": 600,
+      "phish_rows": 1120,
+      "phish_share_hosts": 96.7742,
+      "tld": "top"
+    },
+    {
+      "benign_hosts": 23,
+      "phish_hosts": 449,
+      "phish_rows": 826,
+      "phish_share_hosts": 95.1271,
+      "tld": "online"
+    },
+    {
+      "benign_hosts": 228,
+      "phish_hosts": 184,
+      "phish_rows": 347,
+      "phish_share_hosts": 44.6602,
+      "tld": "org"
+    },
+    {
+      "benign_hosts": 73,
+      "phish_hosts": 289,
+      "phish_rows": 388,
+      "phish_share_hosts": 79.8343,
+      "tld": "cn"
+    },
+    {
+      "benign_hosts": 13,
+      "phish_hosts": 349,
+      "phish_rows": 678,
+      "phish_share_hosts": 96.4088,
+      "tld": "live"
+    },
+    {
+      "benign_hosts": 144,
+      "phish_hosts": 205,
+      "phish_rows": 408,
+      "phish_share_hosts": 58.7393,
+      "tld": "de"
+    },
+    {
+      "benign_hosts": 3,
+      "phish_hosts": 337,
+      "phish_rows": 627,
+      "phish_share_hosts": 99.1176,
+      "tld": "club"
+    }
+  ],
+  "top20_day_mass_pct": 34.7,
+  "top_tlds": [
+    "com",
+    "vn",
+    "xyz",
+    "net",
+    "vip",
+    "top",
+    "online",
+    "live",
+    "club",
+    "org"
+  ],
+  "url_is_host_pct": 95.6,
+  "url_len_host_iqr_benign": [
+    12.0,
+    27.0
+  ],
+  "url_len_host_iqr_phish": [
+    10.0,
+    16.0
+  ],
+  "url_len_host_mean_benign": 19.136,
+  "url_len_host_mean_phish": 14.42,
+  "url_len_host_med_benign": 17.0,
+  "url_len_host_med_phish": 13.0,
+  "url_len_row_iqr_benign": [
+    12.0,
+    27.0
+  ],
+  "url_len_row_iqr_phish": [
+    12.0,
+    18.0
+  ],
+  "url_len_row_mean_benign": 19.173,
+  "url_len_row_mean_phish": 15.729,
+  "url_len_row_med_benign": 17.0,
+  "url_len_row_med_phish": 15.0,
+  "vn_per_source": {
+    "tinnhiem_org": 96.3,
+    "tinnhiem_web": 95.6,
+    "tranco": 0.3,
+    "tranco_vn": 100.0
+  },
+  "vn_share_benign": 61.6,
+  "vn_share_benign_host": 61.4,
+  "vn_share_phish": 2.6,
+  "vn_share_phish_host": 2.7,
+  "www_pairs_benign": 58,
+  "www_pairs_phish": 16799,
+  "www_rows_benign": 91,
+  "www_rows_phish": 17000
+}
