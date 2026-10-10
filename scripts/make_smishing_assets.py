@@ -597,7 +597,7 @@ def tab_flow(msgs, out):
     d = fr["diagnostics"]
     lines = [
         ("Corpus", f"{_fmt(len(msgs))} rows, {_fmt(len({m['text_sha1'] for m in msgs}))} distinct texts",
-         "\\S\\ref{sec:corpus}"),
+         "Section~\\ref{sec:corpus}"),
         ("Registered split, train", f"{_fmt(rows[('train', '0')] + rows[('train', '1')])} rows "
          f"({rows[('train', '1')]} pos.), {_fmt(texts['train'])} texts", "all registered arms"),
         ("Registered split, test", f"{rows[('test', '0')] + rows[('test', '1')]} rows "
@@ -610,21 +610,21 @@ def tab_flow(msgs, out):
          f"{sum(1 for m in msgs if m['split'] == 'test' and m['label'] == '1' and int(m['n_shortened_valid']) > 0)}"
          " under the corrected one", "registered stratum"),
         ("Similarity-grouped split", f"train {_fmt(rb['n_train'])}, test {rb['n_test']} "
-         f"({rb['test_phishing']} pos.)", "\\S\\ref{sec:robust}"),
+         f"({rb['test_phishing']} pos.)", "Section~\\ref{sec:robust}"),
         ("August ham, August in training", f"train {_fmt(tp['registered_august']['n_train'])}, test "
-         f"{tp['registered_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
+         f"{tp['registered_august']['n_test']} ham", "Section~\\ref{sec:sms_batches}"),
         ("Registered split without August", f"train {_fmt(tp['without_august']['n_train'])}, test "
          f"{tp['without_august']['n_test']} May--July rows of the registered test side",
-         "\\S\\ref{sec:sms_batches}"),
+         "Section~\\ref{sec:sms_batches}"),
         ("August ham, no August in training", f"train {_fmt(tp['forward_august']['n_train'])}, test "
-         f"{tp['forward_august']['n_test']} ham", "\\S\\ref{sec:sms_batches}"),
+         f"{tp['forward_august']['n_test']} ham", "Section~\\ref{sec:sms_batches}"),
         ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])}, "
          f"test the batches' {ba['leave_batches_out']['batch']['eval_positive_texts']} pos. texts "
          f"and {ba['leave_batches_out']['eval_ham_texts']} held-out ham texts",
-         "\\S\\ref{sec:sms_batches}"),
+         "Section~\\ref{sec:sms_batches}"),
         ("Leave-one-batch-out", f"all {_fmt(len({m['text_sha1'] for m in msgs}))} texts, "
          f"{ba['leave_one_batch_out']['batches']} folds",
-         "\\S\\ref{sec:sms_batches}"),
+         "Section~\\ref{sec:sms_batches}"),
     ]
     buf = io.StringIO()
     buf.write("\\begin{table*}[t]\n\\centering\\footnotesize\n"
