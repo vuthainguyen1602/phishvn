@@ -1,0 +1,34 @@
+\begin{table}[htbp]
+\centering\small
+\caption{Decode failure rate per decoder and transformation.}
+\label{tab:qr_dfr}
+\setlength{\tabcolsep}{4pt}\footnotesize
+\begin{tabular}{lrrrrccc}
+\toprule
+& \multicolumn{4}{c}{DFR (\%)} & \multicolumn{3}{c}{50\% crossing} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-8}
+Transformation & OpenCV & PyZbar & WeChat & \emph{all 3} & OpenCV & PyZbar & WeChat \\
+\midrule
+\texttt{motion}$^{\dagger}$ & 100.0 & 100.0 & 100.0 & 100.0 & sat. & sat. & sat. \\
+\texttt{blur}$^{\dagger}$ & 100.0 & 100.0 & 98.1 & 98.1 & sat. & sat. & sat. \\
+\texttt{saltpepper} & 95.2 & 95.2 & 58.0 & 56.6 & $<0.25$ & $<0.25$ & $0.51$ \\
+\texttt{invert} & 100.0 & 100.0 & 7.8 & 7.8 & $<0.25$ & $<0.25$ & -- \\
+\texttt{perspective} & 65.4 & 63.0 & 55.3 & 47.7 & $0.49$ & $0.51$ & $0.58$ \\
+\texttt{logo} & 44.4 & 47.7 & 37.7 & 37.3 & $0.65$ & $0.64$ & $0.72$ \\
+\texttt{rotate} & 11.7 & 17.6 & 0.8 & 0.1 & -- & -- & -- \\
+\texttt{contrast} & 3.3 & 0.0 & 0.0 & 0.0 & -- & -- & -- \\
+\texttt{clean} & 0.9 & 0.0 & 0.0 & 0.0 & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\begin{minipage}{0.94\linewidth}\footnotesize
+Pooled over all four error-correction levels, all three module sizes and all four strengths,
+render-weighted: every one of the \QrRenders{} renders counts once, each decoded by all three
+libraries. The same pooling gives the overall figures quoted in the text. The right-hand block gives the
+strength at which DFR crosses 50\%, or \texttt{--} where it never does. \emph{all three} is
+a cascade: the render counts as read if any library reads it, and it is post-hoc rather than
+registered.
+$^{\dagger}$~saturated: the magnitude is in absolute pixels rather than modules, so these two carry
+no usable strength gradient and are excluded from every statement about one.
+\end{minipage}
+\end{table}

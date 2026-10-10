@@ -1,0 +1,33 @@
+{
+  "frozen_on": "2026-09-25",
+  "pinned_at": "2026-09-25T11:04:52",
+  "pinned_at_note": "device-local time of commit e7b6b298, which re-pinned; qr_submit_qrs.found_at is device-local too",
+  "reason": "FSI:DI submission pack, verdicts of 24 September included",
+  "snapshot": {
+    "adjudicated_on": "2026-09-25",
+    "buckets": {
+      "abuse": 1,
+      "benign_auto": 6,
+      "benign_hand": 16,
+      "inert_lure": 1,
+      "off_target": 3,
+      "quishing": 0,
+      "unadjudicated": 0
+    },
+    "crawled_pages": 408,
+    "crawled_pages_with_qr": 1,
+    "date": "2026-09-25",
+    "induced_left_out": 67,
+    "overlap": 2,
+    "pages_examined": 12843,
+    "pages_with_qr": 27,
+    "prevalence_pct": 0.21,
+    "rescan_factor": 2.32,
+    "scan_based_pct": 0.11,
+    "scans": 946,
+    "scans_with_qr": 3,
+    "submitted_pages": 12437,
+    "tag_quishing": 32,
+    "tag_vn_phishing": 1666
+  }
+}

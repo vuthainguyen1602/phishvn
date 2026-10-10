@@ -122,7 +122,7 @@ def main():
     ex = df.loc[stable & groups["bronze"], "dom" if "dom" in df else "url"].astype(str)
     print("[i] example stable-flagged bronze domains:", ", ".join(ex.head(12)))
 
-    label = {"gold": "Gold phishing (human-verified)", "silver": "Silver phishing",
+    label = {"gold": "Gold phishing (source-verified)", "silver": "Silver phishing",
              "bronze": "Bronze phishing (single-feed)",
              "benign (all)": "Benign, all tiers (reference)"}
     body_rows = []

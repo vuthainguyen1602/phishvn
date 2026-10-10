@@ -1,0 +1,25 @@
+\begin{table}[htbp]
+\centering\small
+\caption{Decode failure rate by module size.}
+\label{tab:qr_scale}
+\begin{tabular}{lrrrr}
+\toprule
+Transformation & $2$\,px & $3$\,px & $4$\,px & $2-4$ (pp) \\
+\midrule
+\texttt{motion} & 100.0 & 100.0 & 100.0 & $+0.0$ \\
+\texttt{blur} & 100.0 & 100.0 & 98.1 & $+1.9$ \\
+\texttt{saltpepper} & 85.2 & 89.0 & 74.2 & $+11.0$ \\
+\texttt{invert} & 68.9 & 69.3 & 69.7 & $-0.8$ \\
+\texttt{perspective} & 71.9 & 53.6 & 58.2 & $+13.7$ \\
+\texttt{logo} & 44.1 & 40.6 & 45.1 & $-1.0$ \\
+\texttt{rotate} & 27.4 & 2.2 & 0.4 & $+27.0$ \\
+\texttt{contrast} & 2.7 & 0.3 & 0.3 & $+2.3$ \\
+\texttt{clean} & 0.3 & 0.3 & 0.3 & $-0.0$ \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\begin{minipage}{0.82\linewidth}\footnotesize
+Pooled over decoders, strengths and error-correction levels; the last column is the $2$\,px penalty
+in percentage points. $2$\,px is the scale measured in the wild.
+\end{minipage}
+\end{table}

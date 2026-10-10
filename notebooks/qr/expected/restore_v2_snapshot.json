@@ -1,0 +1,420 @@
+{
+  "bars": {
+    "T1": 10.0,
+    "T2": 5.0
+  },
+  "budget": {
+    "conv": {
+      "checkpoint_kb": 79.2,
+      "params": 19105,
+      "train_seconds": null
+    },
+    "hybrid": {
+      "checkpoint_kb": 495.5,
+      "params": 120353,
+      "train_seconds": 723
+    },
+    "restormer": {
+      "checkpoint_kb": 232.9,
+      "params": 52209,
+      "train_seconds": 6004
+    }
+  },
+  "by_transform": {
+    "conv": {
+      "opencv/blur": {
+        "control": 71.54451345755693,
+        "restored": 13.821946169772255
+      },
+      "opencv/contrast": {
+        "control": 9.602484472049687,
+        "restored": 1.9958592132505175
+      },
+      "opencv/invert": {
+        "control": 2.1490683229813663,
+        "restored": 2.1490683229813663
+      },
+      "opencv/logo": {
+        "control": 45.79296066252588,
+        "restored": 44.94409937888199
+      },
+      "opencv/motion": {
+        "control": 99.42028985507245,
+        "restored": 32.2111801242236
+      },
+      "opencv/saltpepper": {
+        "control": 92.83643892339545,
+        "restored": 63.515527950310556
+      },
+      "pyzbar/blur": {
+        "control": 55.11387163561077,
+        "restored": 16.600414078674948
+      },
+      "pyzbar/contrast": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "pyzbar/invert": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "pyzbar/logo": {
+        "control": 48.97308488612836,
+        "restored": 47.2463768115942
+      },
+      "pyzbar/motion": {
+        "control": 97.15527950310559,
+        "restored": 32.538302277432706
+      },
+      "pyzbar/saltpepper": {
+        "control": 97.2008281573499,
+        "restored": 54.64182194616977
+      },
+      "wechat/blur": {
+        "control": 25.693581780538306,
+        "restored": 0.0
+      },
+      "wechat/contrast": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "wechat/invert": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "wechat/logo": {
+        "control": 36.23188405797101,
+        "restored": 35.75983436853002
+      },
+      "wechat/motion": {
+        "control": 49.958592132505174,
+        "restored": 24.107660455486542
+      },
+      "wechat/saltpepper": {
+        "control": 64.13664596273293,
+        "restored": 39.047619047619044
+      }
+    },
+    "hybrid": {
+      "opencv/blur": {
+        "control": 71.54451345755693,
+        "restored": 2.3146997929606625
+      },
+      "opencv/contrast": {
+        "control": 9.602484472049687,
+        "restored": 26.513457556935812
+      },
+      "opencv/invert": {
+        "control": 2.1490683229813663,
+        "restored": 2.1490683229813663
+      },
+      "opencv/logo": {
+        "control": 45.79296066252588,
+        "restored": 36.215320910973084
+      },
+      "opencv/motion": {
+        "control": 99.42028985507245,
+        "restored": 2.1739130434782608
+      },
+      "opencv/saltpepper": {
+        "control": 92.83643892339545,
+        "restored": 46.091097308488614
+      },
+      "pyzbar/blur": {
+        "control": 55.11387163561077,
+        "restored": 0.0
+      },
+      "pyzbar/contrast": {
+        "control": 0.0,
+        "restored": 24.248447204968944
+      },
+      "pyzbar/invert": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "pyzbar/logo": {
+        "control": 48.97308488612836,
+        "restored": 39.00621118012422
+      },
+      "pyzbar/motion": {
+        "control": 97.15527950310559,
+        "restored": 0.14492753623188404
+      },
+      "pyzbar/saltpepper": {
+        "control": 97.2008281573499,
+        "restored": 39.966873706004144
+      },
+      "wechat/blur": {
+        "control": 25.693581780538306,
+        "restored": 0.0
+      },
+      "wechat/contrast": {
+        "control": 0.0,
+        "restored": 22.790890269151138
+      },
+      "wechat/invert": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "wechat/logo": {
+        "control": 36.23188405797101,
+        "restored": 34.01242236024844
+      },
+      "wechat/motion": {
+        "control": 49.958592132505174,
+        "restored": 0.14492753623188404
+      },
+      "wechat/saltpepper": {
+        "control": 64.13664596273293,
+        "restored": 32.31055900621118
+      }
+    },
+    "restormer": {
+      "opencv/blur": {
+        "control": 71.54451345755693,
+        "restored": 16.447204968944096
+      },
+      "opencv/contrast": {
+        "control": 9.602484472049687,
+        "restored": 27.138716356107654
+      },
+      "opencv/invert": {
+        "control": 2.1490683229813663,
+        "restored": 2.1490683229813663
+      },
+      "opencv/logo": {
+        "control": 45.79296066252588,
+        "restored": 36.08695652173913
+      },
+      "opencv/motion": {
+        "control": 99.42028985507245,
+        "restored": 43.9047619047619
+      },
+      "opencv/saltpepper": {
+        "control": 92.83643892339545,
+        "restored": 61.22153209109731
+      },
+      "pyzbar/blur": {
+        "control": 55.11387163561077,
+        "restored": 15.275362318840575
+      },
+      "pyzbar/contrast": {
+        "control": 0.0,
+        "restored": 24.981366459627324
+      },
+      "pyzbar/invert": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "pyzbar/logo": {
+        "control": 48.97308488612836,
+        "restored": 37.96273291925466
+      },
+      "pyzbar/motion": {
+        "control": 97.15527950310559,
+        "restored": 39.047619047619044
+      },
+      "pyzbar/saltpepper": {
+        "control": 97.2008281573499,
+        "restored": 50.9399585921325
+      },
+      "wechat/blur": {
+        "control": 25.693581780538306,
+        "restored": 11.36645962732919
+      },
+      "wechat/contrast": {
+        "control": 0.0,
+        "restored": 24.981366459627324
+      },
+      "wechat/invert": {
+        "control": 0.0,
+        "restored": 0.0
+      },
+      "wechat/logo": {
+        "control": 36.23188405797101,
+        "restored": 33.565217391304344
+      },
+      "wechat/motion": {
+        "control": 49.958592132505174,
+        "restored": 36.915113871635604
+      },
+      "wechat/saltpepper": {
+        "control": 64.13664596273293,
+        "restored": 36.57556935817805
+      }
+    }
+  },
+  "guard": {
+    "conv": {
+      "opencv": {
+        "control_correct": 1860,
+        "destroyed": 9,
+        "destroyed_pct_of_correct": 0.4838709677419355,
+        "n": 4000,
+        "rescued": 1089
+      },
+      "pyzbar": {
+        "control_correct": 2012,
+        "destroyed": 7,
+        "destroyed_pct_of_correct": 0.34791252485089463,
+        "n": 4000,
+        "rescued": 987
+      },
+      "wechat": {
+        "control_correct": 2830,
+        "destroyed": 22,
+        "destroyed_pct_of_correct": 0.7773851590106007,
+        "n": 4000,
+        "rescued": 535
+      }
+    },
+    "hybrid": {
+      "opencv": {
+        "control_correct": 1860,
+        "destroyed": 119,
+        "destroyed_pct_of_correct": 6.397849462365591,
+        "n": 4000,
+        "rescued": 1487
+      },
+      "pyzbar": {
+        "control_correct": 2012,
+        "destroyed": 167,
+        "destroyed_pct_of_correct": 8.300198807157058,
+        "n": 4000,
+        "rescued": 1464
+      },
+      "wechat": {
+        "control_correct": 2830,
+        "destroyed": 171,
+        "destroyed_pct_of_correct": 6.042402826855124,
+        "n": 4000,
+        "rescued": 745
+      }
+    },
+    "restormer": {
+      "opencv": {
+        "control_correct": 1860,
+        "destroyed": 133,
+        "destroyed_pct_of_correct": 7.150537634408602,
+        "n": 4000,
+        "rescued": 1023
+      },
+      "pyzbar": {
+        "control_correct": 2012,
+        "destroyed": 171,
+        "destroyed_pct_of_correct": 8.499005964214712,
+        "n": 4000,
+        "rescued": 1036
+      },
+      "wechat": {
+        "control_correct": 2830,
+        "destroyed": 191,
+        "destroyed_pct_of_correct": 6.749116607773852,
+        "n": 4000,
+        "rescued": 405
+      }
+    }
+  },
+  "guard_pct": 2.0,
+  "m": 4,
+  "plumbing": {
+    "conv": {
+      "opencv": {
+        "control": 53.51260504201681,
+        "polarity_pp": 16.13226160029229,
+        "raw": 69.6448666423091
+      },
+      "pyzbar": {
+        "control": 49.70770917062477,
+        "polarity_pp": 16.507855316039468,
+        "raw": 66.21556448666423
+      },
+      "wechat": {
+        "control": 29.25831202046036,
+        "polarity_pp": 0.771647789550606,
+        "raw": 30.029959810010965
+      }
+    },
+    "hybrid": {
+      "opencv": {
+        "control": 53.51260504201681,
+        "polarity_pp": 16.13226160029229,
+        "raw": 69.6448666423091
+      },
+      "pyzbar": {
+        "control": 49.70770917062477,
+        "polarity_pp": 16.507855316039468,
+        "raw": 66.21556448666423
+      },
+      "wechat": {
+        "control": 29.25831202046036,
+        "polarity_pp": 0.771647789550606,
+        "raw": 30.029959810010965
+      }
+    },
+    "restormer": {
+      "opencv": {
+        "control": 53.51260504201681,
+        "polarity_pp": 16.13226160029229,
+        "raw": 69.6448666423091
+      },
+      "pyzbar": {
+        "control": 49.70770917062477,
+        "polarity_pp": 16.507855316039468,
+        "raw": 66.21556448666423
+      },
+      "wechat": {
+        "control": 29.25831202046036,
+        "polarity_pp": 0.771647789550606,
+        "raw": 30.029959810010965
+      }
+    }
+  },
+  "registered": {
+    "hybrid": {
+      "T1": {
+        "arms": "restored(hybrid)+opencv vs restored(conv)+opencv, logo only",
+        "mean_pp": 8.728778467908903,
+        "median_pp": 0.0,
+        "n_urls": 115,
+        "p": 2.816159846091691e-08,
+        "p_bh": 3.754879794788921e-08,
+        "verdict": "partial"
+      },
+      "T2": {
+        "arms": "restored(hybrid)+opencv vs raw+wechat",
+        "mean_pp": 10.727804165144315,
+        "median_pp": 11.42857142857143,
+        "n_urls": 115,
+        "p": 8.169007144412191e-16,
+        "p_bh": 3.2676028577648766e-15,
+        "verdict": "success"
+      }
+    },
+    "restormer": {
+      "T1": {
+        "arms": "restored(restormer)+opencv vs restored(conv)+opencv, logo only",
+        "mean_pp": 8.857142857142858,
+        "median_pp": 0.0,
+        "n_urls": 115,
+        "p": 1.2742846770225936e-08,
+        "p_bh": 2.5485693540451872e-08,
+        "verdict": "partial"
+      },
+      "T2": {
+        "arms": "restored(restormer)+opencv vs raw+wechat",
+        "mean_pp": -1.2276214833759593,
+        "median_pp": 0.0,
+        "n_urls": 115,
+        "p": 0.2852741862257553,
+        "p_bh": 0.2852741862257553,
+        "verdict": "negative"
+      }
+    }
+  },
+  "sources": {
+    "conv": "data/processed/qr/qr_restore_arms_conv_dfr.csv",
+    "hybrid": "data/processed/qr/qr_restore_arms_hybrid_dfr.csv",
+    "restormer": "data/processed/qr/qr_restore_arms_restormer_dfr.csv"
+  }
+}

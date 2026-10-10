@@ -49,7 +49,8 @@ except ImportError:
 
 from train_url_baseline import _metrics
 from run_p2_benchmark import pr_curve_row, write_curves
-from run_p2_temporal_strict import load, split_phishing
+import re
+from run_p2_temporal_strict import benign_mask, load, split_phishing
 
 MAX_LEN = 128          # p99 is 43; 20 rows of 53,116 are longer than this and are truncated
 EMB = 32
@@ -167,7 +168,15 @@ def main():
     ap.add_argument("--test-after", default=None)
     ap.add_argument("--out", default="data/processed/p2/p2_charcnn.csv")
     ap.add_argument("--curves", default="data/processed/p2/p2_pr_curves_charcnn.csv")
+    ap.add_argument("--benign-grouped", action="store_true",
+                    help="benign rows split by registrable domain (run_p2_temporal_strict.benign_mask)")
+    ap.add_argument("--strip-scheme", action="store_true",
+                    help="drop the URL scheme before encoding, as the transfer-matrix arm does; "
+                         "the tabular schema excludes is_https for the same reason")
+    ap.add_argument("--device", default="cpu")
     a = ap.parse_args()
+    if (a.benign_grouped or a.strip_scheme) and a.out == "data/processed/p2/p2_charcnn.csv":
+        raise SystemExit("--benign-grouped/--strip-scheme write their own CSV: pass --out and --curves ''")
     os.chdir(ROOT)
 
     df = load()
@@ -181,7 +190,7 @@ def main():
     for proto in ("temporal_strict", "random_same_rows"):
         for s in range(a.seeds):
             rng = np.random.RandomState(s)                 # the canonical per-seed benign mask
-            bmask = rng.rand(len(be)) < a.cut
+            bmask = benign_mask(be, rng, a.cut, a.benign_grouped)
             if proto == "temporal_strict":
                 tr = pd.concat([ph_tr, be[bmask]])
                 te = pd.concat([ph_te, be[~bmask]])
@@ -192,8 +201,10 @@ def main():
                 te = pd.concat([pool[~pmask], be[~bmask]])
 
             t0 = time.time()
-            score = fit_predict(tr["url"].tolist(), tr["y"].to_numpy(int),
-                                te["url"].tolist(), s, a.epochs)
+            enc = (lambda xs: [re.sub(r"^[A-Za-z][A-Za-z0-9+.-]*://", "", str(u)) for u in xs]) \
+                if a.strip_scheme else (lambda xs: xs)
+            score = fit_predict(enc(tr["url"].tolist()), tr["y"].to_numpy(int),
+                                enc(te["url"].tolist()), s, a.epochs, device=a.device)
             yte = te["y"].to_numpy(int)
             met = _metrics(yte, score)
             met.update({"family": "CharCNN", "seed": s, "protocol": proto,

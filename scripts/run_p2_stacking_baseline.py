@@ -28,10 +28,12 @@ RUN:
               CatBoost+HistGB+LogReg+MLP \
       --out data/processed/p2/p2_stacking_combos.csv \
       --curves data/processed/p2/p2_pr_curves_stacking_combos.csv   # base-learner sweep
-  python scripts/run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg \
-      --test-after 2025-02-18 --out data/processed/p2/p2_refresh_cblr_k20.csv --curves ""
+  P2_UNWEIGHTED=0 python scripts/run_p2_stacking_baseline.py --seeds 20 \
+      --bases CatBoost+LogReg --test-after 2025-02-18 --out data/processed/p2/p2_refresh_cblr_k20.csv --curves ""
       # PREREG_refresh_window.md Test 1; pair with the CatBoost file from
-      # run_p2_temporal_strict --test-after
+      # run_p2_temporal_strict --test-after. P2_UNWEIGHTED=0 is required here: the registration
+      # binds the stack configuration of 2026-08-17, whose LogReg/RF/HistGB members are
+      # class-weighted. The benchmark's own stacking arms are unweighted since 2026-10-10.
 """
 from __future__ import annotations
 
@@ -51,7 +53,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH, _metrics
-from run_p2_benchmark import make_any_model, pr_curve_row, write_curves
+from run_p2_benchmark import make_any_model, pr_curve_row, weighting_params, write_curves
 from run_p2_temporal_strict import load, split_phishing
 
 OUT = "data/processed/p2/p2_stacking_baseline.csv"
@@ -86,7 +88,9 @@ def make_stacker(bases: list[str], seed: int):
     from sklearn.ensemble import StackingClassifier
     from sklearn.linear_model import LogisticRegression
     return StackingClassifier(
-        estimators=[(ABBREV[b], make_any_model(b, seed)) for b in bases],
+        # members are configured like the single-family rows they are compared with (uniform
+        # weighting unless P2_UNWEIGHTED=0), so the stack adds a combiner and nothing else
+        estimators=[(ABBREV[b], make_any_model(b, seed, weighting_params(b))) for b in bases],
         final_estimator=LogisticRegression(max_iter=1000),
         stack_method="predict_proba", cv=5, n_jobs=-1)
 

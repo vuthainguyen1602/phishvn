@@ -32,7 +32,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH, _metrics
-from run_p2_benchmark import make_any_model
+from run_p2_benchmark import make_any_model, weighting_params
 from run_p2_temporal_strict import load, split_phishing
 from run_p2_stacking_baseline import ABBREV
 from paired_eval import corrected_paired_t
@@ -54,7 +54,7 @@ def oof_matrix(bases, X, y, folds):
     P = np.full((len(y), len(bases)), np.nan)
     for tr_idx, oo_idx in folds:
         for j, name in enumerate(bases):
-            m = make_any_model(name, 0)
+            m = make_any_model(name, 0, weighting_params(name))
             m.fit(X[tr_idx], y[tr_idx])
             P[oo_idx, j] = m.predict_proba(X[oo_idx])[:, 1]
     return P, ~np.isnan(P).any(axis=1)
@@ -117,7 +117,7 @@ def main():
 
             # Prediction-time bases: fitted once on all of train and shared by the variants, so
             # the only thing that varies is the matrix the meta-learner was fitted on.
-            Pte = np.column_stack([make_any_model(b, s).fit(Xtr, ytr).predict_proba(Xte)[:, 1]
+            Pte = np.column_stack([make_any_model(b, s, weighting_params(b)).fit(Xtr, ytr).predict_proba(Xte)[:, 1]
                                    for b in bases])
             order = chain_order(tr, np.random.RandomState(1000 + s))
 

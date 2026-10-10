@@ -44,7 +44,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from train_url_baseline import COMPPHISH
-from run_p2_benchmark import FAMILIES, make_any_model
+from run_p2_benchmark import FAMILIES, make_any_model, weighting_params
 from run_p2_temporal_strict import load
 
 OUT_DECAY = "data/processed/p2/p2_forecastability_decay.csv"
@@ -93,7 +93,7 @@ def e1_decay(feats, ph_tr, be, seeds):
             Xtr = pd.concat([ph_fit, be_tr])[feats].to_numpy(float)
             ytr = np.r_[np.ones(len(ph_fit)), np.zeros(len(be_tr))].astype(int)
             for fam in FAMILIES:
-                m = make_any_model(fam, s)
+                m = make_any_model(fam, s, weighting_params(fam))
                 m.fit(Xtr, ytr)
                 sc_be = m.predict_proba(be_ev[feats].to_numpy(float))[:, 1]
                 for k, w in enumerate(wins):
@@ -179,7 +179,7 @@ def e3_novelty(feats, ph_tr, ph_te, be, seeds):
         nn = NearestNeighbors(n_neighbors=10).fit(sc.transform(Xtr))
         u = nn.kneighbors(sc.transform(Xte))[0].mean(axis=1)
         for fam in ("CatBoost", "LogReg"):
-            m = make_any_model(fam, s)
+            m = make_any_model(fam, s, weighting_params(fam))
             m.fit(Xtr, ytr)
             p = m.predict_proba(Xte)[:, 1]
             wrong = ((p >= 0.5).astype(int) != yte)

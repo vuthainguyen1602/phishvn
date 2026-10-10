@@ -426,7 +426,8 @@ def tab_stacking():
     """Ensemble baselines on the SAME rows/protocols as tab_strict. Sources:
     p2_stacking_baseline.csv (the JNCA recipe RF+XGB, +HFS) and p2_stacking_combos.csv
     (the base-learner sweep), both 5 seeds; CatBoost reference row from p2_temporal_strict.csv."""
-    df = pd.concat([pd.read_csv("data/processed/p2/p2_stacking_baseline.csv"),
+    df = pd.concat([pd.read_csv("data/processed/p2/p2_stacking_baseline.csv").replace(
+        {"family": {v: k for k, v in STACKS[:2]}}),
                     pd.read_csv("data/processed/p2/p2_stacking_combos.csv")])
     ref = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
     lines = [
@@ -694,7 +695,8 @@ def gen_stacking_verdict():
       run_p2_temporal_strict.py --families CatBoost --seeds 20 --out .../p2_temporal_strict_cb_k20.csv
       run_p2_stacking_baseline.py --seeds 20 --bases CatBoost+LogReg --out .../p2_stacking_cblr_k20.csv"""
     from paired_eval import bh_adjust, corrected_paired_t, fmt_p
-    df5 = pd.concat([pd.read_csv("data/processed/p2/p2_stacking_baseline.csv"),
+    df5 = pd.concat([pd.read_csv("data/processed/p2/p2_stacking_baseline.csv").replace(
+        {"family": {v: k for k, v in STACKS[:2]}}),
                      pd.read_csv("data/processed/p2/p2_stacking_combos.csv")])
     ref5 = pd.read_csv("data/processed/p2/p2_temporal_strict.csv")
 
@@ -717,7 +719,7 @@ def gen_stacking_verdict():
             f"while the CatBoost-anchored mixed stacks without LogReg are statistically "
             f"indistinguishable from CatBoost alone.")
 
-    # Report the K=5 BH family first (positive, does not clear BH), then the pre-planned K=20
+    # Report the K=5 BH family first (positive, does not clear BH), then the exploratory K=20 (chosen after K=5)
     # extension adjusted over its own two tests (temporal, random), printed as q.
     cb = pd.read_csv("data/processed/p2/p2_temporal_strict_cb_k20.csv")
     st = pd.read_csv("data/processed/p2/p2_stacking_cblr_k20.csv")
@@ -730,8 +732,8 @@ def gen_stacking_verdict():
              f"(BH-adjusted ${fmt_p(q['Stack[CB+LR]'], 'q')}$) and Stack[CB+HGB+LR+MLP] "
              f"${res['Stack[CB+HGB+LR+MLP]']['mean']:+.4f}$ "
              f"(${fmt_p(q['Stack[CB+HGB+LR+MLP]'], 'q')}$). The significance claim therefore "
-             f"rests on a 20-seed extension for the focal pair, run before the refresh-window "
-             f"registration and so exploratory, adjusted over its "
+             f"rests on a 20-seed extension for the focal pair, decided after the five-seed result "
+             f"and so exploratory, adjusted over its "
              f"own two tests: Stack[CB+LR] beats CatBoost under the phishing-temporal protocol "
              f"(paired $\\Delta$PR-AUC $= {t['mean']:+.4f}$, {t['wins']}/{t['k']} seeds, "
              f"corrected ${fmt_p(tq, 'q')}$) and loses to it under random-same-rows "
@@ -807,13 +809,13 @@ def tab_decomp():
         # with a third of it blank, and they are narrow enough to sit beside the prose that
         # discusses them, which is where a reader wants them.
         "\\begin{table}[t]\\centering",
-        "\\caption{Decomposing the \\textbf{F1} drop. $\\Delta_{comp}$ = dated-subset random"
-        " minus full-corpus random (\\emph{composition}, protocol unchanged); $\\Delta_{proto}$"
+        "\\caption{Decomposing the \\textbf{F1} drop. $\\Delta_{\\mathrm{comp}}$ = dated-subset random"
+        " minus full-corpus random (\\emph{composition}, protocol unchanged); $\\Delta_{\\mathrm{proto}}$"
         " = phishing-temporal minus dated-subset random (\\emph{protocol}, rows unchanged).}",
         "\\label{tab:decomp}",
         "\\begin{tabular}{lccccc}\\toprule",
-        "Family & Random (full) & Random (dated rows) & Phishing-temporal & $\\Delta_{comp}$ &"
-        " $\\Delta_{proto}$ \\\\ \\midrule",
+        "Family & Random (full) & Random (dated rows) & Phishing-temporal & $\\Delta_{\\mathrm{comp}}$ &"
+        " $\\Delta_{\\mathrm{proto}}$ \\\\ \\midrule",
     ]
     for f in ORDER:
         a = full[(full.family == f) & (full.protocol == "random")]["F1"].mean()
@@ -1160,11 +1162,11 @@ def tab_maxf1():
         "\\begin{table}[t]\\centering",
         "\\caption{Table~\\ref{tab:decomp} at each family's \\emph{chosen} operating point:"
         " the oracle best F1 on the seed-mean test precision--recall curve of the Table~\\ref{tab:strict}"
-        " models, not a validation-selected threshold; $\\Delta_{comp}$ and $\\Delta_{proto}$ as in Table~\\ref{tab:decomp}.}",
+        " models, not a validation-selected threshold; $\\Delta_{\\mathrm{comp}}$ and $\\Delta_{\\mathrm{proto}}$ as in Table~\\ref{tab:decomp}.}",
         "\\label{tab:maxf1}",
         "\\begin{tabular}{lccccc}\\toprule",
         "Family & " + " & ".join(lbl for lbl, _ in stages)
-        + " & $\\Delta_{comp}$ & $\\Delta_{proto}$ \\\\ \\midrule",
+        + " & $\\Delta_{\\mathrm{comp}}$ & $\\Delta_{\\mathrm{proto}}$ \\\\ \\midrule",
     ]
     for f in ORDER:
         a, b, c = (s[1][f] for s in stages)
@@ -1450,8 +1452,8 @@ def gen_charcnn():
 
     out = [
         f"Against the strongest tabular family ({best}) on identical rows and seeds, the "
-        f"character-CNN gains ${d_f1:+.3f}$ F1 and ${d_pr:+.3f}$ PR-AUC under the direct-dated "
-        f"phishing rolling-origin "
+        f"character-CNN gains ${d_f1:+.3f}$ F1 and ${d_pr:+.3f}$ PR-AUC under the "
+        f"phishing-temporal "
         f"protocol, and reduces FPR at $90\\%$ recall by ${abs(d_fpr):.3f}$; all "
         f"{n_sig} paired comparisons across the seven families, three metrics and two protocols "
         f"survive Benjamini--Hochberg ({qfmt}). "
@@ -1464,7 +1466,7 @@ def gen_charcnn():
         f"$\\Delta_{{\\mathrm{{proto}}}}$ in the study (${dp_cnn:+.3f}$ F1 against "
         f"${dp_best:+.3f}$ for the most protocol-sensitive tabular family and "
         f"${dp_worst:+.3f}$ for the least), so the model that gains most from a random split is "
-        f"also the model that loses most when the split is made honest.",
+        f"also the model that loses most when the split moves forward in time.",
     ]
 
     if os.path.exists(sp):
@@ -1487,7 +1489,7 @@ def gen_charcnn():
         out.append(
             f"Because a model reading the raw string could key on the benign feed rather than on "
             f"phishing, we swapped the benign source: trained against one benign family and tested "
-            f"against the other, with the phishing side held at its direct-dated rolling-origin "
+            f"against the other, with the phishing side held at its phishing-temporal "
             f"split. Trained "
             f"on the broad list the character-CNN loses ${abs(cnn_tr):.3f}$ F1, inside its own seed "
             f"spread, while the tabular families lose ${abs(cb_tr):.3f}$ and ${abs(lr_tr):.3f}$ and "
@@ -1556,30 +1558,55 @@ def gen_guard_control():
             f"{worst}/{max(d_new, key=d_new.get)}) — the 'ordering is unchanged' reading in "
             "Section VI-B no longer holds; rewrite it before regenerating.")
 
+    # 2026-10-10: the guard also lowers the control's test prior, and F1 moves with the prior, so
+    # the F1 reading above overstates what the guard explains. The prior-matched arm and the
+    # prior-free metrics give the step the guard leaves; the grouped-benign arm closes the benign
+    # side the guard never covered.
+    pm_p = "data/processed/p2/p2_temporal_strict_guarded_pm.csv"
+    pg_p = "data/processed/p2/p2_temporal_strict_guarded_pm_bgroup.csv"
+    if not (os.path.exists(pm_p) and os.path.exists(pg_p)):
+        raise SystemExit("gen_guard_control: run run_p2_temporal_strict.py --guard-control "
+                         "--match-prior (with and without --benign-grouped) first")
+    pm, pg = pd.read_csv(pm_p), pd.read_csv(pg_p)
+    step = lambda df, f, m: (mean_m(df, "temporal_strict", f, m)
+                             - mean_m(df, "random_same_rows_guarded", f, m))
+    d_pm = {f: step(pm, f, "F1") for f in ORDER}
+    d_roc = {f: step(pm, f, "ROC-AUC") for f in ORDER}
+    d_fpr = {f: step(pm, f, "FPR@R0.90") for f in ORDER}
+    d_roc_u = {f: mean_m(base, "temporal_strict", f, "ROC-AUC")
+               - mean_m(base, "random_same_rows", f, "ROC-AUC") for f in ORDER}
+    d_pg = {f: step(pg, f, "ROC-AUC") for f in ORDER}
+    boost = [f for f in ORDER if f not in ("LogReg",)]
+    share = 1 - np.mean([d_roc[f] for f in boost]) / np.mean([d_roc_u[f] for f in boost])
+    rng_ = lambda d, k=3: f"$[{min(d.values()):+.{k}f}, {max(d.values()):+.{k}f}]$"
+    sub = lambda d: {f: d[f] for f in ORDER if f != "LogReg"}
     return (
-        f"\\textbf{{The control's own leakage, and the arm that removes it.}} One asymmetry has "
-        f"to be closed before $\\Delta_{{proto}}$ can be called a protocol effect. The "
+        f"\\textbf{{The control's own leakage, and the arms that remove it.}} One asymmetry has "
+        f"to be closed before $\\Delta_{{\\mathrm{{proto}}}}$ can be called a protocol effect. The "
         f"phishing-temporal arm applies the registrable-domain guard; the random control re-splits "
         f"the pooled rows without it, so ${100*shared:.1f}\\%$ of the control's phishing test "
         f"window shares a domain with its own training window against "
-        f"${100*shared_t:.1f}\\%$ under the temporal arm: the guard, not the protocol. We "
-        f"therefore re-ran the control with the identical guard applied after the random "
-        f"re-split, and the correction is not cosmetic. The guard costs the control "
-        f"${shift:+.3f}$ F1, near-uniformly across families, and $\\Delta_{{proto}}$ falls from "
-        f"${min(d_old.values()):+.3f}$--${max(d_old.values()):+.3f}$ to "
-        f"${min(d_new.values()):+.4f}$--${max(d_new.values()):+.4f}$: roughly half of the "
-        f"unguarded protocol step was the guard. For the leading families it is now "
-        f"indistinguishable from zero (CatBoost ${d_new['CatBoost']:+.4f}$ F1, "
-        f"${pr_new:+.3f}$ PR-AUC against ${pr_old:+.3f}$ unguarded; logistic regression "
-        f"${d_new['LogReg']:+.4f}$, the wrong sign for a temporal penalty), and what remains is "
-        f"carried by the tail: {worst_name} at ${d_new[worst]:+.4f}$. Two things survive "
-        f"intact. "
-        f"The guard's cost is a near-constant offset, so the \\emph{{ordering}} of families by "
-        f"$\\Delta_{{proto}}$ is preserved (Spearman $\\rho = {rho:.2f}$ between the two "
-        f"controls, logistic regression smallest and {worst_name} largest under both); and the "
-        f"protocol step is small with or without the guard. Table~\\ref{{tab:decomp}} keeps the unguarded control, because that is the "
-        f"comparison the benchmark literature runs and the quantity a reader of that literature "
-        f"needs; this arm is what says how much of it is protocol.")
+        f"${100*shared_t:.1f}\\%$ under the temporal arm. Re-running the control with the identical "
+        f"guard costs it ${shift:+.3f}$ F1, near-uniformly across families, and moves "
+        f"$\\Delta_{{\\mathrm{{proto}}}}$ on F1 from the range {rng_(d_old)} to {rng_(d_new)}. Most of that "
+        f"move is the test prior rather than leakage: the guard removes "
+        f"$\\GuardDropPct\\%$ of the control's phishing test rows, and F1 at a fixed threshold "
+        f"falls with the prior. With the control's benign test rows subsampled to the temporal "
+        f"arm's prior, the F1 step is {rng_(d_pm)} (CatBoost ${d_pm['CatBoost']:+.3f}$), and on "
+        f"the metrics that do not depend on the prior the guard leaves a step of "
+        f"{rng_(sub(d_roc))} ROC-AUC and {rng_(sub(d_fpr))} FPR@0.90 for every family except "
+        f"logistic regression (${d_roc['LogReg']:+.3f}$ and ${d_fpr['LogReg']:+.3f}$). On "
+        f"ROC-AUC the guard accounts for about ${100*share:.0f}\\%$ of the unguarded step of the "
+        f"six non-linear families, so their protocol step is small but not zero, and logistic "
+        f"regression is the one family that pays almost nothing for moving forward in time. The "
+        f"ordering of families by the step is the same under both controls (Spearman "
+        f"$\\rho = {rho:.2f}$ on F1, {worst_name} largest). Grouping the benign rows by "
+        f"registrable domain as well, so that no benign domain sits on both sides "
+        f"(otherwise $\\BenignSharedPct\\%$ of benign test rows share one with training), leaves "
+        f"the ROC-AUC step at {rng_(sub(d_pg))} for the same six families and "
+        f"${d_pg['LogReg']:+.3f}$ for logistic regression. Table~\\ref{{tab:decomp}} keeps the "
+        f"unguarded control, because that is the comparison the benchmark literature runs; these "
+        f"arms say how much of it is protocol.")
 
 
 def tab_xdataset():
@@ -2082,8 +2109,8 @@ def tab_hpo():
         return "\n".join(lines)
     lines = [
         "\\begin{table*}[t]\\centering",
-        "\\caption{Tuned vs.\\ default configurations, tuned on the direct-dated phishing"
-        " rolling-origin train window only and evaluated once on the test window; mean$\\pm$std over 3 model"
+        "\\caption{Tuned vs.\\ default configurations, tuned on the phishing-temporal"
+        " train window only and evaluated once on the test window; mean$\\pm$std over 3 model"
         " seeds.}",
         "\\label{tab:hpo}",
         "\\begin{tabular}{llcccc}\\toprule",
@@ -2202,13 +2229,13 @@ def tab_prior_control():
         + _tn(n['ph_dated']) + "$ dated rows with the whole benign pool of $" + _tn(n['be_all'])
         + "$ (natural) or a random $" + _tn(n['be_matched']) + "$ of it (prior matched to the"
         " full corpus). $\\Delta_{prior}$ = full rows, prior moved $" + hi + " \\to " + lo
-        + "$; $\\Delta_{comp}$ = prior held at $" + lo + "$, dated rows replacing a random draw"
+        + "$; $\\Delta_{\\mathrm{comp}}$ = prior held at $" + lo + "$, dated rows replacing a random draw"
         " of equal size.}",
         "\\label{tab:priorcontrol}",
         "\\small",
         "\\begin{tabular}{lcccccc}\\toprule",
         "Family & " + " & ".join(labels)
-        + " & $\\Delta_{prior}$ & $\\Delta_{comp}$ \\\\ \\midrule",
+        + " & $\\Delta_{prior}$ & $\\Delta_{\\mathrm{comp}}$ \\\\ \\midrule",
     ]
     for f in ORDER:
         a, b, c, d = (m[arm][f] for arm, _ in PRIOR_ARMS)
@@ -2564,8 +2591,213 @@ def gen_twosided_verdict():
         f"two-sided protocol the limitation asks for: {reading} (ROC-AUC ${lo_roc:+.3f}$ to "
         f"${hi_roc:+.3f}$ against the guard-matched random control, FPR@0.90 "
         f"${min(d_fpr.values()):+.3f}$ to ${max(d_fpr.values()):+.3f}$). A two-sided split needs "
-        f"a benign stream sampled the same way over time, which this corpus lacks and the July "
-        f"2026 collection is built to supply.")
+        f"a benign stream sampled the same way over time, which this corpus lacks.")
+
+
+def gen_dates():
+    """Where the phishing dates come from, how accurate the reconstructed ones are, and what the
+    phishing-temporal test window holds. Reads dataset_url.csv (source column), the first-seen
+    validation summary written by the corpus build, and the split run_p2_temporal_strict draws."""
+    import json
+    from run_p2_temporal_strict import load, split_phishing
+    df = load()
+    src = pd.read_csv("data/processed/dataset_url.csv", usecols=["url_norm", "source"], dtype=str)
+    df = df.merge(src.rename(columns={"url_norm": "url"}).drop_duplicates("url"), on="url",
+                  how="left")
+    ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)
+    n_ph, n_cld = len(ph), int((ph.source == "chongluadao").sum())
+    tr, te, _ = split_phishing(ph, 0.70)
+    v = json.load(open("data/processed/first_seen_validation_summary.json"))
+    o = v["ncsc_overlap"]
+    te_2024 = int((te.date >= pd.Timestamp("2024-01-01")).sum())
+    ncsc = lambda d: 100 * float((d.source == "tinnhiemmang").mean())
+    n = lambda x: f"{x:,}".replace(",", "{,}")
+    return (f"Of the ${n(n_ph)}$ dated phishing rows, ${n(n_cld)}$ ({100 * n_cld / n_ph:.0f}\\%) are "
+            "community-feed entries whose first-seen date was reconstructed when the corpus was "
+            "built, from the object identifiers of Wayback-archived API records and the mirror's "
+            "commit history; the rest are the national blacklist's own report dates. On the "
+            f"${o['n']}$ hosts listed by both, the reconstructed date lies a median "
+            f"${o['median_delta_days']:.0f}$ days from the national one "
+            f"(${100 * o['share_abs_within_30d']:.0f}\\%$ within 30 days), small against the "
+            "multi-year span the time cut divides. The phishing-temporal test window "
+            f"(${n(len(te))}$ rows after the guard) opens on {te.date.min().day} {te.date.min():%B %Y}; "
+            f"${n(len(te) - te_2024)}$ of its rows fall before 2024, because the community feed "
+            "stopped updating in May 2024, so the protocol measures roughly a year of forward "
+            "shift rather than the full span. The source mix moves mildly across the cut: the "
+            f"national blacklist is ${ncsc(tr):.1f}\\%$ of training phishing and "
+            f"${ncsc(te):.1f}\\%$ of test phishing.") + "\n"
+
+
+def _host_arm_summary(d):
+    """Diagonal mean, off-diagonal mean, below-chance count (ROC-AUC) and below-floor count (F1)
+    for one arm's transfer matrices in directory d. PhishVN's floor uses that arm's own prior."""
+    from train_url_baseline import add_label
+    roc = pd.read_csv(os.path.join(d, "cross_dataset_ROC-AUC.csv"), index_col=0)
+    f1 = pd.read_csv(os.path.join(d, "cross_dataset_F1.csv"), index_col=0)
+    names = list(roc.columns)
+    src = {"PhishVN": {"data/processed/p2": "data/processed/vn_compphish.csv",
+                       "data/processed/p2/dedup_audit":
+                           "data/processed/p2/dedup_audit/vn_compphish_dedup.csv",
+                       "data/processed/p2/nowww": "data/processed/p2/nowww/phishvn_nowww.csv"}[d]}
+    floor = {}
+    for n in names:
+        path = src.get(n, {"PhiUSIIL": "data/processed/external/phiusiil_compphish.csv",
+                           "ISCXURL2016": "data/processed/external/iscx_compphish.csv",
+                           "PhishStorm": "data/processed/external/phishstorm_compphish.csv"}.get(n))
+        r = float(add_label(pd.read_csv(path, low_memory=False))["y"].mean())
+        floor[n] = 2 * r / (1 + r)
+    off = [(i, j) for i in names for j in names if i != j]
+    out = {"diag": float(np.mean([roc.loc[n, n] for n in names])),
+           "off": float(np.mean([roc.loc[i, j] for i, j in off])),
+           "below": sum(roc.loc[i, j] < 0.5 for i, j in off),
+           "f1_below": sum(f1.loc[i, j] < floor[j] for i, j in off), "n": len(off)}
+    mcc = os.path.join(d, "cross_dataset_MCC.csv")
+    if os.path.exists(mcc):
+        m = pd.read_csv(mcc, index_col=0)
+        out["mcc_off"] = float(np.mean([m.loc[i, j] for i, j in off]))
+        out["mcc_neg"] = sum(m.loc[i, j] < 0 for i, j in off)
+    return out
+
+
+def tab_nowww():
+    """The transfer matrix three ways: as released, with one row per PhishVN host, and with a
+    leading www. removed from every host in all four corpora (run_p2_nowww_xdata.py)."""
+    if not os.path.exists("data/processed/p2/nowww/cross_dataset_ROC-AUC.csv"):
+        return "% canonical-host arm absent -- run run_p2_nowww_xdata.py\n"
+    rows = [("As released", "data/processed/p2"),
+            ("One row per PhishVN host", "data/processed/p2/dedup_audit"),
+            ("\\texttt{www.} removed in all four", "data/processed/p2/nowww")]
+    body = []
+    for label, d in rows:
+        x = _host_arm_summary(d)
+        mcc = f"${x['mcc_off']:.3f}$" if "mcc_off" in x else "--"
+        body.append(f"{label} & ${x['diag']:.3f}$ & ${x['off']:.3f}$ & "
+                    f"${x['diag'] - x['off']:.3f}$ & {x['below']}/{x['n']} & "
+                    f"{x['f1_below']}/{x['n']} & {mcc} \\\\")
+    return "\n".join([
+        "\\begin{table}[t]\\centering\\small",
+        "\\caption{Random-forest transfer across the four corpora under three host treatments. "
+        "ROC-AUC diagonal and off-diagonal means, their gap, the off-diagonal cells below chance, "
+        "the off-diagonal cells whose F1 is below the all-positive classifier on their target, "
+        "and the off-diagonal mean MCC (zero for any constant classifier).}",
+        "\\label{tab:nowww}",
+        "\\setlength{\\tabcolsep}{3pt}",
+        "\\begin{tabular}{lrrrrrr}",
+        "\\toprule",
+        "Hosts & Diag. & Off-diag. & Gap & $<0.5$ & F1 $<$ floor & MCC \\\\",
+        "\\midrule", *body, "\\bottomrule", "\\end{tabular}", "\\end{table}", ""])
+
+
+def gen_nowww():
+    """The www. prefix as the mechanism of the transfer inversion, with the numbers of tab_nowww."""
+    sh_path = "data/processed/p2/nowww/www_share.csv"
+    if not os.path.exists(sh_path):
+        return "% canonical-host arm absent -- run run_p2_nowww_xdata.py\n"
+    sh = pd.read_csv(sh_path).set_index(["corpus", "class"])["www_share"]
+    pc = lambda c, k: (f"${100 * sh[(c, k)]:.0f}\\%$" if sh[(c, k)] >= 0.01
+                       else f"${100 * sh[(c, k)]:.1f}\\%$")
+    rel, ded, now = (_host_arm_summary(d) for d in ("data/processed/p2",
+                                                  "data/processed/p2/dedup_audit",
+                                                  "data/processed/p2/nowww"))
+    txt = (
+        "One mechanism is visible in the hosts themselves. A leading \\texttt{www.} sits on "
+        f"{pc('PhishVN (released)', 'phishing')} of PhishVN's phishing rows and "
+        f"{pc('PhishVN (released)', 'benign')} of its benign rows, and on "
+        f"{pc('ISCXURL2016', 'phishing')} against {pc('ISCXURL2016', 'benign')} in ISCXURL2016, "
+        f"but on {pc('PhiUSIIL', 'benign')} of PhiUSIIL's benign rows (against "
+        f"{pc('PhiUSIIL', 'phishing')} of its phishing rows) and on "
+        f"{pc('PhishStorm', 'benign')} of PhishStorm's (against {pc('PhishStorm', 'phishing')}); "
+        "\\texttt{subdom\\_cnt}, \\texttt{dot\\_cnt} and the length features all count it, so a "
+        "model that learns what the prefix means on one corpus is scored on a corpus where it "
+        "means the opposite. Removing the prefix from every host in all four corpora, with PhishVN "
+        "entering one row per host, raises the off-diagonal ROC-AUC mean from "
+        f"${rel['off']:.3f}$ (${ded['off']:.3f}$ with one row per host alone) to ${now['off']:.3f}$ "
+        f"and cuts the cells below chance from {rel['below']} to {now['below']} of {now['n']} "
+        "(Table~\\ref{tab:nowww}). The diagonal falls as well, from "
+        f"${rel['diag']:.3f}$ to ${now['diag']:.3f}$, because the prefix was a label cue inside each "
+        "corpus too, and the gap between the two narrows from "
+        f"${rel['diag'] - rel['off']:.3f}$ to ${now['diag'] - now['off']:.3f}$. Most of the "
+        "below-chance transfer is therefore a disagreement between corpora about one prefix; "
+        f"what is left after removing it is weaker transfer, with {now['below']} cells still "
+        "below chance. ")
+    if "mcc_off" in now:
+        txt += (f"F1 still falls below the all-positive floor in {now['f1_below']} of the "
+                f"{now['n']} stripped cells, while the off-diagonal MCC, which any constant "
+                f"classifier scores at zero, averages ${now['mcc_off']:+.3f}$ "
+                f"({now['mcc_neg']} cells negative): below the floor on F1 is not the same as "
+                "deciding worse than a constant, because F1 credits the all-positive classifier "
+                "on a balanced target.")
+    return txt + "\n"
+
+
+def gen_guard_macros():
+    """The two asymmetries the guard-matched control leaves (the test prior it shifts and the
+    benign side it does not guard), measured on the canonical per-seed draws."""
+    from run_p2_temporal_strict import benign_mask, load, split_phishing
+    df = load()
+    ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)
+    be = df[df.y == 0].reset_index(drop=True)
+    tr, te, _ = split_phishing(ph, 0.70)
+    shared, drop, p_t, p_g = [], [], [], []
+    for s in range(5):
+        rng = np.random.RandomState(s)
+        bm = benign_mask(be, rng, 0.70)
+        shared.append(be[~bm].rdom.isin(set(be[bm].rdom)).mean())
+        pool = pd.concat([tr, te])
+        pm = rng.rand(len(pool)) < len(tr) / (len(tr) + len(te))
+        g = pool[~pm].rdom.isin(set(pool[pm].rdom))
+        nb = int((~bm).sum())
+        drop.append(g.mean())
+        p_t.append(len(te) / (len(te) + nb))
+        p_g.append(int((~g).sum()) / (int((~g).sum()) + nb))
+    m = lambda k, v: f"\\newcommand{{\\{k}}}{{{v}}}"
+    return "\n".join([m("BenignSharedPct", f"{100 * np.mean(shared):.0f}"),
+                      m("GuardDropPct", f"{100 * np.mean(drop):.1f}"),
+                      m("PriorTemporal", f"{np.mean(p_t):.3f}"),
+                      m("PriorGuarded", f"{np.mean(p_g):.3f}")]) + "\n"
+
+
+def gen_charcnn_guard():
+    """The character-CNN against the two cues the tabular schema cannot use and the string can:
+    the URL scheme (excluded from the schema as a collection artefact) and benign registrable
+    domains repeated across the row-wise benign split."""
+    P = "data/processed/p2/"
+    need = ["p2_charcnn_noscheme.csv", "p2_charcnn_noscheme_bgroup.csv",
+            "p2_temporal_strict_bgroup.csv"]
+    if not all(os.path.exists(P + f) for f in need):
+        return "% CharCNN guard arms absent -- run run_p2_charcnn.py --strip-scheme [--benign-grouped]\n"
+    cnn0, cnn1, cnn2 = (pd.read_csv(P + f) for f in
+                        ("p2_charcnn.csv", "p2_charcnn_noscheme.csv", "p2_charcnn_noscheme_bgroup.csv"))
+    tab0, tab2 = pd.read_csv(P + "p2_temporal_strict.csv"), pd.read_csv(P + "p2_temporal_strict_bgroup.csv")
+    T = "temporal_strict"
+    best = tab2[tab2.protocol == T].groupby("family")["F1"].mean().idxmax()
+    best_name = {"LogReg": "logistic regression"}.get(best, best)
+
+    def gap(cnn, tab, m):
+        c = cnn[cnn.protocol == T].set_index("seed")[m]
+        t = tab[(tab.protocol == T) & (tab.family == best)].set_index("seed")[m]
+        d = c - t
+        good = (d < 0) if m.startswith("FPR") else (d > 0)
+        return float(d.mean()), int(good.sum()), len(d)
+
+    g0 = {m: gap(cnn0, tab0, m) for m in ("F1", "PR-AUC", "FPR@R0.90")}
+    g2 = {m: gap(cnn2, tab2, m) for m in ("F1", "PR-AUC", "FPR@R0.90")}
+    sch = float(cnn1[cnn1.protocol == T]["F1"].mean() - cnn0[cnn0.protocol == T]["F1"].mean())
+    dfpr = (tab2[tab2.protocol == T].groupby("family")["FPR@R0.90"].mean()
+            - tab0[tab0.protocol == T].groupby("family")["FPR@R0.90"].mean())
+    return (
+        "Two cues are open to a string reader and closed to the 21 features. The raw URL keeps "
+        "its scheme, which the schema drops as a collection artefact; removing it (in a rerun on the GPU backend) moves "
+        f"the character-CNN's phishing-temporal F1 by ${sch:+.3f}$. And the benign rows are split row "
+        f"by row, so $\\BenignSharedPct\\%$ of benign test rows share a registrable domain with "
+        "training, which a model reading the string could memorise. With the scheme removed and "
+        "every benign registrable domain assigned wholly to one side, the tabular families' "
+        f"FPR@0.90 moves by ${dfpr.min():+.3f}$ to ${dfpr.max():+.3f}$, and the character-CNN still "
+        f"leads {best_name} under the phishing-temporal protocol by ${g2['F1'][0]:+.3f}$ F1, "
+        f"${g2['PR-AUC'][0]:+.3f}$ PR-AUC and ${g2['FPR@R0.90'][0]:+.3f}$ FPR@0.90 "
+        f"({g2['FPR@R0.90'][1]} of {g2['FPR@R0.90'][2]} seeds on FPR), against "
+        f"${g0['F1'][0]:+.3f}$, ${g0['PR-AUC'][0]:+.3f}$ and ${g0['FPR@R0.90'][0]:+.3f}$ on the "
+        "row-wise split. Its advantage is not the scheme and not memorised benign domains.\n")
 
 
 def main(shap_too: bool = False):
@@ -2603,7 +2835,11 @@ def main(shap_too: bool = False):
                      ("tab_xdataset_charcnn", tab_xdataset_charcnn),
                      ("gen_charcnn_xdata", gen_charcnn_xdata),
                      ("tab_twosided", tab_twosided),
-                     ("gen_twosided_verdict", gen_twosided_verdict)]:
+                     ("gen_twosided_verdict", gen_twosided_verdict),
+                     ("gen_dates", gen_dates),
+                     ("tab_nowww", tab_nowww), ("gen_nowww", gen_nowww),
+                     ("gen_guard_macros", gen_guard_macros),
+                     ("gen_charcnn_guard", gen_charcnn_guard)]:
         # fn() is evaluated BEFORE the target is opened; the old line truncated first and an
         # exception in fn left the asset empty. See scripts/genfile.py.
         write_generated(os.path.join(SEC, name + ".tex"), fn())

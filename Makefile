@@ -8,7 +8,12 @@ url:          ## train URL baselines (multi-seed + bootstrap CI)
 benchmark:    ## multi-protocol URL benchmark: both protocols, then the cross-corpus matrix
 	python scripts/run_p2_benchmark.py
 	python scripts/run_p2_temporal_strict.py
-	python scripts/run_cross_dataset.py
+	# the three external corpora are featurised first with align_compphish.py (see its docstring)
+	P2_UNWEIGHTED=1 python scripts/run_cross_dataset.py --corpora PhishVN=data/processed/vn_compphish.csv \
+	  PhiUSIIL=data/processed/external/phiusiil_compphish.csv \
+	  ISCXURL2016=data/processed/external/iscx_compphish.csv \
+	  PhishStorm=data/processed/external/phishstorm_compphish.csv --seeds 5 \
+	  --out data/processed/p2/cross_dataset_F1.csv
 assets:       ## regenerate the paper figure + tables from data
 	python scripts/make_p1_assets.py
 release:      ## package the citable open-tier release (PAGES=1 for the gated bundle)

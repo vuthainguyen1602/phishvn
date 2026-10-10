@@ -1,0 +1,29 @@
+\begin{table}[htbp]
+\centering\small
+\caption{The restoration arms, on the held-out URLs.}
+\label{tab:qr_restore}
+\setlength{\tabcolsep}{4pt}\footnotesize
+\begin{tabular}{lrrrrrcr}
+\toprule
+& \multicolumn{3}{c}{DFR (\%)} & polarity & network & URLs & \\
+\cmidrule(lr){2-4}
+Decoder & raw & control & restored & (pp) & (pp) & better & $p$ \\
+\midrule
+\texttt{OpenCV} & 69.6 & 53.5 & 26.5 & $+16.1$ & $+27.0$ & 115/115 & $1.3{\times}10^{-20}$ \\
+\texttt{PyZbar} & 66.2 & 49.7 & 25.2 & $+16.5$ & $+24.5$ & 115/115 & $1.3{\times}10^{-20}$ \\
+\texttt{WeChatQR} & 30.0 & 29.2 & 16.4 & $+0.8$ & $+12.8$ & 115/115 & $1.2{\times}10^{-20}$ \\
+\bottomrule
+\end{tabular}
+\\[4pt]
+\begin{minipage}{0.94\linewidth}\footnotesize
+\QrResUrls{} URLs, \QrResRenders{} renders per arm, all three decoders decoded in one invocation on
+one machine. \emph{control} is the raw image with the polarity line alone; \emph{restored} adds the
+network on top of that control, so the \emph{polarity} and \emph{network} columns separate one line
+of preprocessing from the network that follows it. \emph{URLs better} counts held-out URLs whose
+DFR fell from control to restored. $p$ is a two-sided Wilcoxon signed-rank test on the
+\QrResUrls{} per-URL differences, control against restored, one test per decoder. These three tests
+are descriptive and outside the registered family (T1-restore and T2-restore), so they carry no
+multiplicity correction. When every URL improves, the test's normal approximation sits at its
+floor near $10^{-20}$ whatever the effect size, so the count is the informative column.
+\end{minipage}
+\end{table}

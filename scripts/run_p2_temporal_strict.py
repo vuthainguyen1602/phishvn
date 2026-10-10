@@ -28,6 +28,14 @@ phishing on or before, same guard. Set to the corpus maximum the test window is 
 next refresh brings in; set to the canonical cut (2022-11-15) it reproduces the 0.70 split up to
 the boundary tie (smoke test). Benign masks and model configs unchanged.
 
+THE BENIGN SIDE AND THE TEST PRIOR (2026-10-10). The guard above is one-sided: the benign class is
+split row by row, so about 40% of benign test rows share a registrable domain with benign training
+rows, and every FPR in the paper is measured on that side. --benign-grouped assigns benign rows to
+train or test by registrable domain instead (each domain wholly on one side, drawn per seed at the
+--cut rate). Separately, the guarded control drops ~7% of its phishing test rows and so scores a
+lower test prior than the temporal arm; --match-prior subsamples the control's benign test rows so
+its prior equals the temporal arm's for the same seed. Both write their own CSVs.
+
 RUN:
   python scripts/run_p2_temporal_strict.py                 # 7 families x 2 protocols x seeds
   python scripts/run_p2_temporal_strict.py --guard-control \\
@@ -104,6 +112,26 @@ def split_phishing(ph: pd.DataFrame, cut: float, test_after: str | None = None):
     return ph_tr, ph_te[~leaked], int(leaked.sum())
 
 
+def benign_mask(be: pd.DataFrame, rng, cut: float, grouped: bool = False) -> np.ndarray:
+    """The per-seed benign train mask. Row-wise by default (the canonical draw, one rng call per
+    row); grouped=True draws one call per registrable domain, so no benign domain is on both sides.
+    Every runner that pairs with this one consumes the rng through here, in the same order."""
+    if not grouped:
+        return rng.rand(len(be)) < cut
+    doms = be["rdom"].astype(str).to_numpy()
+    uniq = np.unique(doms)
+    return np.isin(doms, uniq[rng.rand(len(uniq)) < cut])
+
+
+def match_prior(te: pd.DataFrame, prior: float, rng) -> pd.DataFrame:
+    """Subsample te's benign rows so the share of phishing equals `prior`."""
+    ph, be = te[te.y == 1], te[te.y == 0]
+    k = int(round(len(ph) * (1 - prior) / prior))
+    if k >= len(be):
+        return te
+    return pd.concat([ph, be.iloc[np.sort(rng.choice(len(be), k, replace=False))]])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--families", nargs="+", default=FAMILIES, choices=FAMILIES)
@@ -121,7 +149,18 @@ def main():
                     help="run the M7 arm: phishing-temporal against a random control that carries "
                          "the SAME registrable-domain guard, so protocol is genuinely the only "
                          "variable. Writes protocols temporal_strict + random_same_rows_guarded.")
+    ap.add_argument("--benign-grouped", action="store_true",
+                    help="split benign rows by registrable domain instead of row by row")
+    ap.add_argument("--match-prior", action="store_true",
+                    help="with --guard-control: subsample the control's benign test rows to the "
+                         "temporal arm's test prior")
     args = ap.parse_args()
+    if args.match_prior and not args.guard_control:
+        raise SystemExit("--match-prior applies to the guarded control; add --guard-control")
+    if (args.benign_grouped or args.match_prior) and (
+            os.path.abspath(args.out) in {os.path.abspath(OUT), os.path.abspath(
+                "data/processed/p2/p2_temporal_strict_guarded.csv")} or args.curves):
+        raise SystemExit("--benign-grouped/--match-prior write their own CSV: pass --out and --curves ''")
 
     refuse_canonical(args.out, OUT, "data/processed/p2/p2_temporal_strict_guarded.csv")
     refuse_canonical(args.curves, CURVES)
@@ -136,7 +175,8 @@ def main():
     print(f"phishing dated: {len(ph)}  train<= {ph_tr.date.max().date()} ({len(ph_tr)})  "
           f"test>= {ph_te.date.min().date()} ({len(ph_te)}; {n_leaked} test rows dropped as "
           f"same-registrable-domain re-detections)")
-    print(f"benign pool: {len(be)} (random 70/30 per seed)")
+    print(f"benign pool: {len(be)} ({'grouped by registrable domain' if args.benign_grouped else 'random'}"
+          f" {args.cut:.2f} per seed)")
 
     protos = ("temporal_strict", "random_same_rows_guarded") if args.guard_control \
         else ("temporal_strict", "random_same_rows")
@@ -147,7 +187,7 @@ def main():
             # per seed, so no family is deterministic under either protocol
             for s in range(args.seeds):
                 rng = np.random.RandomState(s)
-                bmask = rng.rand(len(be)) < args.cut
+                bmask = benign_mask(be, rng, args.cut, args.benign_grouped)
                 if proto == "temporal_strict":
                     tr = pd.concat([ph_tr, be[bmask]])
                     te = pd.concat([ph_te, be[~bmask]])
@@ -163,6 +203,8 @@ def main():
                         p_te = p_te[~p_te.rdom.isin(set(p_tr.rdom))]
                     tr = pd.concat([p_tr, be[bmask]])
                     te = pd.concat([p_te, be[~bmask]])
+                    if args.match_prior:
+                        te = match_prior(te, len(ph_te) / (len(ph_te) + int((~bmask).sum())), rng)
                 met, y_t, sc = run_one(name, tr[feats].to_numpy(float),
                                        tr["y"].to_numpy(int), te[feats].to_numpy(float),
                                        te["y"].to_numpy(int), s, return_scores=True)

@@ -1,0 +1,31 @@
+{
+  "beats_all_three": [
+    "invert",
+    "perspective",
+    "rotate"
+  ],
+  "by_transform": {
+    "blur": 100.0,
+    "clean": 0.0,
+    "contrast": 25.0,
+    "invert": 0.0,
+    "logo": 40.89,
+    "motion": 100.0,
+    "perspective": 49.9,
+    "rotate": 0.19,
+    "saltpepper": 97.41
+  },
+  "note": "post-hoc; the registered tests were computed over three decoders",
+  "overall_dfr": 50.11,
+  "pooling": "render-weighted over all rows of the grid, ZXing and the registered three alike",
+  "registered_overall_by_decoder": {
+    "opencv": 63.06,
+    "pyzbar": 63.46,
+    "wechat": 43.36
+  },
+  "rows": 792000,
+  "worse_than_all_three": [
+    "contrast",
+    "saltpepper"
+  ]
+}

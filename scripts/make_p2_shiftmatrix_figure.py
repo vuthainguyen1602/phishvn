@@ -169,9 +169,9 @@ def make_tex(rows: list[dict], s: dict) -> None:
         "elapsed time is irrelevant. That is enough for the use the benchmark makes of it. The "
         "decay-extrapolation methods of Section~\\ref{sec:related} need distance in time to stand "
         "in for distance in distribution, and here it does not, which is why forecasting the "
-        "random-minus-temporal gap from a family's own decay slope fails"
+        "random-minus-temporal gap from a family's own decay slope fails."
     )
-    write_generated(os.path.join(SEC, "gen_shiftmatrix.tex"), body.rstrip() + "%")
+    write_generated(os.path.join(SEC, "gen_shiftmatrix.tex"), body.rstrip())
 
 
 def main() -> int:

@@ -123,6 +123,17 @@ class CoralAligner:
 UNWEIGHTED = os.environ.get("P2_UNWEIGHTED") == "1"
 
 
+def _cell_metric(y, score, metric):
+    """The shared four metrics, plus two threshold metrics that, unlike F1, give the all-positive
+    classifier no credit: MCC (0 for any constant) and balanced accuracy (0.5 for any constant)."""
+    if metric in ("MCC", "BalAcc"):
+        from sklearn.metrics import balanced_accuracy_score, matthews_corrcoef
+        pred = (np.asarray(score) >= 0.5).astype(int)
+        return (matthews_corrcoef(y, pred) if metric == "MCC"
+                else balanced_accuracy_score(y, pred))
+    return _metrics(y, score)[metric]
+
+
 def cell_score(train_df, test_df, same, metric, seeds, model="RandomForest", tune=False,
                feats=COMPPHISH, adapt="none"):
     n_seed = 1 if model in DETERMINISTIC else seeds
@@ -151,7 +162,7 @@ def cell_score(train_df, test_df, same, metric, seeds, model="RandomForest", tun
         else:
             m = m.fit(tr[feats], tr["y"])
             score = m.predict_proba(te[feats])[:, 1]
-        vals.append(_metrics(te["y"].to_numpy(), score)[metric])
+        vals.append(_cell_metric(te["y"].to_numpy(), score, metric))
     return float(np.mean(vals)), float(np.std(vals))
 
 
@@ -159,7 +170,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpora", nargs="+", required=True,
                     help="name=path.csv entries, each already in the CompPhish schema.")
-    ap.add_argument("--metric", default="F1", choices=["F1", "PR-AUC", "ROC-AUC", "FPR@R0.90"])
+    ap.add_argument("--metric", default="F1", choices=["F1", "PR-AUC", "ROC-AUC", "FPR@R0.90", "MCC", "BalAcc"])
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--model", default="RandomForest",
                     choices=MODEL_NAMES + ["XGBoost", "LightGBM", "CatBoost"],
