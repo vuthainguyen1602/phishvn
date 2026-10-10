@@ -1,0 +1,11 @@
+\begin{table}[t]\centering
+\caption{The blind spot by public-suffix length (CatBoost, phishing-temporal test): $n$, phish., FNR, FPR and ROC area (mean\,$\pm$\,sd) over 5 independently-masked seeds at threshold $0.5$; FNR$_1$ on the single seed-0 split of Table~\ref{tab:tld}. $n$ is a five-seed mean: the benign mask is redrawn per seed, so the benign counts differ from the seed-0 split of Table~\ref{tab:tld}, while the phishing rows are the same on every seed.}
+\label{tab:suffix}
+\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l r r r r r c}\toprule
+Stratum & $n$ & phish. & FNR & FNR$_1$ & FPR & ROC area \\ \midrule
+\texttt{.vn}, len 2 & 765 & 103 & 0.889 & 0.883 & 0.075 & 0.616{\scriptsize\,$\pm$0.015} \\
+other len-2 ccTLDs & 969 & 499 & 0.619 & 0.627 & 0.075 & 0.704{\scriptsize\,$\pm$0.010} \\
+\texttt{.com.vn}, len 6 & 2,381 & 53 & 0.940 & 0.943 & 0.001 & 0.905{\scriptsize\,$\pm$0.009} \\
+other, len $\geq 3$ & 6,654 & 5,224 & 0.022 & 0.023 & 0.825 & 0.758{\scriptsize\,$\pm$0.008} \\
+\bottomrule\end{tabular}\end{table}

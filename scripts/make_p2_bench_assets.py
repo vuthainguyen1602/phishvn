@@ -2700,7 +2700,7 @@ def gen_nowww():
                                                   "data/processed/p2/dedup_audit",
                                                   "data/processed/p2/nowww"))
     txt = (
-        "One mechanism is visible in the hosts themselves. A leading \\texttt{www.} sits on "
+        "A leading \\texttt{www.} sits on "
         f"{pc('PhishVN (released)', 'phishing')} of PhishVN's phishing rows and "
         f"{pc('PhishVN (released)', 'benign')} of its benign rows, and on "
         f"{pc('ISCXURL2016', 'phishing')} against {pc('ISCXURL2016', 'benign')} in ISCXURL2016, "
@@ -2797,7 +2797,7 @@ def gen_charcnn_guard():
         f"${g2['PR-AUC'][0]:+.3f}$ PR-AUC and ${g2['FPR@R0.90'][0]:+.3f}$ FPR@0.90 "
         f"({g2['FPR@R0.90'][1]} of {g2['FPR@R0.90'][2]} seeds on FPR), against "
         f"${g0['F1'][0]:+.3f}$, ${g0['PR-AUC'][0]:+.3f}$ and ${g0['FPR@R0.90'][0]:+.3f}$ on the "
-        "row-wise split. Its advantage is not the scheme and not memorised benign domains.\n")
+        "row-wise split. Neither cue accounts for its advantage.\n")
 
 
 def main(shap_too: bool = False):

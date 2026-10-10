@@ -1,0 +1,13 @@
+\begin{table*}[t]\centering
+\caption{The \texttt{.vn} blind spot in named cases (phishing-temporal test): blocklisted phishing domains, detector score, and top-3 signed SHAP features, largest first (positive = phishing-ward).}
+\label{tab:cases}
+\footnotesize\setlength{\tabcolsep}{5pt}
+\begin{tabular}{l l c l}\toprule
+Case & Domain & Score & Top-3 signed SHAP (largest $|\cdot|$ first) \\ \midrule
+missed .vn & \texttt{chamsocthekhachhang-thang10.com.vn} & 0.136 & \texttt{tld\_len:-3.02,\, digit\_cnt:+1.23,\, dom\_len:+1.13} \\
+missed .vn & \texttt{chamsocthe-uudai-tructuyen-thang10.com.vn} & 0.094 & \texttt{tld\_len:-3.01,\, entropy:+1.47,\, digit\_cnt:+1.10} \\
+missed .vn & \texttt{chamsocthe-uudaikhachhang-thang10.com.vn} & 0.140 & \texttt{tld\_len:-2.99,\, entropy:+1.27,\, digit\_cnt:+1.13} \\
+missed .vn & \texttt{uudaikhachhang-uudaithe-thang11.com.vn} & 0.173 & \texttt{tld\_len:-2.99,\, entropy:+1.24,\, digit\_cnt:+1.22} \\
+caught non-.vn & \texttt{kesug.com} & 1.000 & \texttt{tld\_len:+1.74,\, entropy:+1.65,\, dot\_cnt:+1.60} \\
+caught .vn & \texttt{giaohangtietkiem247.biz.vn} & 0.932 & \texttt{tld\_len:-2.17,\, digit\_ratio:+1.45,\, digit\_cnt:+1.23} \\
+\bottomrule\end{tabular}\end{table*}

@@ -559,7 +559,7 @@ def gen_p6_macros():
         "PsixTldGroups": str(n_groups),
         "PsixTldFewBenign": str(few_benign),
     }
-    lines = ["% Macros for the hand-written sections. Every value is read from the P6 CSVs or",
+    lines = ["% Macros for the hand-written sections. Every value is read from this paper's CSVs or",
              "% from the code that fits the models; see gen_p6_macros() in the generator."]
     lines += [f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in m.items()]
     return "\n".join(lines)

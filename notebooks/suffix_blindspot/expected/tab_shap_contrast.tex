@@ -1,0 +1,16 @@
+\begin{table*}[t]\centering
+\caption{Global attribution (mean $|$SHAP$|$ over 5 independently-masked seeds) of the CatBoost detector under the random and phishing-temporal protocols, top-10 features by phishing-temporal attribution; between-protocol Spearman $\rho = 0.968\pm0.018$ (mean\,$\pm$\,sd, all 21 features).}
+\label{tab:shapcontrast}
+\begin{tabular}{lcccc}\toprule
+Feature & $|$SHAP$|$ random & $|$SHAP$|$ temporal & rank$_{rnd}$ & rank$_{tmp}$ \\ \midrule
+\texttt{tld\_len} & 1.077 & 1.086 & 1 & 1 \\
+\texttt{dot\_cnt} & 0.742 & 0.604 & 2 & 2 \\
+\texttt{digit\_ratio} & 0.438 & 0.429 & 3 & 3 \\
+\texttt{digit\_cnt} & 0.365 & 0.370 & 4 & 4 \\
+\texttt{spec\_ratio} & 0.274 & 0.283 & 5 & 5 \\
+\texttt{special\_cnt} & 0.190 & 0.213 & 7 & 6 \\
+\texttt{letter\_ratio} & 0.194 & 0.174 & 6 & 7 \\
+\texttt{entropy} & 0.151 & 0.156 & 8 & 8 \\
+\texttt{url\_len} & 0.116 & 0.126 & 10 & 9 \\
+\texttt{dom\_len} & 0.112 & 0.109 & 12 & 10 \\
+\bottomrule\end{tabular}\end{table*}

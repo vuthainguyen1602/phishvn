@@ -1,0 +1,21 @@
+\begin{table*}[t]\centering
+\caption{Per-suffix decomposition, phishing-temporal test, single seed-0 split: \emph{all} 28 groups with at least 20 phishing rows, by miss rate (left block, then right). `ph.': phishing count; `SHAP': mean \emph{signed} \texttt{tld\_len} contribution; FNR and FPR at threshold 0.5, the FPR over the group's benign rows ($n$ minus ph.) and printed only where that side has at least 20 rows, which 5 of the 28 groups do. Stratum-level false-positive rates are in Table~\ref{tab:suffix}.}
+\label{tab:tld}
+\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrr@{\hspace{10pt}}lrrrrrr}\toprule
+Suffix & len & $n$ & ph. & SHAP & FNR & FPR & Suffix & len & $n$ & ph. & SHAP & FNR & FPR \\ \midrule
+\texttt{.id} & 2 & 35 & 31 & -0.68 & 1.000 & -- & \texttt{.online} & 6 & 228 & 222 & -0.41 & 0.022 & -- \\
+\texttt{.vn(+2LD)} & 2/6 & 3115 & 156 & -2.04 & 0.904 & 0.015 & \texttt{.pro} & 3 & 50 & 45 & +0.78 & 0.022 & -- \\
+\texttt{.de} & 2 & 243 & 202 & -0.36 & 0.668 & 0.195 & \texttt{.store} & 5 & 51 & 50 & +0.28 & 0.020 & -- \\
+\texttt{.co} & 2 & 49 & 32 & -0.63 & 0.625 & -- & \texttt{.xyz} & 3 & 221 & 207 & +0.81 & 0.019 & -- \\
+\texttt{.cn} & 2 & 45 & 26 & -0.67 & 0.577 & -- & \texttt{.com} & 3 & 4017 & 3161 & +0.81 & 0.015 & 0.939 \\
+\texttt{.cc} & 2 & 73 & 66 & -0.54 & 0.576 & -- & \texttt{.fun} & 3 & 69 & 69 & +0.74 & 0.015 & -- \\
+\texttt{.me} & 2 & 63 & 48 & -0.68 & 0.521 & -- & \texttt{.cfd} & 3 & 82 & 82 & +0.74 & 0.000 & -- \\
+\texttt{.us} & 2 & 42 & 36 & -0.59 & 0.306 & -- & \texttt{.site} & 4 & 87 & 80 & +1.45 & 0.000 & -- \\
+\texttt{.website} & 7 & 29 & 27 & -0.64 & 0.222 & -- & \texttt{.shop} & 4 & 61 & 56 & +1.65 & 0.000 & -- \\
+\texttt{.vip} & 3 & 196 & 194 & +0.84 & 0.046 & -- & \texttt{.click} & 5 & 53 & 53 & +0.34 & 0.000 & -- \\
+\texttt{.icu} & 3 & 25 & 22 & +0.77 & 0.045 & -- & \texttt{.club} & 4 & 48 & 47 & +1.55 & 0.000 & -- \\
+\texttt{.org} & 3 & 115 & 51 & +0.77 & 0.039 & 0.891 & \texttt{.info} & 4 & 50 & 44 & +1.56 & 0.000 & -- \\
+\texttt{.net} & 3 & 288 & 151 & +0.79 & 0.033 & 0.927 & \texttt{.live} & 4 & 43 & 38 & +1.46 & 0.000 & -- \\
+\texttt{.top} & 3 & 277 & 268 & +0.89 & 0.030 & -- & \texttt{.win} & 3 & 39 & 38 & +0.76 & 0.000 & -- \\
+\bottomrule\end{tabular}\end{table*}

@@ -1,0 +1,18 @@
+\begin{table*}[t]\centering
+\caption{Decision rules re-priced against the strata (CatBoost, phishing-temporal test, mean over 5 seeds), with the two trivial classifiers that fix the floor.}
+\label{tab:rules}
+\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{l ccc c ccc}\toprule
+& \multicolumn{3}{c}{FNR on} & & \multicolumn{3}{c}{corpus-wide} \\
+\cmidrule(lr){2-4}\cmidrule(lr){6-8}
+Decision rule & \texttt{.vn} len 2 & other 2-char & \texttt{.com.vn} & FPR & F1 & MCC & bal.\ acc. \\ \midrule
+\emph{Trivial:} flag nothing & 1.000 & 1.000 & 1.000 & 0.000 & 0.000 & 0.000 & 0.500 \\
+\emph{Trivial:} flag everything & 0.000 & 0.000 & 0.000 & 1.000 & 0.706 & 0.000 & 0.500 \\
+\midrule
+Global $0.5$ (baseline) & 0.889 & 0.619 & 0.940 & 0.259 & 0.853 & 0.659 & 0.822 \\
+Global, matched FPR budget & 0.889 & 0.618 & 0.940 & 0.259 & 0.853 & 0.658 & 0.822 \\
+Per-group (\texttt{.vn} vs other), the pooled-group remedy & 0.006 & 0.736 & 0.509 & 0.255 & 0.711 & 0.412 & 0.707 \\
+Per-suffix-length (2 vs $3+$) & 0.643 & 0.402 & 0.955 & 0.259 & 0.832 & 0.615 & 0.804 \\
+Per-stratum (all four) & 0.606 & 0.428 & 0.053 & 0.261 & 0.693 & 0.384 & 0.692 \\
+\texttt{.vn}-only (others' op.\ point) & 0.000 & 0.619 & 0.030 & 0.635 & 0.756 & 0.361 & 0.646 \\
+\bottomrule\end{tabular}\end{table*}
