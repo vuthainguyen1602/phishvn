@@ -1,7 +1,7 @@
 # Walkthrough notebooks
 
-Each folder rebuilds one paper's results step by step and compares every number with the results the paper
-prints, which ship in the folder's `expected/` directory. The explanations are in Vietnamese and the code in
+Each folder reruns one paper's experiments step by step, prints the results, and compares each result file with
+the one the paper reports, which ship in the folder's `expected/` directory. The explanations are in Vietnamese and the code in
 English.
 
 | Folder | Paper | Data |
