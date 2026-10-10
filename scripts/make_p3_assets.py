@@ -29,7 +29,7 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 # A caption opens with a count in words, spelled out here because a caption starting with a
 # numeral reads as a label. The call was introduced without this helper on 2026-08-21, so
@@ -81,6 +81,8 @@ def _balanced_rows():
 
 
 _PR_PANELS: list = []
+# Per-split metrics of every fusion table, written to results/content_fusion.json by main().
+FUSION_RESULTS: dict = {}
 
 # Panels drawn by the PR figure: TF-IDF is the canonical table's encoder, XLM-R one where the
 # ranking effect actually separates — either alone would mislead.
@@ -189,6 +191,11 @@ def make_content_fusion_table(text_encoder="tfidf", tag=""):
                 f"(${_p(p_pr)}$)" if sig(p_pr) else
                 f"nor does it separate on PR-AUC (${d_pr:+.3f}$, ${_p(p_pr)}$)")
     d_ro, p_ro, _, _, _ = paired("content+url", "content", "ROC-AUC")
+    FUSION_RESULTS[text_encoder + "|logreg"] = {
+        "n_phishing": n_ph, "n_benign": n_be, "per_split": agg,
+        "fusion_minus_content": {m: paired("content+url", "content", m)
+                                 for m in ("F1", "PR-AUC", "ROC-AUC")},
+        "fusion_minus_url_f1": paired("content+url", "url", "F1")}
     ro_claim = (f"The ROC-AUC difference (${d_ro:+.3f}$, ${_p(p_ro)}$) points the same way "
                 f"{'and also reaches significance' if sig(p_ro) else 'without reaching significance, so we do not claim it'}."
                 )
@@ -333,6 +340,10 @@ def make_encoder_sweep_table(encoders=("tfidf", "phobert", "phobert-v2", "visobe
     for i, col in enumerate(cols):
         for j, v in enumerate(verdicts):
             v[col]["q_all"] = q_all[i * k + j]
+
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "encoder_sweep.json"),
+                  {v["enc"]: {("mean" if c == "mean" else "|".join(c)): v[c] for c in v if c != "enc"}
+                   for v in verdicts})
 
     sign_of = {m: s for m, _l, s in SWEEP_METRICS}
 
@@ -535,6 +546,7 @@ def make_hybrid_head_table(rows, agg_lin, text_encoder="xlm-r", tag="_xgb"):
     Emits tab_content_fusion_xgb.tex + gen_hybrid_verdict.tex."""
     from train_content_fusion import evaluate as _eval
     agg = _eval(rows, CONFIGS, text_encoder, "lightweight", False, FUSION_SEEDS, head="xgboost")
+    FUSION_RESULTS[text_encoder + "|xgboost"] = {"per_split": agg}
 
     def row(cfg):
         m = agg[cfg]
@@ -615,6 +627,8 @@ def main():
     make_content_fusion_table()
     xl_rows, xl_agg = make_content_fusion_table("xlm-r", "_xlmr")
     make_hybrid_head_table(xl_rows, xl_agg)
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "content_fusion.json"),
+                  FUSION_RESULTS)
     make_encoder_sweep_table(refresh=args.refresh_sweep)
     _fig_pr_curves()
     print("Done. Recompile the P1b manuscript to pick up the regenerated table.")

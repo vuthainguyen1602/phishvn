@@ -1,0 +1,34 @@
+scenario,error,id,text
+bank,benign_fp,2bb84e9d-93ec-5d5e-90eb-3f8e93e4f895,Quy khach vua thanh toan 250.000d tai cua hang tien loi luc 19:20. So du kha dung: 4.120.000d.
+bank,benign_fp,eb7c20ec-9df0-56a7-9ee7-bdb023002c04,Tai khoan cua Quy khach nhan 8.000.000d luong thang. So du hien tai: 12.480.000d.
+bank,benign_fp,f94d5324-e1cb-5ece-831e-e087b155288f,Quy khach vua rut 500.000d tai ATM luc 08:15. So du kha dung: 2.310.000d.
+bank,phishing_miss,913d4d09-1eb4-5925-b0c0-67c93cd09a87,"Kinh gui Quy khach, Quy khach du dieu kien tham gia goi mien phi chuyen khoan tron doi. Vui long kich hoat tai   trong ngay hom nay."
+delivery,benign_fp,b4ab69b2-4d9c-55af-8416-a1a0cb99ac9e,Shipper se giao hang cua ban trong khung 14h-16h hom nay. Vui long de y dien thoai.
+delivery,phishing_miss,8bfd70dd-f3c3-5251-9dfc-18ea57a524d8,"Kinh gui Quy khach, buu kien cua Quy khach se duoc hoan ve nguoi gui trong 24 gio toi. Vui long giu hang tai  "
+ecommerce,benign_fp,9e6cfa7c-c8ec-556a-abb4-a1cf91438479,Vi cua ban nhan hoan 30.000d tu don hang huy. So du vi hien tai da cap nhat.
+ecommerce,benign_fp,6875003f-f1c6-5d7d-b4b9-ef7472a02ad7,Yeu cau doi hang cua ban da duoc duyet. Vui long gui hang ve trong 7 ngay.
+ecommerce,phishing_miss,88ed2f06-605d-5ceb-82ec-9bab6af2747e,Chuc mung! Ban trung voucher 2.000.000d tu chuong trinh tri an. Nhan tai   trong 3 gio.
+ecommerce,phishing_miss,59a25a3c-f402-5b42-bd57-53ab7d8744a6,Phien dau gia cua ban sap ket thuc. Vao   de dat tiep.
+ecommerce,phishing_miss,f57b99d1-ad6c-54b5-ae68-3e8525ff25d7,"Kinh gui Quy khach, Quy khach dang co mot don cho thanh toan sap bi huy tu dong. Vui long giu don tai  "
+ecommerce,phishing_miss,be3188f6-749d-5cf9-9890-c33681edc348,"Kinh gui Quy khach, Quy khach vua duoc nang hang thanh vien. Vui long kich hoat quyen loi tai  "
+gov,benign_fp,dacdefb1-0119-50b7-98f3-68b4e574d58f,Nhac lich: cuoc hen lam thu tuc hanh chinh cua ban vao 09:00 thu Nam tai bo phan mot cua.
+gov,benign_fp,24cd2dd9-dfb8-5755-8fad-b76eca8fd943,Ket qua ho so dich vu cong cua ban da co. Vui long den nhan tai bo phan tra ket qua trong gio hanh chinh.
+gov,benign_fp,e30558b3-f78b-57fb-8d0b-d64495bab5b3,Nhac lich hop to dan pho vao 19h30 thu Sau tai nha van hoa.
+gov,phishing_miss,32172c61-fe50-5986-8ec8-9d4ec0d2ac06,"Kinh gui Quy vi, ket qua giai quyet kien nghi cua Quy vi da duoc ban hanh. Ban dien tu duoc phat hanh tai  "
+social,benign_fp,c6870287-38b1-55a1-b0d2-b2afcff02c4f,Ban co 3 loi moi ket ban moi va 5 thong bao chua doc trong ung dung.
+social,benign_fp,3eda8a25-1e46-5164-b88d-1c9bc3fe6b64,Ban vua dang nhap tren thiet bi moi. Neu la ban thi khong can lam gi them.
+social,benign_fp,d4acb85f-c29e-5de5-817d-01900a412b58,Ban co 5 thong bao moi va 2 tin nhan chua doc.
+social,benign_fp,271765e2-6e04-50d8-83ef-1d7ed10af795,Ban be cua ban vua dang mot bai viet moi.
+social,benign_fp,921d0375-29eb-5ddc-8f09-87028aedd174,Trang ban theo doi vua phat truc tiep.
+social,benign_fp,aaed06a2-86c5-5afc-882b-7e99a585a2f4,Ban co 3 loi moi ket ban dang cho.
+social,benign_fp,4ec0b7b4-ef08-5ce5-b2d0-01f0e37a9ae4,Nhom cua ban co 8 bai dang moi trong tuan.
+social,benign_fp,62ab4ce0-8a88-5f12-b63d-5d1d902c7e63,"Kinh gui Quy khach, cam on Quy khach da hoan tat thiet lap bao mat hai lop cho tai khoan."
+tax,benign_fp,eaa58762-5b0a-53c2-9634-51f63e90648b,Nhac han: thoi han nop to khai thue GTGT thang nay la ngay 20. Vui long hoan tat dung han.
+tax,benign_fp,1954bc3b-49ec-5670-838b-a03ba4b03266,Bien lai dien tu cho khoan nop cua ban da duoc phat hanh va luu tren he thong.
+tax,benign_fp,c9e9812c-5f0c-51f1-b6d7-3b39d5c6d2f5,He thong thue dien tu hoat dong binh thuong tro lai sau bao tri.
+tax,benign_fp,987b1fc8-0661-5912-adfb-d586fee23507,Ho so dang ky nguoi phu thuoc cua ban da duoc chap nhan.
+tax,benign_fp,3f3153c2-b9d0-5a75-ba25-65363a283123,"Kinh gui Nguoi nop thue, xin nhac thoi han nop to khai dinh ky sap toi de Quy vi chu dong hoan tat dung han."
+tax,benign_fp,556719b1-4c75-5301-a3b1-ba3289ef21e6,"Kinh gui Nguoi nop thue, bien lai dien tu cho khoan nop cua Quy vi da duoc phat hanh va luu tren he thong."
+telecom,benign_fp,27e478b4-7bcf-5a6e-bce5-101f8b503f8d,"Thong bao bao tri he thong ngan han tu 2h-3h sang, dich vu co the gian doan nhe."
+telecom,benign_fp,7ee2b37f-ecb1-5c07-b71c-c74d4830d8e2,Thue bao cua ban da hoan tat chuan hoa thong tin.
+telecom,benign_fp,31f9a1c3-20ad-5e50-bcbb-e134edd26392,Dich vu du lieu se bao tri tu 2h den 4h sang mai tai mot so khu vuc.

@@ -40,7 +40,7 @@ ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
 
 import train_content_fusion as tcf
 from paired_eval import corrected_paired_t
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 OUT_CSV = os.path.join(ROOT, "data", "processed", "p3", "p3_standardization_probe.csv")
 SEC = os.path.join(ROOT, "papers", "P3_multimodal", "sections")
@@ -166,6 +166,7 @@ def main():
     encoders = [e.strip() for e in args.encoders.split(",") if e.strip()]
 
     all_rows, frag_parts, any_std_gain = [], [], False
+    results = {}
     split_rows, headline = [], {}
     for enc in encoders:
         res = run(enc)
@@ -200,6 +201,9 @@ def main():
             split_rows.append({"encoder": enc, "variant": "raw", "config": "content",
                                "metric": "F1", "split": i, "value": v})
         headline[enc] = head_c
+        results[enc] = {"per_split": {f"{v}|{c}": d for (v, c), d in res.items()},
+                        "std_vs_raw_stack": t_std, "late_vs_raw_stack": t_late,
+                        "std_stack_vs_url": t_vs_url, "headline": head_c}
         lab = {"tfidf": "char-$n$-gram TF-IDF", "xlm-r": "XLM-R"}.get(enc, enc)
         frag_parts.append(
             f"Under {lab}, per-block standardisation lifts the raw three-channel stack from "
@@ -223,6 +227,8 @@ def main():
         w = csv.DictWriter(fh, fieldnames=list(split_rows[0].keys()))
         w.writeheader()
         w.writerows(split_rows)
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "standardization.json"),
+                  {"encoders": results, "any_std_gain": any_std_gain})
     for enc, hc in headline.items():
         print(f"[i] HEADLINE {enc}: " + " ".join(
             f"{v}={hc[v]['mean']:+.4f}(p={hc[v]['p']:.4f})" for v in ("raw", "std", "late")))

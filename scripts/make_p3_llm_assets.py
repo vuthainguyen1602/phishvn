@@ -25,7 +25,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 SEC = os.path.join(ROOT, "papers", "P3_multimodal", "sections")
-from genfile import write_generated
+from genfile import write_generated, write_results
 from paired_eval import bh_adjust, corrected_paired_t, fmt_p
 from train_fusion import perturb
 
@@ -161,6 +161,9 @@ def main():
               f"             delta {t['mean'] * 100:+.2f} pp, {t['wins']}/{t['k']} splits in "
               f"direction, corrected p={t['p']:.4f}, BH q={t['p_adj']:.4f}, "
               f"reject={t['reject']}")
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "llm_corpus.json"), {
+        "n_phishing": n_ph, "n_benign": n_be, "per_channel": per_channel, "generators": gens,
+        "per_split": res, "tests": T})
     print(f"    {n_test_ph:.0f} phishing messages per test split "
           f"= {pp_per_msg:.1f} pp per message")
 

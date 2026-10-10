@@ -155,6 +155,7 @@ def main():
 
     n = N_PAIRS
     macros, lines = [], []
+    res = {"pairs": n}
     for qi, q in enumerate(BINARY):
         tag = {"meaning_preserved": "Meaning", "lure_intact": "Lure"}[q]
         for w in "AB":
@@ -163,12 +164,14 @@ def main():
             macros += [_macro(f"HE{tag}Count{w}", k), _macro(f"HE{tag}Prop{w}", _f(k / n)),
                        _macro(f"HE{tag}Lo{w}", _f(lo)), _macro(f"HE{tag}Hi{w}", _f(hi))]
             lines.append(f"{q:18s} {w}: {k}/{n} = {k / n:.3f} [{lo:.3f}, {hi:.3f}]")
+            res[f"{q}_{w}"] = [k, k / n, lo, hi]
         po, kap = kappa([r[qi] for r in rated["A"]], [r[qi] for r in rated["B"]], (0, 1))
         # PABAK = 2*p_o - 1: Cohen's kappa collapses when one rater accepts (almost) every pair,
         # so the prevalence-adjusted bias-adjusted kappa is reported beside it (Byrt et al. 1993).
         macros += [_macro(f"HE{tag}Agree", _f(po)), _macro(f"HE{tag}Kappa", _f(kap)),
                    _macro(f"HE{tag}Pabak", _f(2 * po - 1))]
         lines.append(f"{q:18s} agreement {po:.3f}, kappa {_f(kap)}, PABAK {2 * po - 1:.3f}")
+        res[f"{q}_agreement"] = [po, kap, 2 * po - 1]
 
     for w in "AB":
         col = [row[2] for row in rated[w]]
@@ -179,14 +182,19 @@ def main():
             macros += [_macro(f"HEPers{tag}Count{w}", k), _macro(f"HEPers{tag}Prop{w}", _f(k / n)),
                        _macro(f"HEPers{tag}Lo{w}", _f(lo)), _macro(f"HEPers{tag}Hi{w}", _f(hi))]
             lines.append(f"more_persuasive={cat:5s} {w}: {k}/{n} = {k / n:.3f} [{lo:.3f}, {hi:.3f}]")
+            res[f"more_persuasive_{cat}_{w}"] = [k, k / n, lo, hi]
         k = col.count("B") + col.count("ngang")
         lo, hi = wilson(k, n)
         macros += [_macro(f"HEPersAtLeastCount{w}", k), _macro(f"HEPersAtLeastProp{w}", _f(k / n)),
                    _macro(f"HEPersAtLeastLo{w}", _f(lo)), _macro(f"HEPersAtLeastHi{w}", _f(hi))]
         lines.append(f"rewrite at least as persuasive {w}: {k}/{n} = {k / n:.3f} [{lo:.3f}, {hi:.3f}]")
+        res[f"rewrite_at_least_as_persuasive_{w}"] = [k, k / n, lo, hi]
     po, kap = kappa([r[2] for r in rated["A"]], [r[2] for r in rated["B"]], PERSUASIVE)
     macros += [_macro("HEPersAgree", _f(po)), _macro("HEPersKappa", _f(kap)), _macro("HEPairs", n)]
     lines.append(f"more_persuasive agreement {po:.3f}, kappa {_f(kap)}")
+    res["more_persuasive_agreement"] = [po, kap]
+    from genfile import write_results
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "human_eval.json"), res)
 
     os.makedirs(os.path.dirname(args.out_csv), exist_ok=True)
     with open(args.out_csv, "w", encoding="utf-8", newline="") as fh:

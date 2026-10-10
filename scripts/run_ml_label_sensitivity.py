@@ -146,8 +146,7 @@ def p3():
                      f"{vals['silver']} & {vals['gold']} & {vals['unassigned']} \\\\")
     tex = """\\begin{table}[t]
 \\centering
-\\caption{Tier-stratified sensitivity on the balanced Vietnamese-content subset. Overall is
-F1; tier columns are phishing recall, mean$\\pm$sd over the same twenty 70/30 splits. The
+\\caption{Tier-stratified sensitivity on the balanced Vietnamese-content subset. Overall is F1. Tier columns are phishing recall, mean$\\pm$sd over the same twenty 70/30 splits. The
 content-quality filters remain applied before splitting.}
 \\label{tab:tier-sensitivity}
 \\small

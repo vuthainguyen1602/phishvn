@@ -29,7 +29,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 SEC = os.path.join(ROOT, "papers", "P3_multimodal", "sections")
 PARA_CSV = os.path.join(ROOT, "data", "processed", "p3", "p3_paraphrase.csv")
-from genfile import write_generated
+from genfile import write_generated, write_results
 from train_fusion import perturb
 from paired_eval import corrected_paired_t, bh_adjust, fmt_p
 
@@ -286,6 +286,9 @@ D2 adv.\ trained on paraphrases & {cell('D2_A0')} & n/a & {cell('D2_A2')} & {fpr
                   for c in CELLS]).to_csv(
         os.path.join(ROOT, "data", "processed", "p3", "p3_paraphrase_cells.csv"), index=False)
 
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "paraphrase.json"), {
+        "n_phishing": n_ph, "n_benign": int((df.y == 0).sum()), "miss_per_split": per_seed,
+        "benign_fpr_per_split": fpr, "lexical_shift": jac, "tests": T})
     print(f"[+] {stats_csv}")
     for c in CELLS:
         print(f"    {c}: {mean[c]*100:5.1f}% ± {sd[c]*100:.1f}")

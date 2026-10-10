@@ -1,0 +1,2 @@
+n_rows,n_scenarios,scenario_balanced_macro_f1,scenario_balanced_macro_f1_std,scenario_bootstrap_ci_low,scenario_bootstrap_ci_high,pooled_oof_macro_f1,scenario_balanced_phishing_miss,scenario_balanced_benign_fpr,matched_id_macro_f1,macro_f1_gap,exact_sign_flip_p
+336,7,0.8917054342900208,0.06050584564917993,0.8474480844969567,0.9293859649122808,0.8974615064502705,0.03378410382720727,0.1898197875641485,0.9282963279467589,-0.03659089365673805,0.140625

@@ -100,7 +100,9 @@ def main():
         "rejects, the data do bound it below the stated margin"
     )
     sys.path.insert(0, os.path.join(_HERE, "..", "..", "core", "lib"))
-    from genfile import write_generated
+    from genfile import write_generated, write_results
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "tost.json"), {
+        enc: {"mean_diff": mean, **{f"p_tost_{m}": p for m, p, _ in cells}} for enc, mean, cells in rows})
     write_generated(os.path.join(SEC, "gen_tost.tex"), frag + ".\n",
                     f"(eq at 0.02: {eq_counts[0.02]}/{n}, at 0.05: {eq_counts[0.05]}/{n})")
     for enc, mean, cells in rows:

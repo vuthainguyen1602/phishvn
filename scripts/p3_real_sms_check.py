@@ -33,7 +33,7 @@ ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
 import make_p3_band_assets as band
 from make_p3_paraphrase_assets import vec, strip_url, SEEDS
 from train_fusion import perturb
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 REAL_DIR = os.path.join(ROOT, "data", "raw", "sms_hf_full")
 OUT_CSV = os.path.join(ROOT, "data", "processed", "p3", "p3_real_sms_check.csv")
@@ -125,6 +125,11 @@ def main():
     os.makedirs(os.path.dirname(OUT_CSV), exist_ok=True)
     pd.DataFrame(rows).to_csv(OUT_CSV, index=False)
     print(f"[+] {OUT_CSV}")
+
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "real_sms.json"), {
+        "n_raw": n_raw, "n_dedup": n_dedup, "n_empty": n_empty, "n_real": len(real_x),
+        "n_scam": int(real_y.sum()), "n_ham": int((real_y == 0).sum()), "per_split": res,
+        "anchor": anchor, "n_anchor_test": n_anchor_test})
 
     def mm(d, k):
         vals = np.array([m[k] for m in res[d]])

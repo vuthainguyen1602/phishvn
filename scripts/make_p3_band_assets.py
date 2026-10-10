@@ -36,7 +36,7 @@ from make_p3_paraphrase_assets import (
     corpus_multiple_for_significance)
 from paired_eval import corrected_paired_t, bh_adjust, fmt_p
 from p3_jaccard_check import BAND
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 
 def load():
@@ -280,6 +280,9 @@ D2 adv.\ trained on paraphrases & {cell('D2_A0')} & n/a & {cell('D2_A2')} & {fpr
                    "corpus_multiple_needed": t["need"]} for t in tests]).to_csv(
         os.path.join(ROOT, "data", "processed", "p3", "p3_band_stats.csv"), index=False)
 
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "paraphrase_band.json"), {
+        "n_phishing": n_ph, "miss_per_split": per_seed, "benign_fpr_per_split": fpr, "tests": T,
+        "jaccard_mean_all": float(j_all.mean()), "jaccard_mean_test_variant": float(j_test.mean())})
     print(f"    band achieved: mean J={j_all.mean():.3f} "
           f"[{j_all.min():.3f}, {j_all.max():.3f}] over {len(j_all)} rewrites")
     for c in CELLS:

@@ -44,7 +44,7 @@ BAND_CSV = os.path.join(ROOT, "data", "processed", "p3", "p3_paraphrase_band.csv
 
 from make_p3_paraphrase_assets import SEEDS, vec
 from p3_jaccard_check import BAND, jaccard, sources
-from genfile import write_generated
+from genfile import write_generated, write_results
 from train_fusion import perturb
 
 DETECTORS = ("D0", "D1", "D2")
@@ -514,6 +514,13 @@ def main() -> None:
            f"dose than the effect it was sized to detect"
            if stratum else "")
         + ".\n")
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "dose_response.json"), {
+        "increasing": incr, "spearman": rho, "steepness": st, "j_support": [jmin, jmax],
+        "band_point": band_pt, "band_mean_j": band_j, "band_shared_sources": shared,
+        "d0_at_band_edges": [at_lo, at_hi], "d0_mid": [mid, mid_est, mid_lo, mid_hi],
+        "d0_quantiles": [q_lo, q_hi, at_q_lo, at_q_hi], "band_steeper_fraction": steep_frac,
+        "d0_pooled_miss": pooled, "n_observations": n_obs, "n_sources": n_src,
+        "strata": strat, "stratum_fit": stratum})
     write_generated(os.path.join(SEC, "gen_dose_response_notes.tex"), notes)
     write_generated(os.path.join(SEC, "gen_dose_response.tex"), prose)
 

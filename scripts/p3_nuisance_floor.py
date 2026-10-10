@@ -28,7 +28,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from make_p3_paraphrase_assets import strip_url
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 SEEDS = 20
 SEC = os.path.join(ROOT, "papers", "P3_multimodal", "sections")
@@ -75,6 +75,8 @@ def main():
         out[kind] = (100 * np.mean(clean), 100 * np.mean(attacked))
         print(f"  {kind:5s} clean {out[kind][0]:.1f}%  attacked {out[kind][1]:.1f}%")
 
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "nuisance_floor.json"),
+                  {k: {"miss_clean_pct": c, "miss_attacked_pct": a} for k, (c, a) in out.items()})
     lc, la = out["len"]
     cc, ca = out["char"]
     direction = "falls" if la < lc else "rises"
