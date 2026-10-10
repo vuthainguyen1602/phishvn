@@ -1,0 +1,76 @@
+{
+  "T1_fusion_minus_url": {
+    "B": 5000,
+    "ci95": [
+      0.18141824980875193,
+      0.3216006013501419
+    ],
+    "clusters": 584,
+    "mean": 0.24837810868969099,
+    "seed": 20260902,
+    "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+    "unit": "distinct test text; duplicate rows retained within cluster"
+  },
+  "T2_text_minus_url": {
+    "B": 5000,
+    "ci95": [
+      0.1745046223400063,
+      0.31633624324683207
+    ],
+    "clusters": 584,
+    "mean": 0.24255502005109325,
+    "seed": 20260902,
+    "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+    "unit": "distinct test text; duplicate rows retained within cluster"
+  },
+  "arms": {
+    "fusion": {
+      "delta_vs_registered": 0.0153,
+      "f1": 0.942,
+      "precision": 0.941,
+      "recall": 0.9432
+    },
+    "text": {
+      "delta_vs_registered": 0.0073,
+      "f1": 0.9363,
+      "precision": 0.9311,
+      "recall": 0.9417
+    },
+    "url": {
+      "delta_vs_registered": 0.0872,
+      "f1": 0.6942,
+      "precision": 0.8889,
+      "recall": 0.5698
+    }
+  },
+  "floors": {
+    "all_shallow": 0.7563,
+    "tokens": 0.5828
+  },
+  "note": "post-hoc sensitivity analysis; the registered split is the text-hash one",
+  "order_holds": true,
+  "posthoc_fusion_minus_text": {
+    "B": 5000,
+    "ci95": [
+      -0.001608250998319019,
+      0.013525634547715902
+    ],
+    "clusters": 584,
+    "mean": 0.005823088638597743,
+    "seed": 20260902,
+    "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+    "unit": "distinct test text; duplicate rows retained within cluster"
+  },
+  "registered": false,
+  "seeds": 10,
+  "split": {
+    "components": 2288,
+    "holdout": 0.25,
+    "moved": 983,
+    "n_test": 723,
+    "n_train": 2268,
+    "sim": 0.9,
+    "test_ham": 531,
+    "test_phishing": 192
+  }
+}

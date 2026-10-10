@@ -1,0 +1,423 @@
+{
+  "accented_pct": {
+    "0": 39.4,
+    "1": 70.1
+  },
+  "any_token_pct": {
+    "0": 93.8,
+    "1": 56.1
+  },
+  "baselines": {
+    "accent_and_length": {
+      "f1": 0.5859,
+      "n_test": 566,
+      "n_train": 2425,
+      "precision": 0.6637,
+      "recall": 0.5245
+    },
+    "all_shallow": {
+      "f1": 0.7079,
+      "n_test": 566,
+      "n_train": 2425,
+      "precision": 0.6959,
+      "recall": 0.7203
+    },
+    "length": {
+      "f1": 0.3015,
+      "n_test": 566,
+      "n_train": 2425,
+      "precision": 0.5357,
+      "recall": 0.2098
+    },
+    "tokens": {
+      "f1": 0.6207,
+      "n_test": 566,
+      "n_train": 2425,
+      "precision": 0.6122,
+      "recall": 0.6294
+    },
+    "tokens_and_length": {
+      "f1": 0.6272,
+      "n_test": 566,
+      "n_train": 2425,
+      "precision": 0.625,
+      "recall": 0.6294
+    }
+  },
+  "language": {
+    "carrier_mention_pct": {
+      "0": 44.4,
+      "1": 1.4
+    },
+    "families": {
+      "0": {
+        "families": 1500,
+        "largest": [
+          75,
+          74,
+          32,
+          29,
+          22
+        ],
+        "messages": 2193,
+        "pct": 68.4,
+        "singletons": 1290
+      },
+      "1": {
+        "families": 581,
+        "largest": [
+          10,
+          10,
+          10,
+          9,
+          7
+        ],
+        "messages": 798,
+        "pct": 72.8,
+        "singletons": 500
+      }
+    },
+    "log_odds": {
+      "ham": [
+        {
+          "ham": 964,
+          "phish": 33,
+          "term": "dung",
+          "z": -9.9
+        },
+        {
+          "ham": 824,
+          "phish": 12,
+          "term": "gui",
+          "z": -9.5
+        },
+        {
+          "ham": 875,
+          "phish": 31,
+          "term": "chi",
+          "z": -9.4
+        },
+        {
+          "ham": 865,
+          "phish": 3,
+          "term": "tb",
+          "z": -9.3
+        },
+        {
+          "ham": 779,
+          "phish": 14,
+          "term": "lh",
+          "z": -9.2
+        },
+        {
+          "ham": 1152,
+          "phish": 73,
+          "term": "trong",
+          "z": -9.2
+        },
+        {
+          "ham": 792,
+          "phish": 3,
+          "term": "viettel",
+          "z": -8.9
+        },
+        {
+          "ham": 835,
+          "phish": 37,
+          "term": "khach",
+          "z": -8.8
+        },
+        {
+          "ham": 863,
+          "phish": 47,
+          "term": "quy",
+          "z": -8.5
+        },
+        {
+          "ham": 958,
+          "phish": 62,
+          "term": "time",
+          "z": -8.3
+        },
+        {
+          "ham": 1048,
+          "phish": 75,
+          "term": "de",
+          "z": -8.3
+        },
+        {
+          "ham": 2968,
+          "phish": 367,
+          "term": "money",
+          "z": -8.3
+        }
+      ],
+      "phishing": [
+        {
+          "ham": 85,
+          "phish": 276,
+          "term": "b\u1ea1n",
+          "z": 22.5
+        },
+        {
+          "ham": 130,
+          "phish": 224,
+          "term": "http",
+          "z": 19.5
+        },
+        {
+          "ham": 211,
+          "phish": 209,
+          "term": "nh\u1eadn",
+          "z": 16.4
+        },
+        {
+          "ham": 193,
+          "phish": 189,
+          "term": "c\u1ee7a",
+          "z": 15.5
+        },
+        {
+          "ham": 59,
+          "phish": 112,
+          "term": "h\u1ec7",
+          "z": 14.0
+        },
+        {
+          "ham": 178,
+          "phish": 151,
+          "term": "v\u00e0o",
+          "z": 13.1
+        },
+        {
+          "ham": 84,
+          "phish": 109,
+          "term": "li\u00ean",
+          "z": 12.8
+        },
+        {
+          "ham": 74,
+          "phish": 102,
+          "term": "b\u00e1o",
+          "z": 12.6
+        },
+        {
+          "ham": 42,
+          "phish": 89,
+          "term": "c\u1ea7n",
+          "z": 12.6
+        },
+        {
+          "ham": 120,
+          "phish": 120,
+          "term": "s\u1ed1",
+          "z": 12.4
+        },
+        {
+          "ham": 59,
+          "phish": 89,
+          "term": "l\u00f2ng",
+          "z": 12.0
+        },
+        {
+          "ham": 42,
+          "phish": 82,
+          "term": "chuy\u1ec3n",
+          "z": 12.0
+        }
+      ]
+    },
+    "n_joined": 2991,
+    "near_duplicate_leak": {
+      "0.80": {
+        "0": {
+          "n": 198,
+          "of": 423,
+          "pct": 46.8
+        },
+        "1": {
+          "n": 53,
+          "of": 143,
+          "pct": 37.1
+        }
+      },
+      "0.90": {
+        "0": {
+          "n": 145,
+          "of": 423,
+          "pct": 34.3
+        },
+        "1": {
+          "n": 27,
+          "of": 143,
+          "pct": 18.9
+        }
+      },
+      "0.95": {
+        "0": {
+          "n": 85,
+          "of": 423,
+          "pct": 20.1
+        },
+        "1": {
+          "n": 10,
+          "of": 143,
+          "pct": 7.0
+        }
+      }
+    },
+    "nonlinear_floor": {
+      "all_shallow_format_gbm": {
+        "f1": 0.8849,
+        "model": "HistGradientBoosting",
+        "n_test": 566,
+        "n_train": 2425,
+        "precision": 0.9111,
+        "recall": 0.8601
+      },
+      "all_shallow_format_lr": {
+        "f1": 0.7108,
+        "n_test": 566,
+        "n_train": 2425,
+        "precision": 0.7083,
+        "recall": 0.7133
+      },
+      "all_shallow_gbm": {
+        "f1": 0.7945,
+        "model": "HistGradientBoosting",
+        "n_test": 566,
+        "n_train": 2425,
+        "precision": 0.7785,
+        "recall": 0.8112
+      },
+      "strict_format_gbm": {
+        "f1": 0.8467,
+        "model": "HistGradientBoosting",
+        "n_test": 566,
+        "n_train": 2425,
+        "precision": 0.8855,
+        "recall": 0.8112
+      }
+    },
+    "sender_tag_pct": {
+      "0": 1.4,
+      "1": 27.3
+    },
+    "tb_usage": {
+      "0": {
+        "bare_tb_msgs": 429,
+        "prefix_msgs": 432
+      },
+      "1": {
+        "bare_tb_msgs": 2,
+        "prefix_msgs": 1
+      }
+    },
+    "tfidf": {
+      "char": 0.9253,
+      "word": 0.9429,
+      "word_no_brackets": 0.9104,
+      "word_no_tokens": 0.9209
+    }
+  },
+  "median_chars": {
+    "0": 229,
+    "1": 138
+  },
+  "n": {
+    "0": 2193,
+    "1": 798
+  },
+  "registered": false,
+  "seed": 0,
+  "split": {
+    "test": 566,
+    "train": 2425
+  },
+  "token_pct": {
+    "[BHXH_VN]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[BIDV]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[B]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[CO]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[CSKH]": {
+      "0": 0.0,
+      "1": 0.0
+    },
+    "[DATE]": {
+      "0": 24.6,
+      "1": 1.0
+    },
+    "[EVNSPC_CSKH]": {
+      "0": 0.0,
+      "1": 0.0
+    },
+    "[GHTK]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[KHAOSAT]": {
+      "0": 0.0,
+      "1": 0.0
+    },
+    "[LAZADA]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[MONEY]": {
+      "0": 69.1,
+      "1": 35.8
+    },
+    "[NAME]": {
+      "0": 5.1,
+      "1": 2.4
+    },
+    "[NUMBER]": {
+      "0": 59.1,
+      "1": 36.0
+    },
+    "[POINT]": {
+      "0": 6.1,
+      "1": 1.4
+    },
+    "[PUBG]": {
+      "0": 0.1,
+      "1": 0.0
+    },
+    "[QC]": {
+      "0": 8.4,
+      "1": 0.1
+    },
+    "[SHEIN]": {
+      "0": 0.0,
+      "1": 0.0
+    },
+    "[TB]": {
+      "0": 19.7,
+      "1": 0.1
+    },
+    "[TIME]": {
+      "0": 31.3,
+      "1": 7.8
+    },
+    "[URL]": {
+      "0": 0.0,
+      "1": 0.1
+    },
+    "[VANI]": {
+      "0": 0.0,
+      "1": 0.0
+    }
+  }
+}

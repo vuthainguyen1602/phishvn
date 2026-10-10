@@ -1,0 +1,88 @@
+{
+  "arms": {
+    "text": {
+      "f1": 0.9319,
+      "f1_sd": 0.0117,
+      "precision": 0.9365,
+      "recall": 0.9273
+    },
+    "text_ft": {
+      "f1": 0.9397,
+      "f1_sd": 0.0104,
+      "precision": 0.9411,
+      "recall": 0.9385
+    },
+    "text_seg": {
+      "f1": 0.9318,
+      "f1_sd": 0.0104,
+      "precision": 0.9379,
+      "recall": 0.9259
+    }
+  },
+  "cluster_bootstrap": {
+    "ft_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.009108914198455234,
+        0.025110702745170202
+      ],
+      "clusters": 512,
+      "mean": 0.007807453833719337,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "ft_minus_tfidf": {
+      "B": 5000,
+      "ci95": [
+        -0.03543766548424907,
+        0.02874364424016316
+      ],
+      "clusters": 512,
+      "mean": -0.003406478927924524,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "seg_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.015486378524018324,
+        0.01441307726574189
+      ],
+      "clusters": 512,
+      "mean": -0.00024169783015258757,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "tfidf_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.023745446708299645,
+        0.04711373377931246
+      ],
+      "clusters": 512,
+      "mean": 0.01121393276164386,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    }
+  },
+  "finetune": {
+    "batch": 8,
+    "device": "mps",
+    "early_stopping": false,
+    "epochs": 3,
+    "lr": 2e-05,
+    "max_len": 128,
+    "model": "vinai/phobert-base",
+    "segmentation": "pyvi",
+    "validation_slice": null
+  },
+  "n_test": 566,
+  "n_train": 2425,
+  "seeds": 5,
+  "status": "post-hoc, unregistered; the registered text arm is frozen and unsegmented",
+  "tfidf_word_f1": 0.9429
+}

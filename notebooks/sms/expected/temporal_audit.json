@@ -1,0 +1,41 @@
+{
+  "status": "post-hoc retrospective sensitivity; one fitted seed",
+  "cutoff": "2026-08-01",
+  "undated_rows": 15,
+  "forward_excluded_exact_text_rows": 35,
+  "source_sha256": "8a29d50a6335c8938b8beef0a3daf57d276e880244394da453bc656f5a4c7847",
+  "split_sha256": "809ff840e357bd20249bce8cf6e6de41e4cc40e2614e4a6417af6f064feb1e55",
+  "model": "word TF-IDF (1,2), min_df=2, sublinear_tf; LR C=4, seed=0, max_iter=3000",
+  "runs": {
+    "registered_august": {
+      "n_train": 2425,
+      "n_test": 120,
+      "tn": 117,
+      "fp": 3,
+      "fn": 0,
+      "tp": 0,
+      "fpr": 0.025
+    },
+    "without_august": {
+      "n_train": 1905,
+      "n_test": 444,
+      "tn": 294,
+      "fp": 8,
+      "fn": 4,
+      "tp": 138,
+      "fpr": 0.026490066225165563,
+      "f1": 0.9583333333333334,
+      "precision": 0.9452054794520548,
+      "recall": 0.971830985915493
+    },
+    "forward_august": {
+      "n_train": 2349,
+      "n_test": 592,
+      "tn": 538,
+      "fp": 54,
+      "fn": 0,
+      "tp": 0,
+      "fpr": 0.09121621621621621
+    }
+  }
+}

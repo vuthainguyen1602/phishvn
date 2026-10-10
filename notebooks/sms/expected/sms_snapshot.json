@@ -1,0 +1,276 @@
+{
+  "exact_duplicates": 362,
+  "ham": 2193,
+  "messages": 2991,
+  "operator_deep_links": [
+    "myviettel.go.link",
+    "myvt.page.link",
+    "viettelmoney.go.link",
+    "vtmoney.onelink.me"
+  ],
+  "own_split": {
+    "test": 512,
+    "train": 2117
+  },
+  "own_split_leak_texts": 0,
+  "phishing": 798,
+  "pii_token_kinds": 21,
+  "published_split_leak_rows": 47,
+  "published_split_leak_texts": 27,
+  "published_test_rows": 597,
+  "registered_extractor": {
+    "fragment_hosts": [
+      [
+        "ngay.tcqc",
+        23
+      ],
+      [
+        "tp.hcm",
+        9
+      ],
+      [
+        "ngay.lh",
+        3
+      ],
+      [
+        "catp.hcm",
+        2
+      ],
+      [
+        "p.hiep",
+        2
+      ],
+      [
+        "ai.lh",
+        2
+      ],
+      [
+        "p.long",
+        2
+      ],
+      [
+        "tp.thu",
+        2
+      ],
+      [
+        "05.han",
+        2
+      ],
+      [
+        "06.han",
+        2
+      ],
+      [
+        "k.tra",
+        2
+      ],
+      [
+        "qk.tu",
+        2
+      ]
+    ],
+    "messages_url_only_by_fragment": {
+      "0": 46,
+      "1": 10
+    },
+    "non_url_fragments": {
+      "0": 85,
+      "1": 24
+    },
+    "shortened_urls": {
+      "0": 148,
+      "1": 22
+    },
+    "unique_apexes": {
+      "0": 218,
+      "1": 443
+    },
+    "urls": {
+      "0": 1268,
+      "1": 534
+    },
+    "with_url": {
+      "0": 1178,
+      "1": 503
+    }
+  },
+  "residual_pii_messages": 6,
+  "shortened_hosts": {
+    "0": [
+      [
+        "myvt.page.link",
+        125
+      ],
+      [
+        "viettelmoney.go.link",
+        29
+      ],
+      [
+        "vtmoney.onelink.me",
+        15
+      ],
+      [
+        "bit.ly",
+        10
+      ],
+      [
+        "myviettel.go.link",
+        8
+      ],
+      [
+        "tinyurl.com",
+        7
+      ],
+      [
+        "onelink.me",
+        3
+      ],
+      [
+        "cps.onl",
+        2
+      ],
+      [
+        "onelink.to",
+        2
+      ],
+      [
+        "page.link",
+        2
+      ],
+      [
+        "lzd.co",
+        2
+      ],
+      [
+        "lnkd.in",
+        1
+      ],
+      [
+        "grb.to",
+        1
+      ],
+      [
+        "goo.gl",
+        1
+      ],
+      [
+        "o2o.vn",
+        1
+      ],
+      [
+        "id.vin",
+        1
+      ]
+    ],
+    "1": [
+      [
+        "bit.ly",
+        5
+      ],
+      [
+        "t.ly",
+        2
+      ],
+      [
+        "lzd.co",
+        1
+      ],
+      [
+        "ln.run",
+        1
+      ],
+      [
+        "goo.gl",
+        1
+      ],
+      [
+        "qrco.de",
+        1
+      ]
+    ]
+  },
+  "shortened_urls": {
+    "0": 210,
+    "1": 11
+  },
+  "shortened_urls_without_operator_link": {
+    "0": 33,
+    "1": 11
+  },
+  "source": "trannguyenthaituan/vietnamese_sms_dataset full_dataset.csv (CC-BY-4.0)",
+  "top_tlds": {
+    "0": [
+      [
+        "vn",
+        935
+      ],
+      [
+        "link",
+        164
+      ],
+      [
+        "com",
+        30
+      ],
+      [
+        "me",
+        22
+      ],
+      [
+        "ly",
+        10
+      ],
+      [
+        "net",
+        4
+      ]
+    ],
+    "1": [
+      [
+        "com",
+        111
+      ],
+      [
+        "top",
+        74
+      ],
+      [
+        "cc",
+        69
+      ],
+      [
+        "me",
+        52
+      ],
+      [
+        "vip",
+        51
+      ],
+      [
+        "online",
+        27
+      ]
+    ]
+  },
+  "unique_apexes": {
+    "0": 174,
+    "1": 423
+  },
+  "unique_texts": 2629,
+  "urls": {
+    "0": 1183,
+    "1": 510
+  },
+  "urls_without_operator_link": {
+    "0": 1006,
+    "1": 510
+  },
+  "with_url": {
+    "0": 1132,
+    "1": 493
+  },
+  "zalo_me_urls": {
+    "0": 3,
+    "1": 16
+  }
+}

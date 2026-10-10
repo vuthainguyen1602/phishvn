@@ -1,0 +1,115 @@
+{
+  "arms": {
+    "early_flag": {
+      "f1": 0.9318,
+      "f1_sd": 0.0113,
+      "precision": 0.9415,
+      "recall": 0.9224
+    },
+    "fusion": {
+      "f1": 0.9267,
+      "f1_sd": 0.0107,
+      "precision": 0.9384,
+      "recall": 0.9154
+    },
+    "late_gated": {
+      "f1": 0.9351,
+      "f1_sd": 0.0095,
+      "precision": 0.9536,
+      "recall": 0.9175
+    },
+    "late_mean": {
+      "f1": 0.9316,
+      "f1_sd": 0.0129,
+      "precision": 0.9691,
+      "recall": 0.8972
+    },
+    "stack": {
+      "f1": 0.9308,
+      "f1_sd": 0.0121,
+      "precision": 0.9446,
+      "recall": 0.9175
+    },
+    "text": {
+      "f1": 0.929,
+      "f1_sd": 0.013,
+      "precision": 0.938,
+      "recall": 0.9203
+    }
+  },
+  "cluster_bootstrap": {
+    "early_flag_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.006005953541781461,
+        0.012165902670741751
+      ],
+      "clusters": 512,
+      "mean": 0.0027813752131306954,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "fusion_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.009261811360613258,
+        0.004714154579759136
+      ],
+      "clusters": 512,
+      "mean": -0.002370736363879999,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "late_gated_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.0046649763837998594,
+        0.01664847764868549
+      ],
+      "clusters": 512,
+      "mean": 0.006163794876874792,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "late_mean_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.012869130950771173,
+        0.017272246557855604
+      ],
+      "clusters": 512,
+      "mean": 0.002537152217138727,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "stack_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.004792684480884493,
+        0.008461125261205231
+      ],
+      "clusters": 512,
+      "mean": 0.0018194737994145307,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    }
+  },
+  "has_url_only": {
+    "early_flag": 0.9289,
+    "fusion": 0.9183,
+    "late_gated": 0.934,
+    "late_mean": 0.934,
+    "stack": 0.9323,
+    "text": 0.924
+  },
+  "n_test": 566,
+  "n_test_no_url": 256,
+  "seeds": 10,
+  "stack_folds": "StratifiedGroupKFold(5) by message text",
+  "status": "post-hoc, unregistered; the registered fusion is the concatenation MLP"
+}

@@ -1,0 +1,66 @@
+{
+  "arms": {
+    "text": {
+      "f1": 0.929,
+      "f1_sd": 0.013,
+      "precision": 0.938,
+      "recall": 0.9203
+    },
+    "text_nodia": {
+      "f1": 0.9081,
+      "f1_sd": 0.0172,
+      "precision": 0.9145,
+      "recall": 0.9021
+    }
+  },
+  "cluster_bootstrap": {
+    "text_nodia_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.04826996783955128,
+        0.005000674172879994
+      ],
+      "clusters": 512,
+      "mean": -0.020908901813222053,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "tfidf_word_no_tokens_nodia_minus_accented": {
+      "B": 5000,
+      "ci95": [
+        -0.027905066572244043,
+        0.030649400408021152
+      ],
+      "clusters": 512,
+      "mean": -0.00039038748059999406,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "tfidf_word_nodia_minus_accented": {
+      "B": 5000,
+      "ci95": [
+        -0.01161122552822016,
+        0.028163126083952574
+      ],
+      "clusters": 512,
+      "mean": 0.007778708153973884,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    }
+  },
+  "linear": {
+    "tfidf_char_accented": 0.9253,
+    "tfidf_char_nodia": 0.9441,
+    "tfidf_word_accented": 0.9429,
+    "tfidf_word_no_tokens_accented": 0.9209,
+    "tfidf_word_no_tokens_nodia": 0.9209,
+    "tfidf_word_nodia": 0.9507
+  },
+  "n_changed_by_normalisation": 1426,
+  "normalisation": "NFD, combining marks removed, \u0111/\u0110 -> d/D",
+  "seeds": 10,
+  "status": "post-hoc, unregistered"
+}

@@ -1,0 +1,29 @@
+{
+  "text_full": 0.928991978725132,
+  "text_masked": 0.935203245982383,
+  "masked_plus_url": 0.9415919100684951,
+  "mask_effect": {
+    "mean": 0.006326957200827726,
+    "ci95": [
+      -0.006083332190517454,
+      0.019545773032846183
+    ],
+    "B": 5000,
+    "clusters": 512,
+    "seed": 20260902,
+    "unit": "distinct test text; duplicate rows retained within cluster",
+    "status": "post-hoc sensitivity; conditional on the fitted seed ensemble"
+  },
+  "url_adds_to_masked": {
+    "mean": 0.006407346470942965,
+    "ci95": [
+      -0.0011861546325485583,
+      0.015072315454177324
+    ],
+    "B": 5000,
+    "clusters": 512,
+    "seed": 20260902,
+    "unit": "distinct test text; duplicate rows retained within cluster",
+    "status": "post-hoc sensitivity; conditional on the fitted seed ensemble"
+  }
+}

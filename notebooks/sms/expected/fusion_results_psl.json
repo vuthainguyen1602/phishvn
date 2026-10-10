@@ -1,0 +1,198 @@
+{
+  "T1_fusion_minus_url": {
+    "inflation": 2.2991,
+    "k": 10,
+    "mean": 0.3302,
+    "p": 5.521482038812296e-07,
+    "p_naive": 3.703882343952131e-10,
+    "se": 0.0265,
+    "t": 12.4768,
+    "wins": 10
+  },
+  "T2_text_minus_url": {
+    "inflation": 2.2991,
+    "k": 10,
+    "mean": 0.325,
+    "p": 4.865284789082716e-07,
+    "p_naive": 3.2466585288060333e-10,
+    "se": 0.0257,
+    "t": 12.6626,
+    "wins": 10
+  },
+  "arms": {
+    "fusion": {
+      "f1": 0.9342,
+      "precision": 0.94,
+      "recall": 0.9287
+    },
+    "text": {
+      "f1": 0.929,
+      "precision": 0.938,
+      "recall": 0.9203
+    },
+    "url": {
+      "f1": 0.604,
+      "precision": 0.868,
+      "recall": 0.465
+    }
+  },
+  "arms_sd": {
+    "fusion": 0.0066,
+    "text": 0.013,
+    "url": 0.032
+  },
+  "auc": {
+    "fusion": {
+      "pr_auc": 0.9816,
+      "roc_auc": 0.991
+    },
+    "text": {
+      "pr_auc": 0.9782,
+      "roc_auc": 0.9888
+    },
+    "url": {
+      "pr_auc": 0.665,
+      "roc_auc": 0.7962
+    }
+  },
+  "cluster_bootstrap": {
+    "T1_fusion_minus_url": {
+      "B": 5000,
+      "ci95": [
+        0.2588623582265241,
+        0.4093906801401962
+      ],
+      "clusters": 512,
+      "mean": 0.33200679518219484,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "T2_text_minus_url": {
+      "B": 5000,
+      "ci95": [
+        0.25415520443760004,
+        0.4035561279619575
+      ],
+      "clusters": 512,
+      "mean": 0.3267454016995947,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "posthoc_fusion_minus_text": {
+      "B": 5000,
+      "ci95": [
+        -0.0015316277215149442,
+        0.012662145812960799
+      ],
+      "clusters": 512,
+      "mean": 0.005261393482600164,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    }
+  },
+  "confusion_mean": {
+    "fusion": {
+      "fn": 10.2,
+      "fp": 8.5,
+      "tn": 414.5,
+      "tp": 132.8
+    },
+    "text": {
+      "fn": 11.4,
+      "fp": 8.7,
+      "tn": 414.3,
+      "tp": 131.6
+    },
+    "url": {
+      "fn": 76.5,
+      "fp": 10.3,
+      "tn": 412.7,
+      "tp": 66.5
+    }
+  },
+  "diagnostics": {
+    "fusion/has_url": {
+      "detected_mean": 78.6,
+      "f1": 0.9279,
+      "n": 301,
+      "n_pos": 86
+    },
+    "fusion/no_url": {
+      "detected_mean": 54.2,
+      "f1": 0.9434,
+      "n": 265,
+      "n_pos": 57
+    },
+    "fusion/shortened_phish": {
+      "detected_mean": 4.0,
+      "f1": 1.0,
+      "n": 4,
+      "n_pos": 4
+    },
+    "text/has_url": {
+      "detected_mean": 77.7,
+      "f1": 0.9222,
+      "n": 301,
+      "n_pos": 86
+    },
+    "text/no_url": {
+      "detected_mean": 53.9,
+      "f1": 0.939,
+      "n": 265,
+      "n_pos": 57
+    },
+    "text/shortened_phish": {
+      "detected_mean": 4.0,
+      "f1": 1.0,
+      "n": 4,
+      "n_pos": 4
+    },
+    "url/has_url": {
+      "detected_mean": 66.5,
+      "f1": 0.8155,
+      "n": 301,
+      "n_pos": 86
+    },
+    "url/no_url": {
+      "detected_mean": 0.0,
+      "f1": 0.0,
+      "n": 265,
+      "n_pos": 57
+    },
+    "url/shortened_phish": {
+      "detected_mean": 1.0,
+      "f1": 0.4,
+      "n": 4,
+      "n_pos": 4
+    }
+  },
+  "fpr": {
+    "fusion": 0.0201,
+    "text": 0.0206,
+    "url": 0.0243
+  },
+  "n_messages": 2991,
+  "n_test": 566,
+  "n_train": 2425,
+  "n_with_url": 1625,
+  "posthoc_fusion_minus_text": {
+    "inflation": 2.2991,
+    "k": 10,
+    "mean": 0.0052,
+    "p": 0.5799039894587956,
+    "p_naive": 0.21938709642085585,
+    "se": 0.0091,
+    "t": 0.5742,
+    "wins": 7
+  },
+  "registered_inference_audit": {
+    "legacy_seed_tests_retained_for_provenance": true,
+    "reason": "Nadeau-Bengio requires repeated data splits; these ten values vary only the optimizer seed on one fixed holdout.",
+    "valid": false
+  },
+  "seeds": 10,
+  "url_rule": "psl"
+}

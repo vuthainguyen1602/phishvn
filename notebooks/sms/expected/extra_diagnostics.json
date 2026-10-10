@@ -1,0 +1,119 @@
+{
+  "fn_examples": {
+    "ids": [
+      "NEW_059",
+      "COM_072",
+      "COM_083",
+      "COM_1063",
+      "COM_1407",
+      "COM_1742",
+      "COM_1746",
+      "COM_1763",
+      "COM_2066"
+    ],
+    "in_two_positive_batches": 3,
+    "positive_rows_missed_by_majority": 9,
+    "without_url": 2
+  },
+  "fp_examples": {
+    "distinct_texts_flagged_by_majority": 9,
+    "ham_rows_flagged_by_any_seed": 15,
+    "ham_rows_flagged_by_majority": 9,
+    "majority_in_august_batch": 6,
+    "top": [
+      {
+        "has_url": 1,
+        "message_id": "COM_2633",
+        "text_votes": 10
+      },
+      {
+        "has_url": 1,
+        "message_id": "COM_2746",
+        "text_votes": 10
+      },
+      {
+        "has_url": 1,
+        "message_id": "COM_2929",
+        "text_votes": 9
+      },
+      {
+        "has_url": 0,
+        "message_id": "COM_798",
+        "text_votes": 8
+      },
+      {
+        "has_url": 0,
+        "message_id": "COM_2684",
+        "text_votes": 8
+      },
+      {
+        "has_url": 0,
+        "message_id": "COM_2894",
+        "text_votes": 8
+      },
+      {
+        "has_url": 0,
+        "message_id": "COM_2895",
+        "text_votes": 8
+      },
+      {
+        "has_url": 1,
+        "message_id": "COM_267",
+        "text_votes": 6
+      }
+    ]
+  },
+  "registered": false,
+  "status": "post-hoc, descriptive",
+  "text_minus_floor": {
+    "floor_full": {
+      "B": 5000,
+      "ci95": [
+        0.007869770110550109,
+        0.08161288293295794
+      ],
+      "clusters": 512,
+      "mean": 0.04340504901757625,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    },
+    "floor_strict": {
+      "B": 5000,
+      "ci95": [
+        0.039577538001923394,
+        0.12816407215489123
+      ],
+      "clusters": 512,
+      "mean": 0.08211677277634657,
+      "seed": 20260902,
+      "status": "post-hoc sensitivity; conditional on the fitted seed ensemble",
+      "unit": "distinct test text; duplicate rows retained within cluster"
+    }
+  },
+  "truncation": {
+    "ham": {
+      "raw_over_256_pct": 0.0,
+      "seg_median_tokens": 82,
+      "seg_over_128_pct": 8.4,
+      "seg_over_256_pct": 0.0
+    },
+    "positive": {
+      "raw_over_256_pct": 0.0,
+      "seg_median_tokens": 47,
+      "seg_over_128_pct": 0.8,
+      "seg_over_256_pct": 0.0
+    }
+  },
+  "url_char": {
+    "all_test_f1": 0.658,
+    "all_test_precision": 0.8636,
+    "all_test_recall": 0.5315,
+    "has_url_f1": 0.8736,
+    "has_url_pr_auc": 0.9434,
+    "has_url_roc_auc": 0.9808,
+    "model": "char 2-5-gram TF-IDF on the first public-suffix URL, logistic regression C=4",
+    "test_rows_with_url": 301,
+    "train_rows_with_url": 1324
+  }
+}
