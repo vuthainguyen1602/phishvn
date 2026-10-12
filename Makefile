@@ -1,4 +1,4 @@
-.PHONY: install data url benchmark assets release verify clean
+.PHONY: install data url benchmark assets p7 release verify clean
 install:      ## install python deps
 	pip install -r requirements.txt
 data:         ## build the URL dataset from data/raw
@@ -16,6 +16,9 @@ benchmark:    ## multi-protocol URL benchmark: both protocols, then the cross-co
 	  --out data/processed/p2/cross_dataset_F1.csv
 assets:       ## regenerate the paper figure + tables from data
 	python scripts/make_p1_assets.py
+p7:           ## feed-measurement paper: figures and tables from dataset_url.csv and the recorded probes
+	python scripts/make_p7cti_assets.py
+	python scripts/make_p7_wildcard.py --cached
 release:      ## package the citable open-tier release (PAGES=1 for the gated bundle)
 	python scripts/make_release.py --version $(or $(VERSION),1.0.0) $(if $(PAGES),--include-pages,)
 verify:       ## run unit tests

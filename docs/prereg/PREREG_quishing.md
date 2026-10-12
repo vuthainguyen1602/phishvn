@@ -188,3 +188,20 @@ on which a decoder returned a string) from the pages confirmed by eye to render 
 one page confirmed not to (a parking page whose stored decode is a six-digit string off page
 furniture), and the 17 never inspected, all derived from `qr_adjudication.csv`. No number pinned
 on 2026-09-25 was changed, and no re-pin was made.
+
+## Correction note, 2026-10-12
+
+Two statements in the record above are corrected here rather than edited in place. (1) The
+deviation record of 2026-10-03 says the paper states the population change "in Section 2.1"; in
+the manuscript as built it is Section 3.1 (Data collection). (2) The same record and the manuscript
+said the search arm "has not grown since registration"; that was true at the 25 September pin
+(408 pages, 946 scans) and not on 3 October, when the arm's ledger held 573 pages and 1,652 scans.
+The manuscript now says the arm had not grown between registration and the pin. Neither correction
+touches a pinned number. The manuscript also now labels the density cut of Section 5.4 as a post-hoc
+reading on WeChatQR alone with bin sizes in URL-equivalents, prints the Wilcoxon p_BH and median
+beside each registered architecture comparison (Restormer T2-arch: mean -1.2 pp, median 0.0,
+p_BH 0.29), discloses that the restoration set's blur and motion bands are module-relative and so
+not comparable with the sweep's absolute bands, and reports the rescued/destroyed pair per decoder
+as PREREG_restore.md asks. Four verdict rows of qr_adjudication.csv that had their adjudicated_on
+re-dated to 2026-10-02 on re-confirmation carry their original 2026-09-25 date again, with the
+re-confirmation in a new confirmed_on column.

@@ -52,6 +52,9 @@ PROC = os.path.join(ROOT, "data", "processed")
 DATASET = os.path.join(PROC, "dataset_url.csv")
 FS_VALID = os.path.join(PROC, "first_seen_validation.csv")
 FS_SUMMARY = os.path.join(PROC, "first_seen_validation_summary.json")
+if not os.path.exists(FS_VALID):  # flat public mirror: both ship under docs/verify/
+    FS_VALID = os.path.join(ROOT, "docs", "verify", "first_seen_validation.csv")
+    FS_SUMMARY = os.path.join(ROOT, "docs", "verify", "first_seen_validation_summary.json")
 P7_PROC = os.path.join(PROC, "p7")
 
 # Seeded so the bootstrap intervals are a property of the data, not of the run. Changing this
@@ -460,10 +463,26 @@ def common_window_sensitivity(df: pd.DataFrame):
         row("all_retrievable", all_two, "source-specific", "source-specific"),
         row("common_dated_window", common, start.date(), end.date()),
     ])
+    # Why the aligned row is so much smaller than the unaligned one. The window is the whole
+    # dated span of one archive, so the calendar restriction removes nothing from it; what the
+    # aligned row requires is a RECOVERED DATE on both sides, and most shared hosts have none on
+    # the ChongLuaDao side. Printed so the prose cannot call the drop a calendar effect.
+    shared_all = set(all_two[all_two.source == "chongluadao"].host) & \
+        set(all_two[all_two.source == "tinnhiemmang"].host)
+    cld_dated_hosts = set(dated[dated.source == "chongluadao"].host)
+    tnm_in_window = set(common[common.source == "tinnhiemmang"].host)
+    n_no_cld_date = len(shared_all - cld_dated_hosts)
+    n_tnm_outside = len((shared_all & cld_dated_hosts) - tnm_in_window)
+    cld_span = spans.loc["chongluadao"]
+    window_is_cld_span = bool(cld_span["min"] == start and cld_span["max"] == end)
+    rows["shared_without_chongluadao_date"] = n_no_cld_date
+    rows["shared_tinnhiemmang_outside_window"] = n_tnm_outside
     os.makedirs(P7_PROC, exist_ok=True)
     rows.to_csv(os.path.join(P7_PROC, "p7_common_window.csv"), index=False,
                 float_format="%.6f")
     a, c = rows.iloc[0], rows.iloc[1]
+    assert int(a.overlap_hosts) == n_no_cld_date + n_tnm_outside + int(c.overlap_hosts), \
+        "the shared-host decomposition does not add up"
     body = "\n".join([
         (f"All retrievable (unaligned) & {int(a.chongluadao_hosts):,} & "
          f"{int(a.tinnhiemmang_hosts):,} & {int(a.overlap_hosts):,} & "
@@ -496,9 +515,20 @@ Condition & CLD hosts & TNM hosts & shared & Jaccard & \\% smaller \\\\
         f"{int(c.tinnhiemmang_hosts):,} TinNhiemMang hosts, of which only "
         f"{int(c.overlap_hosts):,} are shared (Jaccard {100*c.jaccard:.2f}\\%; "
         f"{100*c.share_of_smaller:.2f}\\% of the smaller archive), against "
-        f"{int(a.overlap_hosts):,} shared hosts in the unaligned archive totals. The low-overlap "
-        f"direction therefore survives calendar alignment, but OpenPhish remains outside the "
-        f"test and recovered ingestion dates do not make this a contemporaneous recall study"
+        f"{int(a.overlap_hosts):,} shared hosts in the unaligned archive totals. That drop is not "
+        f"a calendar effect"
+        + (f": the window is ChongLuaDao's whole dated span, so the restriction removes nothing "
+           f"from that archive" if window_is_cld_span else "")
+        + f", and {n_no_cld_date:,} of the {int(a.overlap_hosts):,} shared hosts have no recovered "
+        f"ChongLuaDao date at all"
+        + (f" ({n_tnm_outside} more fall outside the window on the TinNhiemMang side)"
+           if n_tnm_outside else "")
+        + f", so they leave the aligned row for want of a date, not for want of "
+        f"overlap in time. The aligned row is therefore a bound set by date recovery, which failed "
+        f"on almost every host the two archives share, and it cannot test calendar mismatch; why "
+        f"recovery fails on exactly the shared hosts is not explained by this study. OpenPhish "
+        f"remains outside the test, and recovered ingestion dates do not make this a "
+        f"contemporaneous recall study"
     )
     write_generated(os.path.join(SEC, "gen_common_window.tex"), gen.rstrip() + "%")
     STATS["common_window"] = rows.to_dict("records")
@@ -689,6 +719,29 @@ def gen_sector_ci(df: pd.DataFrame):
 GOV_TOKENS = {"dichvucong": "the national public-service portal",
               "vssid": "social insurance",
               "gplx": "driving licences"}
+
+
+def gen_agency_tokens(df: pd.DataFrame):
+    """The four agency strings the ethics section searches for, counted the same way on both
+    sides: substring match over www.-collapsed distinct hosts. The benign counts had been typed
+    by hand in units that mixed hosts with rows and excluded one token from another."""
+    def hosts(frame):
+        return set(frame["domain"].astype(str).str.strip().str.lower()
+                   .str.replace(r"^www\.", "", regex=True))
+    ph, be = hosts(df[df.label == "phishing"]), hosts(df[df.label != "phishing"])
+    tokens = [("congan", "police"), ("bocongan", "ministry"), ("toaan", "courts"), ("canhsat", "police")]
+    pc = {t: sum(t in h for h in ph) for t, _ in tokens}
+    bc = {t: sum(t in h for h in be) for t, _ in tokens}
+    ph_txt = ", ".join(f"{pc[t]} for \\texttt{{{t}}}" + (f" ({g})" if i < 3 else "")
+                       for i, (t, g) in enumerate(tokens))
+    tex = (f"a direct search of the phishing hostnames for the obvious strings returns "
+           f"{'nothing at all' if not any(pc.values()) else 'almost nothing'}: {ph_txt}, "
+           f"against {bc['congan']}, {bc['bocongan']}, {bc['toaan']} and {bc['canhsat']} of the "
+           f"{len(be):,} distinct benign hosts (substring match; the {bc['bocongan']} "
+           f"\\texttt{{bocongan}} hosts are among the {bc['congan']} \\texttt{{congan}} ones), "
+           f"which are the real agencies")
+    write_generated(os.path.join(SEC, "gen_agency_tokens.tex"), tex + "%")
+    STATS["agency_tokens"] = {"phishing_hosts": pc, "benign_hosts": bc, "benign_hosts_total": len(be)}
 
 
 def gen_govtokens(df: pd.DataFrame):
@@ -1151,6 +1204,7 @@ def main():
     gen_bulk(df)
     gen_dating(df)
     gen_govtokens(df)
+    gen_agency_tokens(df)
     # Every number above, in one machine-readable file: the walkthrough notebook recomputes the
     # analysis and compares against this rather than against the generated LaTeX.
     out = os.path.join(PROC, "p7", "p7_results.json")

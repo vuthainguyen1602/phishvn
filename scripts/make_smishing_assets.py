@@ -618,7 +618,7 @@ def tab_flow(msgs, out):
          "Section~\\ref{sec:sms_batches}"),
         ("August ham, no August in training", f"train {_fmt(tp['forward_august']['n_train'])}, test "
          f"{tp['forward_august']['n_test']} ham", "Section~\\ref{sec:sms_batches}"),
-        ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])}, "
+        ("Two-batch hold-out", f"train {_fmt(ba['leave_batches_out']['batch']['train_rows'])} rows, "
          f"test the batches' {ba['leave_batches_out']['batch']['eval_positive_texts']} pos. texts "
          f"and {ba['leave_batches_out']['eval_ham_texts']} held-out ham texts",
          "Section~\\ref{sec:sms_batches}"),
@@ -1032,7 +1032,7 @@ def main() -> int:
 
     months, ham, ph = fig_timeline(msgs, os.path.join(FIG, "sms_timeline.pdf"))
     fig_hosts(urls, os.path.join(FIG, "sms_hosts.pdf"))
-    TLD_TABLE_N, TLD_FIG_N = 5, 8    # Table 2 ranks five suffixes, Figure 3 draws eight
+    TLD_TABLE_N, TLD_FIG_N = 5, 8    # tab_sms_tld.tex (not \input by the paper) ranks five suffixes, Figure 3 draws eight
     per_tld = fig_tld(urls, os.path.join(FIG, "sms_tld.pdf"), top=TLD_FIG_N)
     snap = json.load(open(SNAP, encoding="utf-8"))
     short = fig_shortener(urls, os.path.join(FIG, "sms_shortener.pdf"),

@@ -19,7 +19,7 @@ macros -- a hand-copied cell is wrong the first time the analysis is re-run, and
 RUN:  python3 scripts/make_quishing_assets.py
 """
 from __future__ import annotations
-import csv, datetime as dt, json, os, sys, time
+import csv, datetime as dt, json, math, os, sys, time
 from urllib.parse import urlparse
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -40,6 +40,8 @@ INDUCED = os.path.join("data", "processed", "infra", "self_induced_hosts.csv")
 # messenger link or a link back to the same site. Tracked with the manuscript, because the count
 # of quishing pages is a judgement and a judgement has to be on file to be checked.
 ADJUDICATION = os.path.join("papers", "future_quishing", "qr_adjudication.csv")
+if not os.path.exists(ADJUDICATION):  # flat public mirror: the verdict file ships under docs/verify/
+    ADJUDICATION = os.path.join("docs", "verify", "qr_adjudication.csv")
 # verdict -> the bucket the paper reports it in. `quishing` is the narrow sense the paper counts
 # by: the code is what carries the victim to the attack.
 VERDICT_BUCKET = {"quishing": "quishing", "phishing_inert_qr": "inert_lure",
@@ -601,6 +603,11 @@ def v2_assets() -> None:
     m += "\\newcommand{\\QrVTwoBarOne}{%.0f}\n" % v["bars"]["T1"]
     m += "\\newcommand{\\QrVTwoBarTwo}{%.0f}\n" % v["bars"]["T2"]
     m += "\\newcommand{\\QrVTwoUrls}{%d}\n" % v["registered"]["hybrid"]["T1"]["n_urls"]
+    for arch, tag in (("hybrid", "Hybrid"), ("restormer", "Restormer")):
+        for t, tt in (("T1", "TOne"), ("T2", "TTwo")):
+            rr = v["registered"][arch][t]
+            m += "\\newcommand{\\QrVTwo%s%sMedian}{%+.1f}\n" % (tag, tt, rr["median_pp"])
+            m += "\\newcommand{\\QrVTwo%s%sPBH}{%s}\n" % (tag, tt, _pfmt(rr["p_bh"]))
     m += "\\newcommand{\\QrGateRawDfr}{%.1f}\n" % gated["conv"]["raw_dfr"]
     for arch, tag in (("conv", "Conv"), ("hybrid", "Hybrid"), ("restormer", "Restormer")):
         g = gated[arch]
@@ -611,6 +618,7 @@ def v2_assets() -> None:
     m += "\\newcommand{\\QrGateRenders}{%s}\n" % f"{gated['conv']['n']:,}"
     write_generated(os.path.join(SEC, "gen_qr_v2.tex"), m)
 
+    first = json.load(open(RES_SNAP, encoding="utf-8"))["registered"]  # arm A's T1-restore, shown for comparison
     body = ""
     for arch, tag in (("conv", "A: conv $3{\\times}3$"), ("hybrid", "B: hybrid"),
                       ("restormer", "C: Restormer")):
@@ -618,7 +626,7 @@ def v2_assets() -> None:
         g = v["guard"][arch]["opencv"]
         b = v.get("budget", {}).get(arch, {})
         t1 = ("---" if not r else "$%+.1f$ (%s)" % (r["T1"]["mean_pp"], r["T1"]["verdict"][:4]))
-        t2 = ("$+3.5$ (part)" if not r
+        t2 = ("$%+.1f$ (%s)" % (first["T1"]["mean_pp"], first["T1"]["verdict"][:4]) if not r
               else "$%+.1f$ (%s)" % (r["T2"]["mean_pp"], r["T2"]["verdict"][:4]))
         flag = "" if g["destroyed_pct_of_correct"] <= v["guard_pct"] else r"$^{\ddagger}$"
         body += ("%s & %s & %s & %s & %s & %s%s \\\\\n"
@@ -642,7 +650,10 @@ Arm & params & T1-arch: \texttt{logo} vs A & T2-arch: vs raw+WeChat & resc. & br
 \begin{minipage}{0.94\linewidth}\footnotesize
 Registered in \texttt{PREREG\_restore\_v2.md}. Percentage points of OpenCV DFR on \QrVTwoUrls{}
 held-out URLs, positive when the arm is ahead. Each cell is a two-sided Wilcoxon signed-rank test on
-the per-URL differences, Benjamini--Hochberg over $m=4$ (two tests, two new arms). T1-arch's bar is
+the per-URL differences, Benjamini--Hochberg over $m=4$ (two tests, two new arms): $p_{\mathrm{BH}}$ is
+$\QrVTwoHybridTOnePBH$ and $\QrVTwoHybridTTwoPBH$ for the hybrid, $\QrVTwoRestormerTOnePBH$ and
+$\QrVTwoRestormerTTwoPBH$ for Restormer (medians $\QrVTwoHybridTOneMedian$, $\QrVTwoHybridTTwoMedian$,
+$\QrVTwoRestormerTOneMedian$ and $\QrVTwoRestormerTTwoMedian$\,pp). T1-arch's bar is
 $+\QrVTwoBarOne$\,pp and T2-arch's is $+\QrVTwoBarTwo$\,pp, both fixed at registration. Arm A's
 T2-arch figure is the first study's T1-restore and is shown for comparison, not re-tested.
 \emph{broke} is the share of renders the control arm decoded and the restored arm did not:
@@ -652,6 +663,11 @@ T2-arch say.
 \end{table}
 """)
     fig_gate(v, gated, os.path.join(os.path.dirname(SEC), "figures", "fig_qr_gate.pdf"))
+
+
+def _pfmt(p: float) -> str:
+    """A p-value for prose: two decimals when it is readable, scientific otherwise."""
+    return "%.2f" % p if p >= 0.01 else "%.1f \\times 10^{%d}" % (p / 10 ** int(math.floor(math.log10(p))), int(math.floor(math.log10(p))))
 
 
 def results() -> int:
@@ -779,6 +795,10 @@ def results() -> int:
            + m("DensPerspDense", "%.1f" % d["by_density"]["dfr"]["perspective"]["50+"])
            + m("DensNSparse", "{:,}".format(d["by_density"]["n_renders"]["<=25"]))
            + m("DensNDense", "{:,}".format(d["by_density"]["n_renders"]["50+"]))
+           # the registration counts in URLs, so the render counts are also given per URL
+           + m("RendersPerUrlDens", "%d" % round(sum(d["by_density"]["n_renders"].values()) / d["urls"]))
+           + m("DensUrlsSparse", "{:,}".format(round(d["by_density"]["n_renders"]["<=25"] / (sum(d["by_density"]["n_renders"].values()) / d["urls"]))))
+           + m("DensUrlsDense", "{:,}".format(round(d["by_density"]["n_renders"]["50+"] / (sum(d["by_density"]["n_renders"].values()) / d["urls"]))))
            + m("SilentOpencv", "%.1f" % d["failure_kind"]["opencv"]["silent_pct"])
            + m("SilentWechat", "%.1f" % d["failure_kind"]["wechat"]["silent_pct"])
            # restoration, registered
@@ -803,7 +823,11 @@ def results() -> int:
            + m("ResMotionWechatOut", "%.1f" % r["by_transform"]["wechat"]["motion"]["restored"])
            + m("ResRescued", f"{r['transitions']['opencv']['rescued']:,}")
            + m("ResDestroyed", f"{r['transitions']['opencv']['destroyed']:,}")
-           + m("ResRenders", f"{r['transitions']['opencv']['n']:,}"))
+           + m("ResRenders", f"{r['transitions']['opencv']['n']:,}")
+           + m("ResRescuedWechat", f"{r['transitions']['wechat']['rescued']:,}")
+           + m("ResDestroyedWechat", f"{r['transitions']['wechat']['destroyed']:,}")
+           + m("ResRescuedPyzbar", f"{r['transitions']['pyzbar']['rescued']:,}")
+           + m("ResDestroyedPyzbar", f"{r['transitions']['pyzbar']['destroyed']:,}"))
     write_generated(os.path.join(SEC, "gen_qr_results.tex"), tex)
 
     # ---- table: DFR per decoder x transform ---------------------------------------------------

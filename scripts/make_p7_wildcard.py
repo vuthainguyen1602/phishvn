@@ -47,10 +47,14 @@ FIG = os.path.join(ROOT, "papers", "P7_cti", "figures")
 PROC = os.path.join(ROOT, "data", "processed")
 URL_CSV = os.path.join(PROC, "dataset_url.csv")
 PROBE_CSV = os.path.join(PROC, "p7", "p7_wildcard_probe.csv")
+if not os.path.exists(PROBE_CSV):  # flat public mirror: the recorded answers ship under docs/verify/
+    PROBE_CSV = os.path.join(ROOT, "docs", "verify", "p7_wildcard_probe.csv")
 # The companion study's funnel, for the contrast. Read rather than retyped.
 P4_FUNNEL = os.path.join(PROC, "infra", "funnel.csv")
 # Second-tier probe: the platforms the PSL cannot see (reviewer #1, M9). See platform_probe().
 PLATFORM_CSV = os.path.join(PROC, "p7", "p7_platform_probe.csv")
+if not os.path.exists(PLATFORM_CSV):
+    PLATFORM_CSV = os.path.join(ROOT, "docs", "verify", "p7_platform_probe.csv")
 PLATFORM_MIN_HOSTS = 5
 
 
@@ -174,7 +178,7 @@ def make_hosting_tex(rows: list[dict], total_hosts: int, tier1_platform_hosts: i
         + (f". \\texttt{{{top['registrable_domain']}}} alone carries "
            f"{100 * int(top['phishing_hosts']) / total_hosts:.1f}\\% of every phishing host in "
            f"the corpus, against {tier1_platform_hosts} hosts on all the platform suffixes the "
-           f"first tier could see, and each of them is counted as a \\texttt{{.com}} "
+           f"suffix screen could see, and each of them is counted as a \\texttt{{.com}} "
            f"registration in Table~\\ref{{tab:infra}}" if top else "")
         + f". The other {len(own)} do not answer and are subdomain fans under a single "
         f"registration ({own_names}{', among others' if len(own) > 4 else ''}). Neither group is "
@@ -288,8 +292,8 @@ def make_figure(s: dict, p4: tuple[int, int] | None) -> str:
     ax.set_yticks(list(ypos), [f".{r['suffix']}" for r in hits], fontsize=9.5)
     ax.set_xlim(0, max(int(r["indicators"]) for r in hits) * 1.28)
     ax.set_xlabel("phishing indicators in this corpus")
-    ax.set_title(f"{s['answering']} of {s['suffixes']} suffixes answer for names\n"
-                 "that were never registered", fontsize=10)
+    ax.set_title(f"{s['answering']} of {s['suffixes']} suffixes answer for an\n"
+                 "unlikely, unregistered-looking label", fontsize=10)
     ax.grid(axis="x", alpha=0.6)
     ax.annotate("registry", (0.97, 0.12), xycoords="axes fraction", ha="right",
                 fontsize=9.5, color=ORANGE)
@@ -300,9 +304,9 @@ def make_figure(s: dict, p4: tuple[int, int] | None) -> str:
     # TEAL and PURPLE, not the left panel's BLUE and ORANGE. Those two already mean
     # "hosting platform" and "registry" four centimetres away, and a reader who has just learned
     # that pairing meets orange again here standing for a collection method.
-    bars = [("curated\n(this corpus)", s["registry_n"], s["denominator"], TEAL)]
+    bars = [("this corpus\n(blocklist feeds)", s["registry_n"], s["denominator"], TEAL)]
     if p4:
-        bars.append(("auto-submitted\n(brand-token feed)", p4[0], p4[1], PURPLE))
+        bars.append(("prospective collection\n(brand-token candidates)", p4[0], p4[1], PURPLE))
     for i, (name, k, n, colour) in enumerate(bars):
         share = 100.0 * k / n if n else 0.0
         ax2.bar(i, max(share, 0.004), width=0.5, color=colour, alpha=0.9, zorder=3)
@@ -321,7 +325,7 @@ def make_figure(s: dict, p4: tuple[int, int] | None) -> str:
     # Shorter than the panel is tall, or it overflows the pinned box and runs into the title
     # (which is what pinning the aspect first did). "candidates" is carried by the bar
     # annotations, which read "9 of 36,706".
-    ax2.set_ylabel("never-registered (%, log)")
+    ax2.set_ylabel("answering the label (%, log)")
     # Descriptive, not causal: the prose beside this panel says the ratio does not isolate
     # feed-generation practice as the cause, so the title cannot assert what the text declines.
     ax2.set_title("the same screen on two collections", fontsize=10)

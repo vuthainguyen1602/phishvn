@@ -106,9 +106,14 @@ def fig_eval_design():
                     alpha=0.7 if fam == "CatBoost" else 0.5, zorder=3)
     if "RandomForest" in xdata:
         # Right of its dot (to the left it read as a third design annotation), and in INK not series grey:
-        # text never wears the series colour, and at 7.5 pt the grey was too faint against white
+        # text never wears the series colour, and at 7.5 pt the grey was too faint against white.
+        # Both dots are named: the two cross-corpus means sit 0.004 apart, and an unlabelled
+        # CatBoost dot read as the dashed line ending on the RandomForest label.
         ax.annotate("RandomForest", (xc, xdata["RandomForest"]), textcoords="offset points",
                     xytext=(7, -3), ha="left", va="center", fontsize=7.5, color=INK)
+    if "CatBoost" in xdata:
+        ax.annotate("CatBoost", (xc, xdata["CatBoost"]), textcoords="offset points",
+                    xytext=(7, 6), ha="left", va="center", fontsize=7.5, color=INK)
 
     # Between-family spread annotations, below the lowest dot of each cluster and given an opaque
     # box: at the third cluster the two dashed cross-dataset lines pass exactly through the text.
@@ -1490,7 +1495,7 @@ def gen_charcnn():
         "gain_and_spread": {"temporal_strict": [g_t, s_t], "random_same_rows": [g_r, s_r]}}
 
     out = [
-        f"Against the strongest tabular family ({best}) on identical rows and seeds, the "
+        f"Against the tabular family with the best F1 ({best}) on identical rows and seeds, the "
         f"character-CNN gains ${d_f1:+.3f}$ F1 and ${d_pr:+.3f}$ PR-AUC under the "
         f"phishing-temporal "
         f"protocol, and reduces FPR at $90\\%$ recall by ${abs(d_fpr):.3f}$; all "

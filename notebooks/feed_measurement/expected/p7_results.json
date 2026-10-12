@@ -1,4 +1,19 @@
 {
+  "agency_tokens": {
+    "benign_hosts": {
+      "bocongan": 10,
+      "canhsat": 3,
+      "congan": 89,
+      "toaan": 86
+    },
+    "benign_hosts_total": 16328,
+    "phishing_hosts": {
+      "bocongan": 0,
+      "canhsat": 0,
+      "congan": 0,
+      "toaan": 0
+    }
+  },
   "bank_minus_ecom_host": [
     0.846,
     0.463,
@@ -27,6 +42,8 @@
       "jaccard": 0.02527646129541864,
       "overlap_hosts": 496,
       "share_of_smaller": 0.19224806201550387,
+      "shared_tinnhiemmang_outside_window": 0,
+      "shared_without_chongluadao_date": 471,
       "start": "source-specific",
       "tinnhiemmang_hosts": 2580,
       "union_hosts": 19623
@@ -40,6 +57,8 @@
       "jaccard": 0.001325837929571489,
       "overlap_hosts": 25,
       "share_of_smaller": 0.013638843426077468,
+      "shared_tinnhiemmang_outside_window": 0,
+      "shared_without_chongluadao_date": 471,
       "start": "2021-05-07",
       "tinnhiemmang_hosts": 1833,
       "union_hosts": 18856

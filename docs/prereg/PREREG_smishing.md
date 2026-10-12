@@ -321,3 +321,21 @@ Written after a second audit of the revised manuscript. Registered quantities ar
   (7 groups, 0.987–1.000); the sixth entry's 8 groups included one with a single ham text.
 - **Pseudo-batches** match each real batch's class counts approximately (greedy assignment of whole
   components), and the paper now says so.
+
+### Deviation record, 2026-10-12, eighth entry (appended; nothing above is edited)
+
+- **What the manuscript prints for the batch checks, stated exactly.** The second and third
+  entries of 2026-10-08 describe sentences the manuscript no longer carries: recall at the 0.5
+  threshold 0.14 and ROC-AUC 0.974 for the two-batch hold-out, and the split 0.248 / 0.612 of the
+  leave-one-batch-out recall between the two positive batches and the other positives. The
+  manuscript as built prints, for leave-one-batch-out, pooled recall at 2% ham FPR 0.385
+  against 0.924 (component-grouped five-fold) and 0.848--0.876 (five pseudo-batch draws),
+  0.495 with balanced class weights (pseudo 0.883--0.911), 0.748 with
+  per-model thresholds (pseudo 0.918--0.930), ROC-AUC 0.952 against 0.991; for the
+  two-batch hold-out, recall at 2% ham FPR only. The 0.248 / 0.612 split is computed
+  (`gen_sms_audit.tex` macros) but not printed. The three August checks leave out the
+  15 undated rows, and the forward check also removes 35 August rows whose
+  exact text occurs before August; the manuscript now says so beside Table 1.
+- **Line 9 of this file** compares this registration with another registration of the same
+  repository. The comparison carries no content for this study; the sentence stands because the
+  file is append-only.
