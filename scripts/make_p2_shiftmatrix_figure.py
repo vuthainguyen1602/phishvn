@@ -29,7 +29,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 SEC = os.path.join(ROOT, "papers", "P2_url_benchmark", "sections")
 FIG = os.path.join(ROOT, "papers", "P2_url_benchmark", "figures")
@@ -183,6 +183,8 @@ def main() -> int:
         return 0
     rows = load()
     s = summarise(rows)
+    write_results("data/processed/p2/results/p2_shiftmatrix.json",
+                  {k: s[k] for k in ("n", "rho", "p", "adj_mean", "adj_lo", "adj_hi", "bnd_mean")})
     figure(rows, s)
     make_tex(rows, s)
     print(f"[i] {s['n']} pairs; rho={s['rho']:+.3f} (p={s['p']:.3f}); "

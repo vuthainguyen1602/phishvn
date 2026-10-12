@@ -194,6 +194,17 @@ def main():
     # skip-logic that reads .qr_scan_seen untouched.
     examined_ledger = os.path.join(os.path.dirname(args.out) or ".", ".qr_scan_examined.csv")
     newly_examined_pages = []
+    # Scans URLScan answered 404 for: no screenshot exists, so there is nothing to decode. They are
+    # NOT examined and must stay out of .qr_scan_seen, which backfill_qr_examined.py turns into the
+    # prevalence denominator. But a 404 is final, and without a record of it every hourly pass
+    # re-requested the same handful of screenshots (six pages, 114 times each by 11/10/2026).
+    # Their own file keeps them skipped without counting them.
+    noshot_file = os.path.join(os.path.dirname(args.out) or ".", ".qr_scan_noshot")
+    noshot = set()
+    if os.path.isfile(noshot_file):
+        with open(noshot_file, encoding="utf-8") as f:
+            noshot = {ln.strip() for ln in f if ln.strip()}
+    new_noshot = []
 
     found_qrs = []
     skipped = 0
@@ -206,7 +217,7 @@ def main():
         
         if not uuid:
             continue
-        if uuid in seen:
+        if uuid in seen or uuid in noshot:
             skipped += 1
             continue
             
@@ -235,7 +246,9 @@ def main():
                     if img_resp.status_code == 429:
                         print(f"    [!] 429 rate-limited on {uuid} — backing off 30s")
                         time.sleep(30)
-                    elif img_resp.status_code != 404:
+                    elif img_resp.status_code == 404:
+                        new_noshot.append(uuid)
+                    else:
                         print(f"    [!] HTTP {img_resp.status_code} fetching screenshot for {uuid}")
                     continue
             except Exception as e:
@@ -317,6 +330,13 @@ def main():
         try:
             with open(seen_file, "a", encoding="utf-8") as f:
                 f.write("\n".join(newly_examined) + "\n")
+        except OSError:
+            pass
+    if new_noshot:
+        try:
+            with open(noshot_file, "a", encoding="utf-8") as f:
+                f.write("\n".join(new_noshot) + "\n")
+            print(f"[*] {len(new_noshot)} scan(s) have no screenshot (404); recorded, will be skipped")
         except OSError:
             pass
     if newly_examined_pages:

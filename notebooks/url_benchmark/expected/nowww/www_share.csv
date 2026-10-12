@@ -1,0 +1,11 @@
+corpus,class,rows,www_share
+PhishVN,phishing,19909,0.010196393590838314
+PhishVN,benign,16352,0.005320450097847358
+PhiUSIIL,phishing,10000,0.4163
+PhiUSIIL,benign,10000,1.0
+ISCXURL2016,phishing,7947,0.4284635711589279
+ISCXURL2016,benign,7947,0.003020007550018875
+PhishStorm,phishing,10000,0.3454
+PhishStorm,benign,10000,0.6745
+PhishVN (released),phishing,36706,0.4631395412194192
+PhishVN (released),benign,16410,0.00554539914686167

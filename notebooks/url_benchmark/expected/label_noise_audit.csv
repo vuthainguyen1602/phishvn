@@ -1,0 +1,21 @@
+group,seed,n,flag_rate
+gold,0,1688,0.0095
+silver,0,899,0.0133
+bronze,0,34119,0.0081
+benign (all),0,16410,0.028
+gold,1,1688,0.0107
+silver,1,899,0.0145
+bronze,1,34119,0.0076
+benign (all),1,16410,0.0278
+gold,2,1688,0.0107
+silver,2,899,0.0167
+bronze,2,34119,0.0084
+benign (all),2,16410,0.0251
+gold,3,1688,0.0077
+silver,3,899,0.0156
+bronze,3,34119,0.0072
+benign (all),3,16410,0.0274
+gold,4,1688,0.0083
+silver,4,899,0.0167
+bronze,4,34119,0.0076
+benign (all),4,16410,0.0268

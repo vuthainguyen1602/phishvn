@@ -1,0 +1,31 @@
+model,metric,quantity,point,ci_lo,ci_hi,boot
+CatBoost,F1,diagonal,0.8043,0.8019,0.8068,500
+CatBoost,F1,off-diagonal,0.6281,0.6272,0.6289,500
+CatBoost,F1,gap,0.1762,0.1736,0.1788,500
+CatBoost,F1,cell PhishVN->PhiUSIIL,0.6392,0.6362,0.642,500
+CatBoost,F1,cell PhishVN->ISCXURL2016,0.7021,0.6989,0.7051,500
+CatBoost,F1,cell PhishVN->PhishStorm,0.57,0.567,0.5734,500
+CatBoost,F1,cell PhiUSIIL->PhishVN,0.6976,0.696,0.6992,500
+CatBoost,F1,cell PhiUSIIL->ISCXURL2016,0.4576,0.4538,0.4615,500
+CatBoost,F1,cell PhiUSIIL->PhishStorm,0.6807,0.6771,0.6839,500
+CatBoost,F1,cell ISCXURL2016->PhishVN,0.7397,0.7381,0.7411,500
+CatBoost,F1,cell ISCXURL2016->PhiUSIIL,0.639,0.6364,0.6418,500
+CatBoost,F1,cell ISCXURL2016->PhishStorm,0.5755,0.5724,0.5786,500
+CatBoost,F1,cell PhishStorm->PhishVN,0.6932,0.6916,0.6948,500
+CatBoost,F1,cell PhishStorm->PhiUSIIL,0.627,0.6234,0.6309,500
+CatBoost,F1,cell PhishStorm->ISCXURL2016,0.5156,0.5116,0.5193,500
+RandomForest,ROC-AUC,diagonal,0.8744,0.8723,0.8763,500
+RandomForest,ROC-AUC,off-diagonal,0.4701,0.4692,0.4709,500
+RandomForest,ROC-AUC,gap,0.4043,0.4021,0.4064,500
+RandomForest,ROC-AUC,cell PhishVN->PhiUSIIL,0.3153,0.3123,0.3185,500
+RandomForest,ROC-AUC,cell PhishVN->ISCXURL2016,0.8102,0.8071,0.8133,500
+RandomForest,ROC-AUC,cell PhishVN->PhishStorm,0.3206,0.3172,0.3239,500
+RandomForest,ROC-AUC,cell PhiUSIIL->PhishVN,0.399,0.3968,0.4011,500
+RandomForest,ROC-AUC,cell PhiUSIIL->ISCXURL2016,0.2003,0.1975,0.2031,500
+RandomForest,ROC-AUC,cell PhiUSIIL->PhishStorm,0.7286,0.7253,0.7317,500
+RandomForest,ROC-AUC,cell ISCXURL2016->PhishVN,0.5697,0.5674,0.572,500
+RandomForest,ROC-AUC,cell ISCXURL2016->PhiUSIIL,0.4129,0.4109,0.4149,500
+RandomForest,ROC-AUC,cell ISCXURL2016->PhishStorm,0.38,0.3772,0.383,500
+RandomForest,ROC-AUC,cell PhishStorm->PhishVN,0.4613,0.4591,0.4636,500
+RandomForest,ROC-AUC,cell PhishStorm->PhiUSIIL,0.6862,0.683,0.6897,500
+RandomForest,ROC-AUC,cell PhishStorm->ISCXURL2016,0.3572,0.3534,0.3607,500

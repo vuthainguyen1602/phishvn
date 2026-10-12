@@ -1,0 +1,11 @@
+protocol,seed,test_twin_rate,test_regdom_shared_rate,phish_test_twin_rate,phish_test_regdom_shared_rate
+temporal_strict,0,0.7677,0.1825,0.7699,0.0
+random_same_rows,0,0.7908,0.2237,0.8197,0.0746
+temporal_strict,1,0.7727,0.1789,0.7699,0.0
+random_same_rows,1,0.7946,0.2184,0.82,0.0718
+temporal_strict,2,0.7718,0.1813,0.7699,0.0
+random_same_rows,2,0.7921,0.2195,0.8186,0.0704
+temporal_strict,3,0.7711,0.1812,0.7699,0.0
+random_same_rows,3,0.7942,0.2178,0.8218,0.0686
+temporal_strict,4,0.7672,0.1846,0.7699,0.0
+random_same_rows,4,0.7946,0.2233,0.8253,0.0722

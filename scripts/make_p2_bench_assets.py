@@ -33,7 +33,12 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated
+from genfile import write_generated, write_results
+
+# The numbers the generators COMPUTE (tests, bootstraps, recounts from the corpus), as opposed to
+# merely format from an experiment CSV; main() writes them to results/p2_generated.json so the
+# walkthrough notebook can check its recomputation against them instead of against the LaTeX.
+RESULTS: dict = {}
 
 SEC = "papers/P2_url_benchmark/sections"
 FIG = "papers/P2_url_benchmark/figures"
@@ -501,6 +506,9 @@ def tab_confusion():
                      & (strict.protocol == proto)]["FPR@R0.90"].mean()
         fp = round(fpr * n_be)
         cells[proto] = (fp, n_be - fp)
+    RESULTS["confusion"] = {"dated_test_phish": n_ph, "dated_test_benign": n_be,
+                            "random_arm_phish_test": n_ph_rand, "tp": tp, "fn": fn,
+                            "fp_tn": cells}
     lines = [
         "\\begin{table}[t]\\centering",
         "\\caption{CatBoost confusion counts at recall $0.90$, derived from"
@@ -542,6 +550,7 @@ def gen_forecastability():
             s_ = pd.Series(slopes)
             rho, p = spearmanr(-s_[gap.index], gap)
             rhos.append((origin, metric, rho, p))
+    RESULTS["forecast_decay_spearman"] = [[o, m, r, p] for o, m, r, p in rhos]
     rho_txt = "; ".join(f"origin {o:.2f}/{m}: $\\rho = {r:+.2f}$ ($p = {p:.2f}$)"
                         for o, m, r, p in rhos)
     # By MAGNITUDE. max() over signed rhos returned +0.32 and printed "never exceeds $\\rho=+0.32$"
@@ -589,6 +598,10 @@ def gen_forecastability():
     a_all, a_ph = cb.auc_all.mean(), cb.auc_phish.mean()
     usable = max(a_all, 1 - a_all)
     below = int((cb.auc_all < 0.5).sum())
+    RESULTS["forecast_other"] = {
+        "catboost_win_swing": swing, "adjacent_auc_mean": adj.auc.mean(),
+        "auc_W4_TEST": bd.auc, "auc_W1_W4": w1w4.auc, "auc_W1_TEST": w1te.auc,
+        "novelty_auc_all": a_all, "novelty_auc_phish": a_ph, "novelty_seeds_below_half": below}
     novelty = (f"Train-only lexical novelty does not give a usable gate on where CatBoost fails "
                f"forward in time, and the reason is not that the probe is silent. "
                f"AUC(novelty; error) $= {a_all:.3f}$ over the full test window "
@@ -625,6 +638,8 @@ def gen_fcts():
         raise SystemExit("gen_fcts: forward chaining beat its shuffled control — the "
                          "'no signal inside the window' reading no longer holds, rewrite it")
     ratio = (t.groupby("variant").coef_CB.mean() / t.groupby("variant").coef_LR.mean())
+    RESULTS["fcts"] = {"forward_minus_shuffled": vs_shuf, "forward_minus_random": vs_rand,
+                       "coef_ratio_cb_lr": ratio.to_dict()}
     return ("\\newcommand{\\ForecastFCTSVerdict}{"
             # No em dashes: the 2026-09 pass stripped them from every paper's prose and missed
             # this file, because a generated one is rewritten by the script rather than edited.
@@ -726,6 +741,9 @@ def gen_stacking_verdict():
     t = paired(cb, st, "CatBoost", "Stack[CB+LR]", "temporal_strict")
     r = paired(cb, st, "CatBoost", "Stack[CB+LR]", "random_same_rows")
     (tq, rq), _ = bh_adjust([t["p"], r["p"]])
+    # fit times (the cost sentence) are wall-clock and are deliberately left out
+    RESULTS["stacking"] = {"k5_vs_catboost": {f: {**res[f], "q": q[f]} for f in fams},
+                           "k20_temporal": {**t, "q": tq}, "k20_random": {**r, "q": rq}}
     cross = (f"At the five seeds of Table~\\ref{{tab:stacking}} the two LogReg-anchored stacks "
              f"are ahead of CatBoost but do not clear the family-wise bar: Stack[CB+LR] "
              f"${res['Stack[CB+LR]']['mean']:+.4f}$ PR-AUC "
@@ -870,6 +888,8 @@ def gen_decomp_macros():
         rows_dated = int((~is_ph).sum() + (is_ph & df["date"].notna()).sum())
     except Exception as e:
         print(f"[i] row counts unavailable ({type(e).__name__}) — figure will omit them.")
+
+    RESULTS["decomposition"] = {"stage_f1": stage, "rows_full": rows_full, "rows_dated": rows_dated}
 
     def num(v):
         return f"{v:.3f}"  # leading zero kept: the prose writes 0.053, the figure must match
@@ -1024,6 +1044,12 @@ def gen_dedup_sensitivity():
     sh = sh[sh.weighting == "none"].sort_values("share", ascending=False)
     top = ", ".join("\\texttt{" + r.feature.replace("_", "\\_") + "}" for r in sh.head(3).itertuples())
     lk0, lk1 = pd.read_csv(P + "p2_dup_leakage.csv").iloc[0], pd.read_csv(DEDUP + "p2_dup_leakage.csv").iloc[0]
+    RESULTS["dedup_sensitivity"] = {
+        "rows_released": n_all, "rows_dedup": n_dd, "dated_dropped": dated_dropped,
+        "undated_phish_left": undated_ph_left, "family_move_max": float(mv1.max()),
+        "offdiag_roc_released": o0, "offdiag_roc_dedup": o1, "below_chance_released": b0,
+        "below_chance_dedup": b1, "flipped_cells": [list(t) for t in flips],
+        "rf_f1_gap": [f0, f1], "catboost_f1_gap": [c0, c1]}
     num = lambda x: f"{int(x):,}".replace(",", "{,}")
     return (
         f"\\textbf{{Duplicated hosts.}} The released corpus records {num(n_all - n_dd)} URLs twice, "
@@ -1078,6 +1104,8 @@ def gen_strict_verdict():
 
     f1 = pair("F1")
     ci = stats.t.ppf(0.975, f1["k"] - 1) * f1["se"] if f1["se"] else 0.0
+    RESULTS["strict_cb_minus_lr"] = {"F1": f1, "F1_ci95_half": ci,
+                                     **{m: pair(m) for m in ("PR-AUC", "ROC-AUC", "FPR@R0.90")}}
     n = f1["k"]
     # FPR is a loss: a negative difference is CatBoost winning, so the seed count is (k - wins).
     # Backwards, this prints "0 of 5 seeds" for a unanimous effect
@@ -1155,6 +1183,7 @@ def tab_maxf1():
     threshold placement. The step sizes do not change; what changes is the mechanism the paper is
     entitled to assert, and which family is ahead at the end of it."""
     stages = _maxf1_stages()
+    RESULTS["max_f1"] = {label: fams for label, fams in stages}
     lines = [
         # Single-column: at table* width these two and the wide strict table formed a float page
         # with a third of it blank, and they are narrow enough to sit beside the prose that
@@ -1286,6 +1315,10 @@ def tab_trivial_floor():
         "Evaluation design & test prior $p$ & all-positive F1 & best family (headroom)"
         " \\\\", "\\midrule",
     ]
+    RESULTS["trivial_floor"] = {"positive_rate": rates, "all_positive_f1": floor,
+                                "offdiag_f1_mean": off_mean, "offdiag_floor_mean": floor_mean,
+                                "dated_test_phish": n_ph, "dated_test_benign": n_be,
+                                "designs": [[l_, p_, b_] for l_, p_, b_ in designs]}
     for label, p, best in designs:
         fl = 2 * p / (1 + p)
         lines.append(f"{label} & {p:.3f} & {fl:.3f} & {best:.3f} ({best - fl:+.3f}) \\\\")
@@ -1449,6 +1482,12 @@ def gen_charcnn():
         return (cnn[cnn.protocol == proto]["F1"].mean() - tab.max(), tab.max() - tab.min())
     g_t, s_t = spread_gain("temporal_strict")
     g_r, s_r = spread_gain("random_same_rows")
+    RESULTS["charcnn"] = {
+        "paired": [[f, m, pr_, d, p_, q_] for (f, m, pr_, d), p_, q_ in zip(res, ps, qs)],
+        "n_significant": int(n_sig), "best_tabular": best,
+        "vs_best_temporal": {"F1": d_f1, "PR-AUC": d_pr, "FPR@R0.90": d_fpr},
+        "protocol_drop_cnn": dp_cnn, "protocol_drop_tabular": dp_tab,
+        "gain_and_spread": {"temporal_strict": [g_t, s_t], "random_same_rows": [g_r, s_r]}}
 
     out = [
         f"Against the strongest tabular family ({best}) on identical rows and seeds, the "
@@ -1486,6 +1525,9 @@ def gen_charcnn():
         cb_pr = swap("CatBoost", "tranco", "PR-AUC")
         cnn_ti = swap("CharCNN", "tinnhiem") - canon("CharCNN")
         cb_ti = swap("CatBoost", "tinnhiem") - canon("CatBoost")
+        RESULTS["source_probe"] = {"cnn_tranco": cnn_tr, "catboost_tranco": cb_tr,
+                                   "logreg_tranco": lr_tr, "catboost_tranco_prauc": cb_pr,
+                                   "cnn_tinnhiem": cnn_ti, "catboost_tinnhiem": cb_ti}
         out.append(
             f"Because a model reading the raw string could key on the benign feed rather than on "
             f"phishing, we swapped the benign source: trained against one benign family and tested "
@@ -1578,6 +1620,11 @@ def gen_guard_control():
     d_pg = {f: step(pg, f, "ROC-AUC") for f in ORDER}
     boost = [f for f in ORDER if f not in ("LogReg",)]
     share = 1 - np.mean([d_roc[f] for f in boost]) / np.mean([d_roc_u[f] for f in boost])
+    RESULTS["guard_control"] = {
+        "delta_old": d_old, "delta_new": d_new, "regdom_shared_random": shared,
+        "regdom_shared_temporal": shared_t, "guard_shift": shift, "catboost_prauc_old": pr_old,
+        "catboost_prauc_new": pr_new, "spearman_old_new": rho, "pm_f1": d_pm, "pm_roc": d_roc,
+        "pm_fpr": d_fpr, "unguarded_roc": d_roc_u, "pm_bgroup_roc": d_pg, "roc_share_removed": share}
     rng_ = lambda d, k=3: f"$[{min(d.values()):+.{k}f}, {max(d.values()):+.{k}f}]$"
     sub = lambda d: {f: d[f] for f in ORDER if f != "LogReg"}
     return (
@@ -1854,6 +1901,8 @@ def gen_coral_degeneracy():
                 sub += r.loc[i, j] < 0.5
     n_off = len(f.index) * (len(f.columns) - 1)
     worst = min(deg, key=lambda t: t[3]) if deg else None
+    RESULTS["coral_degeneracy"] = {"degenerate_cells": [list(t) for t in deg],
+                                   "below_chance": int(sub), "offdiag_cells": n_off}
     return (
         f"${len(deg)}$ of the ${n_off}$ adapted transfer cells sit within $0.005$ of the "
         f"all-positive classifier's F1 on their target "
@@ -2134,6 +2183,12 @@ def tab_official_split_priors():
         ("Gold$+$silver", df[df["tier"].astype(str).isin(["gold", "silver"])]),
         ("Gold only", df[df["tier"].astype(str).eq("gold")]),
     ]
+
+    RESULTS["official_split_priors"] = {
+        name.replace("$+$", "+"): {sp: [int(d[d["split"].astype(str).eq(sp)]["is_phish"].sum()),
+                                        int(d["split"].astype(str).eq(sp).sum())]
+                                   for sp in ("train", "val", "test")}
+        for name, d in populations}
 
     def cell(d, split):
         s = d[d["split"].astype(str).eq(split)]
@@ -2612,6 +2667,10 @@ def gen_dates():
     te_2024 = int((te.date >= pd.Timestamp("2024-01-01")).sum())
     ncsc = lambda d: 100 * float((d.source == "tinnhiemmang").mean())
     n = lambda x: f"{x:,}".replace(",", "{,}")
+    RESULTS["dates"] = {"dated_phish": n_ph, "chongluadao": n_cld, "train": len(tr),
+                        "test": len(te), "test_from_2024": te_2024,
+                        "test_first_day": str(te.date.min().date()),
+                        "ncsc_share_train_pct": ncsc(tr), "ncsc_share_test_pct": ncsc(te)}
     return (f"Of the ${n(n_ph)}$ dated phishing rows, ${n(n_cld)}$ ({100 * n_cld / n_ph:.0f}\\%) are "
             "community-feed entries whose first-seen date was reconstructed when the corpus was "
             "built, from the object identifiers of Wayback-archived API records and the mirror's "
@@ -2750,6 +2809,8 @@ def gen_guard_macros():
         drop.append(g.mean())
         p_t.append(len(te) / (len(te) + nb))
         p_g.append(int((~g).sum()) / (int((~g).sum()) + nb))
+    RESULTS["guard_macros"] = {"benign_shared": shared, "guard_drop": drop,
+                               "prior_temporal": p_t, "prior_guarded": p_g}
     m = lambda k, v: f"\\newcommand{{\\{k}}}{{{v}}}"
     return "\n".join([m("BenignSharedPct", f"{100 * np.mean(shared):.0f}"),
                       m("GuardDropPct", f"{100 * np.mean(drop):.1f}"),
@@ -2863,6 +2924,7 @@ def main(shap_too: bool = False):
     # is opt-in: audit_stale_assets.py calls main() on every commit and must stay cheap.
     if shap_too:
         tab_shap()
+    write_results("data/processed/p2/results/p2_generated.json", RESULTS)
 
 
 if __name__ == "__main__":
