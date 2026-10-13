@@ -570,8 +570,10 @@ def v2_assets() -> None:
         for t in ("T1", "T2"):
             r = v["registered"][arch][t]
             m += "\\newcommand{\\QrVTwo%s%s}{%+.1f}\n" % (tag, TNAME[t], r["mean_pp"])
-            m += "\\newcommand{\\QrVTwo%s%sVerdict}{%s}\n" % (tag, TNAME[t],
-                                                                r["verdict"].upper())
+            # \mbox: a verdict word is what the claims suite looks for beside the number, and
+            # pdflatex once hyphenated NEGATIVE across a line, which pdftotext then read as two words
+            m += "\\newcommand{\\QrVTwo%s%sVerdict}{\\mbox{%s}}\n" % (tag, TNAME[t],
+                                                                       r["verdict"].upper())
         g = v["guard"][arch]["opencv"]
         m += "\\newcommand{\\QrVTwo%sBreak}{%.1f}\n" % (tag, g["destroyed_pct_of_correct"])
         m += "\\newcommand{\\QrVTwo%sRescued}{%s}\n" % (tag, f"{g['rescued']:,}")
