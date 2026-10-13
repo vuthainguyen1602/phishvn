@@ -257,7 +257,12 @@ def run_budget(df, feats, windows, budgets, period=3, psi_tau=0.10, f1_drop=0.1,
         for w in range(1, len(chunks)):
             cur = chunks[w]
             for k in f1s:
-                p = models[k].predict_proba(cur[feats])[:, 1]
+                # One thread: a parallel forest sums its trees' probabilities in whatever order the
+                # threads finish, so p moved in the last bit between runs, and with hundreds of rows
+                # tied on |p - 0.5| that was enough to change which rows active learning bought (the
+                # seed-2, B=1600 cell took three values over three runs). Summed in tree order, p is
+                # the same every run.
+                p = models[k].set_params(n_jobs=1).predict_proba(cur[feats])[:, 1]
                 f1 = f1_score(cur.y, (p >= 0.5).astype(int), zero_division=0)
                 f1s[k].append(f1)
                 if k == "static":

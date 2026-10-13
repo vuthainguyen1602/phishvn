@@ -126,7 +126,11 @@ def run(df, feats, windows, period, psi_tau, f1_drop, include_static_arch=True, 
         acc = pd.concat([acc, cur])
         psi_trace.append(round(mean_psi(ref["drift"], cur), 3))
         for strat in strategies:
+            # scored on one thread: a parallel forest sums tree probabilities in thread order, which
+            # moved ROC-AUC in the eighth decimal between runs (n_jobs only matters to the forest)
             m = models[strat]
+            if isinstance(m, RandomForestClassifier):
+                m.set_params(n_jobs=1)
             pred = m.predict(cur[feats])
             f1 = f1_score(cur.y, pred, zero_division=0)
             strategies[strat].append(round(f1, 3))

@@ -22,10 +22,12 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 CSV = os.path.join(ROOT, "data", "processed", "p5", "dedup", "p5_construction_sweep.csv")
 SEC = os.path.join(ROOT, "papers", "P5_temporal_drift", "sections")
+# The corpus counts, the URL-twin share, the salt ranges and the PSI reading, for the notebook
+RESULTS = os.path.join(ROOT, "data", "processed", "p5", "results", "p5_sweep.json")
 LABEL = {"released": "Released rows", "nowww": "\\texttt{www.} removed",
          "dedup": "One row per URL"}
 
@@ -55,6 +57,8 @@ def construction():
         f"URL that also appears as a dated row; keeping one row per URL removes ${num(removed)}$ rows "
         f"in all.")
     write_generated(os.path.join(SEC, "gen_construction.tex"), body)
+    return {"rows": len(u), "dated": int(dated.sum()), "undated_phishing": int(und.sum()),
+            "www_copies": int(copy.sum()), "removed_by_dedup": int(removed)}
 
 
 ORDER = ("released", "nowww", "dedup", "dated")
@@ -87,7 +91,7 @@ def gaps(x, col):
 
 
 def main():
-    construction()
+    res = {"construction": construction()}
     d = pd.read_csv(CSV)
     g = {c: x.set_index("policy") for c, x in d.groupby("construction")}
     rows = []
@@ -166,6 +170,7 @@ def main():
     auc = {c: gaps(g[c], "auc_autc") for c in ORDER}
     nov = {c: gaps(g[c], "novel_autc") for c in ORDER}
     seen = {c: 1 - g[c]["novel_pos_share"].iloc[0] for c in ORDER}
+    twin = url_twin_share()
     txt = (
         f"Table~\\ref{{tab:gapways}} tests that range three ways. F1 at a fixed threshold moves with "
         f"the class prior, and on ROC-AUC the one-row-per-URL gap falls from ${gaps(u, 'autc'):.3f}$ to "
@@ -175,7 +180,7 @@ def main():
         f"lexical features are coarse: {100 * seen['released']:.0f}\\% of the later windows' phishing "
         f"rows in the released stream, and {100 * seen['nowww']:.0f}\\% once \\texttt{{www.}} is "
         f"removed, repeat a feature vector that window 1 already holds, against "
-        f"{100 * url_twin_share():.1f}\\% that repeat one of its URLs. Restricted to the rows whose vector window 1 never held, the gap is "
+        f"{100 * twin:.1f}\\% that repeat one of its URLs. Restricted to the rows whose vector window 1 never held, the gap is "
         f"${nov['released']:.3f}$ on the released stream and ${nov['nowww']:.3f}$ with \\texttt{{www.}} "
         f"removed, so the small residual of the stripped stream is not an artefact of rows the static "
         f"model has already seen.")
@@ -197,7 +202,10 @@ def main():
                 "on F1 the constructions separate by more than the placement moves any of them, on ROC-AUC "
                 "they do not." if f1_apart else
                 "the placement alone moves the gap by as much as the choice of construction does.")
+    res["url_twin_share"] = twin
     write_generated(os.path.join(SEC, "gen_gapways.tex"), txt)
+    res["salt_ranges"] = {c: dict(zip(("f1_min", "f1_max", "salts", "auc_min", "auc_max"), v))
+                          for c, v in srange.items()}
 
     # PSI against the drift trigger's reference window on the released stream, beside the
     # static model's recall on dated positives: the monitor reads the inputs, and the inputs of
@@ -224,6 +232,11 @@ def main():
         + " The two URL formats differ in a handful of counts (subdomains, dots, length), and an "
           "average over twenty-one binned features dilutes them.")
     write_generated(os.path.join(SEC, "gen_psi_blind.tex"), psi_body)
+    res["psi_blind"] = {"first_window": w0, "last_window": w1, "psi_min": float(quiet.min()),
+                        "psi_max": float(quiet.max()), "first_fire": first_fire,
+                        "static_recall_dated_max": float(win.loc[w0:w1, "static_recall_dated"].max())}
+    os.makedirs(os.path.dirname(RESULTS), exist_ok=True)
+    write_results(RESULTS, res)
 
 
 if __name__ == "__main__":

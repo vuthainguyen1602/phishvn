@@ -27,7 +27,7 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated
+from genfile import write_generated, write_results
 from retrain_drift import load, run
 from drift_detectors import run_detection, score_detector, run_budget
 
@@ -35,6 +35,8 @@ P5 = os.path.join(ROOT, "papers", "P5_temporal_drift")
 FIG = os.path.join(P5, "figures")
 SEC = os.path.join(P5, "sections")
 DRIFT_CSV = os.path.join(ROOT, "data", "interim", "drift_compphish.csv")
+# The numbers behind the three tables, for the walkthrough notebook to compare against
+RESULTS = os.path.join(ROOT, "data", "processed", "p5", "results", "p5_assets.json")
 WINDOWS, PERIOD, PSI_TAU, F1_DROP, ADWIN_DELTA = 20, 3, 0.2, 0.1, 0.002
 BUDGETS = [50, 200, 800]
 
@@ -240,7 +242,7 @@ def make_budget_table(bud):
 parentheses) per strategy and per-retrain budget $B$.}}
 \\label{{tab:budget}}
 \\small
-\\resizebox{{\\textwidth}}{{!}}{{%
+\\resizebox{{\\linewidth}}{{!}}{{%
 \\begin{{tabular}}{{lcccc}}
 \\toprule
 \\textbf{{Budget $B$ (labels/retrain)}} & {head} \\\\
@@ -280,6 +282,16 @@ def main():
     # (3) labelling-budget frontier
     bud = run_budget(df, feats, WINDOWS, BUDGETS, period=PERIOD, psi_tau=PSI_TAU, f1_drop=F1_DROP)
     make_budget_table(bud)
+    os.makedirs(os.path.dirname(RESULTS), exist_ok=True)
+    write_results(RESULTS, {
+        "overtime": {"rows": len(df), "dated_pct": 100.0 * _d.notna().sum() / len(_u),
+                     "window_f1": strat, "retrains": counts, "psi_trace": psi_trace},
+        "detection": {"truth": truth, "fires": fires,
+                      "scores": {k: dict(zip(("detection_rate", "false_alarm_rate", "mean_lag",
+                                              "precision"), score_detector(truth, v)))
+                                 for k, v in fires.items()}},
+        "budget": {str(b): {k: {"autc": a, "labels": n} for k, (a, n) in r.items()}
+                   for b, r in bud.items()}})
     print("Done. Recompile the P5 manuscript to pick up the regenerated assets.")
 
 

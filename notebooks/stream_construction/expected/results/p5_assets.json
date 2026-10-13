@@ -1,0 +1,359 @@
+{
+  "budget": {
+    "200": {
+      "active": {
+        "autc": 0.7427363645730661,
+        "labels": 1200
+      },
+      "drift": {
+        "autc": 0.6923735433830965,
+        "labels": 600
+      },
+      "periodic": {
+        "autc": 0.7904266862632979,
+        "labels": 1200
+      },
+      "static": {
+        "autc": 0.6511068081576588,
+        "labels": 0
+      }
+    },
+    "50": {
+      "active": {
+        "autc": 0.6623829126487435,
+        "labels": 300
+      },
+      "drift": {
+        "autc": 0.6722747396664528,
+        "labels": 150
+      },
+      "periodic": {
+        "autc": 0.7459661489403737,
+        "labels": 300
+      },
+      "static": {
+        "autc": 0.6511068081576588,
+        "labels": 0
+      }
+    },
+    "800": {
+      "active": {
+        "autc": 0.8253754770157216,
+        "labels": 4800
+      },
+      "drift": {
+        "autc": 0.7021887617951684,
+        "labels": 2400
+      },
+      "periodic": {
+        "autc": 0.8325671663074322,
+        "labels": 4800
+      },
+      "static": {
+        "autc": 0.6511068081576588,
+        "labels": 0
+      }
+    }
+  },
+  "detection": {
+    "fires": {
+      "ADWIN (error stream)": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "ADWIN + PSI (combined)": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false
+      ],
+      "Fixed-schedule (naive)": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false
+      ],
+      "PSI (feature distribution)": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "SHAP-shift (attribution)": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    "scores": {
+      "ADWIN (error stream)": {
+        "detection_rate": 1.0,
+        "false_alarm_rate": 0.6666666666666666,
+        "mean_lag": 0.2857142857142857,
+        "precision": 0.4666666666666667
+      },
+      "ADWIN + PSI (combined)": {
+        "detection_rate": 1.0,
+        "false_alarm_rate": 0.75,
+        "mean_lag": 0.0,
+        "precision": 0.4375
+      },
+      "Fixed-schedule (naive)": {
+        "detection_rate": 1.0,
+        "false_alarm_rate": 0.16666666666666666,
+        "mean_lag": 1.0,
+        "precision": 0.6666666666666666
+      },
+      "PSI (feature distribution)": {
+        "detection_rate": 0.5714285714285714,
+        "false_alarm_rate": 0.0,
+        "mean_lag": 0.25,
+        "precision": 1.0
+      },
+      "SHAP-shift (attribution)": {
+        "detection_rate": 1.0,
+        "false_alarm_rate": 0.0,
+        "mean_lag": 0.14285714285714285,
+        "precision": 1.0
+      }
+    },
+    "truth": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "overtime": {
+    "dated_pct": 40.78055576474132,
+    "psi_trace": [
+      0.01,
+      0.018,
+      0.021,
+      0.036,
+      0.034,
+      0.04,
+      0.014,
+      0.025,
+      0.068,
+      0.25,
+      0.187,
+      0.161,
+      0.2,
+      0.163,
+      0.197,
+      0.205,
+      0.018,
+      0.025,
+      0.027
+    ],
+    "retrains": {
+      "drift": 6,
+      "periodic": 6,
+      "static": 0,
+      "static_cb": 0,
+      "static_cblr": 0
+    },
+    "rows": 53116,
+    "window_f1": {
+      "drift": [
+        0.896,
+        0.776,
+        0.837,
+        0.707,
+        0.844,
+        0.882,
+        0.844,
+        0.865,
+        0.86,
+        0.879,
+        0.854,
+        0.857,
+        0.873,
+        0.92,
+        0.917,
+        0.92,
+        0.911,
+        0.922,
+        0.92
+      ],
+      "periodic": [
+        0.896,
+        0.698,
+        0.603,
+        0.742,
+        0.796,
+        0.851,
+        0.867,
+        0.878,
+        0.9,
+        0.923,
+        0.858,
+        0.858,
+        0.89,
+        0.919,
+        0.916,
+        0.925,
+        0.908,
+        0.919,
+        0.931
+      ],
+      "static": [
+        0.896,
+        0.698,
+        0.603,
+        0.427,
+        0.604,
+        0.506,
+        0.488,
+        0.577,
+        0.466,
+        0.209,
+        0.287,
+        0.305,
+        0.466,
+        0.966,
+        0.989,
+        0.961,
+        0.931,
+        0.995,
+        0.994
+      ],
+      "static_cb": [
+        0.895,
+        0.696,
+        0.597,
+        0.425,
+        0.603,
+        0.505,
+        0.487,
+        0.578,
+        0.467,
+        0.207,
+        0.287,
+        0.305,
+        0.465,
+        0.96,
+        0.985,
+        0.96,
+        0.928,
+        0.994,
+        0.993
+      ],
+      "static_cblr": [
+        0.896,
+        0.694,
+        0.598,
+        0.425,
+        0.602,
+        0.506,
+        0.487,
+        0.576,
+        0.467,
+        0.207,
+        0.287,
+        0.306,
+        0.466,
+        0.961,
+        0.987,
+        0.958,
+        0.93,
+        0.994,
+        0.994
+      ]
+    }
+  }
+}

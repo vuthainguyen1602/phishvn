@@ -1,0 +1,41 @@
+{
+  "construction": {
+    "dated": 21661,
+    "removed_by_dedup": 16855,
+    "rows": 53116,
+    "undated_phishing": 17071,
+    "www_copies": 16755
+  },
+  "psi_blind": {
+    "first_fire": 11,
+    "first_window": 2,
+    "last_window": 10,
+    "psi_max": 0.068,
+    "psi_min": 0.01,
+    "static_recall_dated_max": 0.2457221081451061
+  },
+  "salt_ranges": {
+    "dedup": {
+      "auc_max": 0.10143058647051095,
+      "auc_min": 0.0741026680233039,
+      "f1_max": 0.3397894736842103,
+      "f1_min": 0.232578947368421,
+      "salts": 10
+    },
+    "nowww": {
+      "auc_max": 0.01711268612278305,
+      "auc_min": 0.00973485288231124,
+      "f1_max": 0.042210526315789365,
+      "f1_min": 0.025736842105262947,
+      "salts": 10
+    },
+    "released": {
+      "auc_max": 0.15221925244705803,
+      "auc_min": 0.1129328984633935,
+      "f1_max": 0.22184210526315784,
+      "f1_min": 0.2081052631578948,
+      "salts": 10
+    }
+  },
+  "url_twin_share": 0.040468825382410534
+}

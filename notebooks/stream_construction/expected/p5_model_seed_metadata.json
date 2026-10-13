@@ -1,0 +1,42 @@
+{
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "windows": 20,
+  "period": 3,
+  "psi_tau": 0.2,
+  "f1_drop": 0.1,
+  "n_rows": 53116,
+  "features": [
+    "url_len",
+    "dom_len",
+    "is_ip",
+    "tld_len",
+    "subdom_cnt",
+    "letter_cnt",
+    "digit_cnt",
+    "special_cnt",
+    "eq_cnt",
+    "qm_cnt",
+    "amp_cnt",
+    "dot_cnt",
+    "dash_cnt",
+    "under_cnt",
+    "letter_ratio",
+    "digit_ratio",
+    "spec_ratio",
+    "slash_cnt",
+    "entropy",
+    "path_len",
+    "query_len"
+  ],
+  "input_sha256": "b8d7e0640f0f8cc788a8537cd73ef2c3f6dbce85ad34de34b34388d0bb62accc",
+  "scope": "model randomness conditional on one fixed constructed stream",
+  "score_precision": "per-window F1 rounded to 3 decimals by existing runner",
+  "paired_delta_mean": 0.011515789473684169,
+  "paired_delta_sd": 0.0006276191657163144
+}

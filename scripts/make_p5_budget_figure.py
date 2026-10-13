@@ -33,7 +33,7 @@ try:
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 
-from genfile import write_generated
+from genfile import write_generated, write_results
 # The stream, the window count and the trigger constants are imported from the asset script that
 # builds the tables, so the figure and `tab_budget` cannot end up describing different runs.
 from make_p5_assets import (BUDGETS, DRIFT_CSV, F1_DROP, PERIOD,
@@ -219,6 +219,15 @@ def make_tex(rows: list[dict]) -> None:
         f"${tex_int(best['labels'])}$ labels"
     )
     write_generated(os.path.join(SEC, "gen_budget_frontier.tex"), body.rstrip() + "%")
+    # the numbers of that paragraph, for the walkthrough notebook to compare against
+    write_results(os.path.join(PROC, "p5", "results", "p5_budget_frontier.json"), {
+        "crossover": flip, "drift_minus_periodic_cheapest": gap_lo,
+        "drift_minus_periodic_dearest": gap_hi, "drift_label_ratio": ratio,
+        "matched_pairs": [list(e) for e in eq], "active_below_periodic": act_loses,
+        "active_minus_periodic": dict(zip(map(str, bs), act_gaps)),
+        "active_monotone": act_monotone, "static_autc": stat,
+        "best": {"policy": best["policy"], "budget": best["budget"], "autc": best["autc"],
+                 "labels": best["labels"]}})
 
 
 def main() -> int:

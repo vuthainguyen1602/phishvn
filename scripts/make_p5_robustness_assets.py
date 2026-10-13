@@ -2,7 +2,7 @@
 """
 make_p5_robustness_assets.py — the P5 table and sentences that read run_p5_robustness.py's CSVs.
 
-  tab_windows.tex          per-window composition: spread share, prior, static P/R/F1, policy F1
+  tab_windows.tex          per-window composition: spread share, prior, static P and R (single column)
   gen_window_reading.tex   what the composition says about the staleness gap, plus the
                            dated-only stream
   gen_budget_seeds.tex     the budget frontier across model seeds
@@ -24,13 +24,15 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated
+from genfile import write_generated, write_results
 
 P5 = os.path.join(ROOT, "data", "processed", "p5")
 SEC = os.path.join(ROOT, "papers", "P5_temporal_drift", "sections")
 WIN = os.path.join(P5, "p5_window_composition.csv")
 DATED = os.path.join(P5, "p5_dated_only.csv")
 SEEDS = os.path.join(P5, "p5_budget_seeds.csv")
+# The numbers the sentences derive from the CSVs, for the notebook to compare against
+RESULTS = os.path.join(P5, "results", "p5_robustness.json")
 
 
 def floor(p):
@@ -39,26 +41,30 @@ def floor(p):
 
 
 def tab_windows(w):
+    # Single-column since 2026-10-13. The three F1 columns (static, periodic, drift) repeated the
+    # per-window F1 figure printed beside this table, and window 1 is the training window with no
+    # scores, so its two composition numbers go in the caption instead of a row of dashes.
     f = lambda v: "--" if (v is None or (isinstance(v, float) and np.isnan(v))) else f"{v:.3f}"
+    first = w.iloc[0]
     rows = []
     for r in w.itertuples():
-        cells = [f"{r.window}", f"{100 * r.spread_share:.0f}", f"{r.prior:.2f}"]
         if np.isnan(r.static_f1):
-            cells += ["--"] * 7
-        else:
-            rd = r.static_recall_dated if r.positives_dated >= 50 else float("nan")
-            cells += [f(r.static_precision), f(r.static_recall), f(rd), f(r.static_recall_spread),
-                      f(r.static_f1), f(r.periodic_f1), f(r.drift_f1)]
+            continue
+        rd = r.static_recall_dated if r.positives_dated >= 50 else float("nan")
+        cells = [f"{r.window}", f"{100 * r.spread_share:.0f}", f"{r.prior:.2f}",
+                 f(r.static_precision), f(r.static_recall), f(rd), f(r.static_recall_spread)]
         rows.append(" & ".join(cells) + " \\\\")
-    tex = ("\\begin{table*}[t]\n\\centering\n\\caption{The constructed stream window by window: the "
-           "share of hash-spread (undated) rows, the class prior, the static model's precision, "
-           "recall overall and on dated and spread positives separately (blank under 50 dated "
-           "positives), its F1, and the F1 of the two updating policies. Window 1 is the training "
-           "window.}\n\\label{tab:windows}\n\\small\n\\setlength{\\tabcolsep}{4pt}\n"
-           "\\begin{tabular}{rrrrrrrrrr}\n\\toprule\n"
-           "Window & Spread (\\%) & Prior & \\multicolumn{5}{c}{Static} & Periodic & Drift \\\\\n"
-           "\\cmidrule(lr){4-8}\n & & & P & R & R dated & R spread & F1 & F1 & F1 \\\\\n\\midrule\n"
-           + "\n".join(rows) + "\n\\bottomrule\n\\end{tabular}\n\\end{table*}")
+    tex = ("\\begin{table}[t]\n\\centering\n\\caption{The constructed stream window by window: the "
+           "share of hash-spread (undated) rows, the class prior, and the static model's precision "
+           "and recall, overall and on dated and spread positives separately (blank under 50 dated "
+           "positives). Window 1 is the training window "
+           f"({100 * first.spread_share:.0f}\\% spread, prior {first.prior:.2f}). "
+           "Per-window F1 of all three policies is in Figure~\\ref{fig:drift}.}\n"
+           "\\label{tab:windows}\n\\small\n\\setlength{\\tabcolsep}{3.5pt}\n"
+           "\\begin{tabular}{rrrrrrr}\n\\toprule\n"
+           "& & & \\multicolumn{4}{c}{Static model} \\\\\n\\cmidrule(lr){4-7}\n"
+           "Window & Spread (\\%) & Prior & P & R & R dated & R spread \\\\\n\\midrule\n"
+           + "\n".join(rows) + "\n\\bottomrule\n\\end{tabular}\n\\end{table}")
     write_generated(os.path.join(SEC, "tab_windows.tex"), tex)
 
 
@@ -117,6 +123,8 @@ def gen_window_reading(w, d, fmt, dw, dprior):
         f"last window alone, whose prior is ${float(dprior.iloc[-1]):.2f}$. This stream sits too close "
         f"to its ceiling to measure staleness, so it neither confirms nor bounds the gap.")
     write_generated(os.path.join(SEC, "gen_window_reading.tex"), body)
+    return {"spread_recall_corr": rho, "dated_floor_mean": float(fl.mean()),
+            "below_floor": below, "last_window_gap_share": last_share}
 
 
 def gen_shap_trace(t):
@@ -139,6 +147,9 @@ def gen_shap_trace(t):
         f"highest non-proxy value and ${fired.tv_distance.min() - tau:.4f}$ below the lowest proxy "
         f"value that fires.")
     write_generated(os.path.join(SEC, "gen_shap_trace.tex"), body)
+    return {"proxy_windows": len(prox), "caught_at_onset": len(fired),
+            "margin_above_nonproxy": tau - non.tv_distance.max(),
+            "margin_below_fired": fired.tv_distance.min() - tau}
 
 
 def _label_note(s):
@@ -146,7 +157,7 @@ def _label_note(s):
     lab = s.pivot_table(index=["seed", "budget"], columns="policy", values="labels")
     auc = s.pivot_table(index=["seed", "budget"], columns="policy", values="autc")
     if (lab.drift == lab.periodic).all():
-        return "The two spend the same labels in every cell."
+        return "The two spend the same labels in every cell.", {}
     pairs = []
     for (sd, b), r in lab.iterrows():
         for (sd2, h), r2 in lab.xs(sd, level="seed", drop_level=False).iterrows():
@@ -156,10 +167,13 @@ def _label_note(s):
     g = p.groupby("b").d
     share = float((lab.drift / lab.periodic).median())
     worse = int((p.d < 0).sum())
+    numbers = {"drift_label_share": share, "matched_pairs": len(p),
+               "matched_pairs_drift_behind": worse,
+               "matched_gap_mean_by_budget": {str(k): v for k, v in g.mean().items()}}
     return (f"The label-free trigger buys {100 * share:.0f}\\% of the schedule's labels in every cell. "
             f"Matched on labels bought (the trigger at $B$ against the schedule at the budget that "
             f"buys as many), it is behind on {worse} of {len(p)} seed-budget pairs, by "
-            f"${g.mean().max():+.3f}$ to ${g.mean().min():+.3f}$ AUTC on average.")
+            f"${g.mean().max():+.3f}$ to ${g.mean().min():+.3f}$ AUTC on average."), numbers
 
 
 def gen_budget_seeds(s):
@@ -187,12 +201,19 @@ def gen_budget_seeds(s):
                 f"at $B={lo}$ and {pm(dp, second)} at $B={second}$, ahead on {dp_lo_wins} and "
                 f"{dp_2_wins} of {k} seeds) and leads at the dearest ({pm(dp, hi)} at $B={hi}$, "
                 f"ahead on {dp_hi_wins} of {k}); between them the sign depends on the seed. ")
+    note, numbers = _label_note(s)
     body = (
         f"Repeating the grid over {k} model seeds (the seed sets the forest and the random label "
         f"draws together; mean $\\pm$ SD over seeds) gives the same reading. Uncertainty sampling is {act_txt}: {pm(ap, lo)} AUTC against periodic "
         f"retraining at $B={lo}$, widest at $B={worst_b}$ ({pm(ap, worst_b)}), and "
-        f"{pm(ap, hi)} at $B={hi}$. " + trig + _label_note(s))
+        f"{pm(ap, hi)} at $B={hi}$. " + trig + note)
     write_generated(os.path.join(SEC, "gen_budget_seeds.tex"), body)
+    out = {"seeds": k, "active_below_everywhere": act_all, "active_worst_budget": worst_b,
+           "drift_minus_periodic": {str(b): [dp.mean()[b], dp.std()[b]] for b in bs},
+           "active_minus_periodic": {str(b): [ap.mean()[b], ap.std()[b]] for b in bs},
+           "drift_ahead_seeds": {str(lo): dp_lo_wins, str(second): dp_2_wins, str(hi): dp_hi_wins}}
+    out.update(numbers)
+    return out
 
 
 def main():
@@ -204,9 +225,11 @@ def main():
     dw = pd.read_csv(os.path.join(P5, "p5_dated_only_windows.csv"))
     dprior = pd.read_csv(os.path.join(P5, "p5_dated_only_priors.csv"))["prior"]
     tab_windows(w)
-    gen_window_reading(w, d, fmt, dw, dprior)
-    gen_shap_trace(pd.read_csv(os.path.join(P5, "p5_shap_trace.csv")))
-    gen_budget_seeds(s)
+    res = {"window_reading": gen_window_reading(w, d, fmt, dw, dprior),
+           "shap_trace": gen_shap_trace(pd.read_csv(os.path.join(P5, "p5_shap_trace.csv"))),
+           "budget_seeds": gen_budget_seeds(s)}
+    os.makedirs(os.path.dirname(RESULTS), exist_ok=True)
+    write_results(RESULTS, res)
 
 
 if __name__ == "__main__":
