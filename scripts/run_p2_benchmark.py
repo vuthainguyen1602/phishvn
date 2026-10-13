@@ -71,22 +71,34 @@ def refuse_canonical(out, canonical, *extra):
                                  f"the canonical {path}; pass --out")
 
 
-def make_any_model(name: str, seed: int, params: dict | None = None):
+def make_any_model(name: str, seed: int, params: dict | None = None, unweighted: bool | None = None):
     """The three boosters are P2 additions; the rest defer to train_url_baseline.make_model so
     P2's numbers for those families stay comparable with P1b's published baselines. `params`
     overrides the booster defaults (the GWO HPO path); None keeps the defaults the benchmark
-    reports."""
-    p = params or {}
+    reports.
+
+    Weighting is decided HERE, not by the caller: the shared baseline module fits LogReg,
+    RandomForest and HistGB with class_weight="balanced", and before 2026-10-13 a call without
+    `params` inherited that, so a script that skipped weighting_params() fitted a weighted model
+    while the P2 tables beside it were unweighted. Now every family follows P2_UNWEIGHTED (default
+    1: unweighted) unless the caller says otherwise; `unweighted=False` is the legacy
+    mixed-weighting arm, which P6 uses for its class-weighted stack member (its Section 3 says
+    so). An explicit class_weight in `params` still wins."""
+    p = {**(weighting_params(name, unweighted) or {}), **(params or {})}
+    u = UNWEIGHTED if unweighted is None else unweighted
     if name == "Stack[CB+LR]":
         # The crossover ensemble (see run_p2_stacking_baseline): exposed here so companion
-        # studies (P6's group-threshold run) can score it through the same factory.
+        # studies (P6's group-threshold run) can score it through the same factory. The logistic
+        # member follows the same switch as a bare LogReg, so P2's unweighted stack and P6's
+        # class-weighted one are the same code under different flags, not two definitions.
         from catboost import CatBoostClassifier
         from sklearn.ensemble import StackingClassifier
         from sklearn.linear_model import LogisticRegression
         return StackingClassifier(
             estimators=[("CB", CatBoostClassifier(iterations=300, depth=6, learning_rate=0.1,
                                                   random_seed=seed, verbose=False)),
-                        ("LR", LogisticRegression(max_iter=1000, class_weight="balanced"))],
+                        ("LR", LogisticRegression(max_iter=1000,
+                                                  class_weight=None if u else "balanced"))],
             final_estimator=LogisticRegression(max_iter=1000),
             stack_method="predict_proba", cv=5, n_jobs=-1)
     if name == "XGBoost":
@@ -102,7 +114,7 @@ def make_any_model(name: str, seed: int, params: dict | None = None):
         from catboost import CatBoostClassifier
         return CatBoostClassifier(**{"iterations": 300, "depth": 6, "learning_rate": 0.1,
                                      "random_seed": seed, "verbose": False, **p})
-    return make_model(name, seed, params)
+    return make_model(name, seed, p or None)
 
 
 # The recall axis every PR curve in P2 is interpolated onto. Fixed and shared so curves from

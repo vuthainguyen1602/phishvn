@@ -26,7 +26,6 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from train_url_baseline import make_model
 
 # Continuous / large search spaces (metaheuristics only matter when the space is big enough that
 # exhaustive grid search is impractical). Each entry: (name, low, high, kind).
@@ -39,7 +38,7 @@ SPACE = {
                ("max_iter", 100, 500, "int")],
     "MLP": [("mlpclassifier__alpha", -5, -2, "logfloat"),
             ("mlpclassifier__learning_rate_init", -4, -2, "logfloat")],
-    # booster additions — constructed via run_p2_benchmark.make_any_model (see _factory)
+    # booster additions; every family is constructed via run_p2_benchmark.make_any_model (_factory)
     "CatBoost": [("iterations", 100, 600, "int"), ("depth", 4, 10, "int"),
                  ("learning_rate", -2, -0.5, "logfloat"), ("l2_leaf_reg", 1.0, 10.0, "float")],
     "XGBoost": [("n_estimators", 100, 600, "int"), ("max_depth", 3, 10, "int"),
@@ -49,12 +48,10 @@ SPACE = {
 
 
 def _factory(model, seed, params):
-    """make_model knows the four baseline families; the boosters live in run_p2_benchmark."""
-    if model in ("CatBoost", "XGBoost", "LightGBM"):
-        from run_p2_benchmark import make_any_model
-        return make_any_model(model, seed, params)
-    from run_p2_benchmark import weighting_params
-    return make_model(model, seed, {**(weighting_params(model) or {}), **(params or {})})
+    """Every family goes through run_p2_benchmark.make_any_model, which applies the P2 weighting
+    switch itself (unweighted unless P2_UNWEIGHTED=0) and then the tuned params on top."""
+    from run_p2_benchmark import make_any_model
+    return make_any_model(model, seed, params)
 
 
 def _decode(pos, space):

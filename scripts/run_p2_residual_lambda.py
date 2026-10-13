@@ -12,6 +12,11 @@ curve does not share earns Test 2 its slot; a monotone curve forfeits it and Tes
 Split, seeds and benign masks are run_p2_stacking_baseline's canonical setting; each model is
 fitted ONCE per seed/protocol and lambda is swept at scoring time.
 
+Weighting: the run of record (data/processed/p2/p2_residual_lambda.csv, and the design note) fitted
+the LogReg backbone class-weighted, because until 2026-10-13 make_any_model() without params
+inherited the shared baseline's class_weight="balanced". The factory now follows P2_UNWEIGHTED
+(default unweighted, as the benchmark tables are); P2_UNWEIGHTED=0 reproduces the recorded run.
+
 RUN:
   python scripts/run_p2_residual_lambda.py            # 5 seeds, lambda in {0,0.1,...,1}
 The two variants written out, and what decides the slot: kept in the development repository, not shipped in this mirror

@@ -95,7 +95,10 @@ def split_and_fit(df, feats, family: str, seed: int, cal_frac: float):
     be_te = be[r >= 0.70]
 
     tr = pd.concat([ph_fit, be_fit])
-    m = make_any_model(family, seed)
+    # unweighted=False: this paper's Stack[CB+LR] keeps its class-weighted logistic member (the
+    # manuscript's Section 3 says so). CatBoost and XGBoost take no class weight, so for the
+    # canonical family the flag changes nothing.
+    m = make_any_model(family, seed, unweighted=False)
     m.fit(tr[feats].to_numpy(float), tr["y"].to_numpy(int))
 
     cal = pd.concat([ph_cal, be_cal]).reset_index(drop=True)
@@ -144,7 +147,7 @@ def one_seed(df, feats, family: str, seed: int, cal_frac: float,
     # constraint is intrinsic to the 21-feature space, strengthening the infrastructure-cascade case.
     ytr = tr["y"].to_numpy(int)
     w = stratum_class_weights(tr)
-    mb = make_any_model(family, seed)
+    mb = make_any_model(family, seed, unweighted=False)
     mb.fit(tr[feats].to_numpy(float), ytr, sample_weight=w)
 
     cal["pred_bal"] = mb.predict_proba(cal[feats].to_numpy(float))[:, 1]
