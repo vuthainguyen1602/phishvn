@@ -148,7 +148,7 @@ def _fig_pr_curves():
                   title_fontsize=8, alignment="left")
         ax.set_title(_PR_PANEL_TITLES[tag], fontsize=9)
     axes[0].set_ylabel("precision")
-    fig.suptitle(f"mean over {n_splits} stratified splits; dots mark the $0.5$ operating point",
+    fig.suptitle(f"mean over {n_splits} stratified splits, dots marking the $0.5$ operating point",
                  fontsize=8.5, y=0.99)
     fig.tight_layout(rect=(0, 0, 1, 0.95))
     out = os.path.join(ROOT, "papers", "P3_multimodal", "figures", "fig_pr_fusion.pdf")
@@ -222,7 +222,7 @@ def make_content_fusion_table(text_encoder="tfidf", tag=""):
                 else f" Content encoder: \\mbox{{{text_encoder}}} (frozen embeddings).")
     tex = f"""\\begin{{table*}}[t]
 \\caption{{Content/JS modality ablation on {n_ph} phishing $+$ {n_be} benign
-Vietnamese-content pages; mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.{enc_note}{FPR_NOTE}}}
+Vietnamese-content pages, mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.{enc_note}{FPR_NOTE}}}
 \\label{{tab:content_fusion{tag}}}
 \\small
 \\begin{{tabular}}{{l c c c c}}
@@ -282,7 +282,7 @@ def _sweep_scores(encoders, refresh=False):
             for metric, vals in metrics.items():
                 for i, v in enumerate(vals):
                     recs.append({"encoder": enc, "config": cfg, "metric": metric,
-                                 "split": i, "value": f"{float(v):.6f}"})
+                                 "split": i, "value": repr(float(v))})  # full precision: the JSONs are recomputed from this cache
     if recs:
         os.makedirs(os.path.dirname(SWEEP_CACHE), exist_ok=True)
         with open(SWEEP_CACHE, "w", newline="", encoding="utf-8") as fh:
@@ -429,8 +429,8 @@ Content encoder & content & fusion & {head_metrics} \\\\
                     "(" + ", ".join(f"{m} {n_win(('uc', m))}/{k}" for m, _l, _s in SWEEP_METRICS) + ")")
 
     tex_b = f"""\\begin{{table*}}[t]
-\\caption{{\\textbf{{Adding content to URL features}}: paired (content$+$URL) $-$ (URL); layout
-and correction as in Table~\\ref{{tab:encsweep}}.}}
+\\caption{{\\textbf{{Adding content to URL features}}: paired (content$+$URL) $-$ (URL), with the layout
+and correction as in Table~\\ref{{tab:encsweep}}.{FPR_NOTE}}}
 \\label{{tab:encsweepcu}}
 \\small\\setlength{{\\tabcolsep}}{{4pt}}
 \\begin{{tabular}}{{l c rl rl rl rl}}
@@ -585,7 +585,7 @@ def _make_url_tree_table(scores, encs, n_ph):
                      for _ in refs)
     tex = f"""\\begin{{table*}}[t]
 \\caption{{\\textbf{{Content$+$URL against tree-based URL-only references}}: paired (content$+$URL)
-$-$ (URL-only tree model), same {n_ph}$+${n_ph} pages and {FUSION_SEEDS} splits; the URL trees use
+$-$ (URL-only tree model), same {n_ph}$+${n_ph} pages and {FUSION_SEEDS} splits. The URL trees use
 default hyperparameters on the raw $21$ features. BH $q$ per column. \\textbf{{Bold}}: improvement
 at $q<0.05$.}}
 \\label{{tab:urltree}}
@@ -654,7 +654,7 @@ def make_hybrid_head_table(rows, agg_lin, text_encoder="xlm-r", tag="_xgb"):
                      ("\n\\midrule" if c == "js" else "") for c in CONFIGS)
     tex = f"""\\begin{{table*}}[t]
 \\caption{{Hybrid transformer$\\to$boosted-trees stack: Table~\\ref{{tab:content_fusion_xlmr}} with the
-linear fusion head replaced by XGBoost, same subset, splits and \\mbox{{{text_encoder}}} embeddings;
+linear fusion head replaced by XGBoost, same subset, splits and \\mbox{{{text_encoder}}} embeddings,
 mean\\,$\\pm$\\,std over {FUSION_SEEDS} stratified splits.{FPR_NOTE}}}
 \\label{{tab:content_fusion{tag}}}
 \\small
@@ -703,7 +703,7 @@ Configuration & F1 & PR-AUC & ROC-AUC & FPR@90\\%rec. \\\\
                 f"{'agrees' if (d_dpr > 0) == (d_dil > 0) else 'differs'} "
                 f"(${d_dpr:+.3f}$, ${_p(p_dpr)}$)")
     else:
-        dil += f" ({stats}; PR-AUC ${d_dpr:+.3f}$, ${_p(p_dpr)}$)"
+        dil += f" ({stats}, PR-AUC ${d_dpr:+.3f}$, ${_p(p_dpr)}$)"
     fpr = f"{np.mean(agg['content+url']['FPR@R0.90']):.3f}"
     verdict = (f"Paired on the same {n} splits under the corrected resampled $t$, "
                f"{head_claim('content+url', 'content$+$URL')}. "

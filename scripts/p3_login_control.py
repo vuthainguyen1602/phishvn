@@ -235,7 +235,7 @@ Encoder & Config. & Recall & FPR benign & FPR sens. & FPR login \\\\
         f"data (password field: ${tp['password']}$ against ${tb['password']}$). Of the "
         f"${sum(flow[b]['targets'] for b in ('batch1', 'batch2'))}$ genuine login pages "
         f"targeted for the control, ${n_c}$ pass the subset's gates and share no host with a "
-        f"subset page; the char-$n$-gram content model flags "
+        f"subset page. The char-$n$-gram content model flags "
         f"${pct(summary[encs[0]]['content']['fpr_control'])}\\%$ of them "
         f"(Wilson $95\\%$ CI ${pct(lo)}$--${pct(hi)}\\%$, counting each page once at the "
         f"split-averaged rate), against ${pct(summary[encs[0]]['content']['fpr_benign'])}\\%$ of "

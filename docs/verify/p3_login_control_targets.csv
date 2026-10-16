@@ -1,0 +1,60 @@
+url,org,category
+https://vcbdigibank.vietcombank.com.vn/login,Vietcombank,bank
+https://smartbanking.bidv.com.vn/dang-nhap,BIDV,bank
+https://ipay.vietinbank.vn/login,VietinBank,bank
+https://ibank.agribank.com.vn/ibank/index.jsp,Agribank,bank
+https://onlinebanking.techcombank.com.vn/,Techcombank,bank
+https://online.mbbank.com.vn/pl/login,MB Bank,bank
+https://online.acb.com.vn/acbib/,ACB,bank
+https://www.isacombank.com.vn/,Sacombank,bank
+https://vpbankonline.vpbank.com.vn/,VPBank,bank
+https://ebank.tpb.vn/retail/vX/,TPBank,bank
+https://ebanking.hdbank.com.vn/,HDBank,bank
+https://ibanking.shb.com.vn/,SHB,bank
+https://ib.vib.com.vn/,VIB,bank
+https://omni.ocb.com.vn/,OCB,bank
+https://ebank.msb.com.vn/IBSRetail/,MSB,bank
+https://ebanking.seabank.com.vn/,SeABank,bank
+https://ebanking.eximbank.com.vn/,Eximbank,bank
+https://ebank.lpbank.com.vn/,LPBank,bank
+https://ebanking.namabank.com.vn/,Nam A Bank,bank
+https://ebank.baca-bank.vn/,Bac A Bank,bank
+https://ebanking.pvcombank.com.vn/,PVcomBank,bank
+https://ebanking.abbank.vn/,ABBank,bank
+https://ebanking.vietbank.com.vn/,Vietbank,bank
+https://ib.kienlongbank.com/,KienlongBank,bank
+https://ebanking.saigonbank.com.vn/,Saigonbank,bank
+https://ibanking.scb.com.vn/,SCB,bank
+https://ebank.ncb-bank.vn/,NCB,bank
+https://ebanking.bvbank.net.vn/,BVBank,bank
+https://ebanking.vietabank.com.vn/,VietABank,bank
+https://ebank.pgbank.com.vn/,PGBank,bank
+https://ebanking.oceanbank.vn/,OceanBank,bank
+https://business.momo.vn/,MoMo,wallet
+https://merchant.zalopay.vn/,ZaloPay,wallet
+https://merchant.vnpay.vn/,VNPay,wallet
+https://viettelmoney.vn/,Viettel Money,wallet
+https://id.zalo.me/,Zalo,account
+https://shopee.vn/buyer/login,Shopee,ecommerce
+https://tiki.vn/customer/account/login,Tiki,ecommerce
+https://member.lazada.vn/user/login,Lazada,ecommerce
+https://kiotviet.vn/dang-nhap,KiotViet,ecommerce
+https://my.vnpt.com.vn/,VNPT,telco
+https://viettel.vn/dang-nhap,Viettel,telco
+https://www.mobifone.vn/dang-nhap,MobiFone,telco
+https://cskh.evnhcmc.vn/,EVN HCMC,utility
+https://cskh.evnspc.vn/,EVN SPC,utility
+https://cskh.evnhanoi.vn/,EVN Hanoi,utility
+https://dichvucong.gov.vn/p/home/dvc-dang-nhap.html,National Public Service Portal,government
+https://dichvucong.baohiemxahoi.gov.vn/,Vietnam Social Security,government
+https://thuedientu.gdt.gov.vn/,General Department of Taxation,government
+https://canhan.gdt.gov.vn/,General Department of Taxation (personal),government
+https://sso.dancuquocgia.gov.vn/,National Population Database,government
+https://khachhang.ghn.vn/,GHN,logistics
+https://khachhang.giaohangtietkiem.vn/,GHTK,logistics
+https://viettelpost.vn/,Viettel Post,logistics
+https://my.j-express.vn/,J&T Express,logistics
+https://napthe.vn/,Garena top-up,games
+https://pay.zing.vn/,Zing top-up,games
+https://id.vnexpress.net/,VnExpress ID,account
+https://accounts.vtc.vn/,VTC,account
