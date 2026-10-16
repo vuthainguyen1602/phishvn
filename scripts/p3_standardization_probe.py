@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-p3_standardization_probe.py — per-block standardisation and late-fusion probe (revision R3.3).
+p3_standardization_probe.py — per-block standardisation and late-fusion probe (revision R3.3;
+reframed at revision 2, when the standardised head became the paper's main head).
 
 The reviewer's hypothesis: the three-channel linear stack falling below URL-only (0.811 vs
 0.836 F1) while recovering under scale-invariant XGBoost (0.918) is a feature-scaling artefact
@@ -206,15 +207,15 @@ def main():
                         "std_stack_vs_url": t_vs_url, "headline": head_c}
         lab = {"tfidf": "char-$n$-gram TF-IDF", "xlm-r": "XLM-R"}.get(enc, enc)
         frag_parts.append(
-            f"Under {lab}, per-block standardisation lifts the raw three-channel stack from "
-            f"${np.mean(res[('raw', stk)]['F1']):.3f}$ to ${np.mean(res[('std', stk)]['F1']):.3f}$ F1 "
-            f"(paired ${t_std['mean']:+.3f}$, corrected {_fmt(t_std['p'])}), and stacked late fusion "
-            f"to ${np.mean(res[('late', stk)]['F1']):.3f}$ (${t_late['mean']:+.3f}$, {_fmt(t_late['p'])}). "
-            f"The standardised stack sits ${t_vs_url['mean']:+.3f}$ from URL-only "
-            f"(corrected {_fmt(t_vs_url['p'])}). The headline contrast, content$+$URL minus content, is "
-            f"${head_c['raw']['mean']:+.3f}$ raw ({_fmt(head_c['raw']['p'])}), "
-            f"${head_c['std']['mean']:+.3f}$ standardised ({_fmt(head_c['std']['p'])}) and "
-            f"${head_c['late']['mean']:+.3f}$ under late fusion ({_fmt(head_c['late']['p'])}).")
+            f"Under {lab}, the three-channel stack scores "
+            f"${np.mean(res[('raw', stk)]['F1']):.3f}$ F1 with the blocks at raw scale, "
+            f"${np.mean(res[('std', stk)]['F1']):.3f}$ standardised (paired ${t_std['mean']:+.3f}$, "
+            f"corrected {_fmt(t_std['p'])}) and ${np.mean(res[('late', stk)]['F1']):.3f}$ under "
+            f"late fusion (${t_late['mean']:+.3f}$ against raw, {_fmt(t_late['p'])}). The headline "
+            f"contrast, content$+$URL minus content, is ${head_c['std']['mean']:+.3f}$ standardised "
+            f"({_fmt(head_c['std']['p'])}), ${head_c['raw']['mean']:+.3f}$ raw "
+            f"({_fmt(head_c['raw']['p'])}) and ${head_c['late']['mean']:+.3f}$ under late fusion "
+            f"({_fmt(head_c['late']['p'])}).")
 
     os.makedirs(os.path.dirname(OUT_CSV), exist_ok=True)
     with open(OUT_CSV, "w", newline="", encoding="utf-8") as fh:
@@ -234,33 +235,28 @@ def main():
             f"{v}={hc[v]['mean']:+.4f}(p={hc[v]['p']:.4f})" for v in ("raw", "std", "late")))
 
     frag = (
-        "Is the linear-head dilution a feature-scaling artefact? The URL counts enter the "
-        "logistic head raw, at scales far from the unit-scale content features. A post-hoc "
-        "probe (same subset, splits and heads) "
-        "re-runs the stack with every dense block per-block standardised on the training "
-        "portion, and with a stacked-probability late fusion in place of concatenation. "
-        "Its six contrasts are post hoc, outside any pre-specified family, and carry corrected "
-        "$p$-values without Benjamini--Hochberg adjustment. "
+        "How much does the treatment of scale matter? Every linear-head result above "
+        "standardises the dense blocks on each split's training portion. A probe on the same "
+        "subset and splits compares that with the URL, JavaScript and embedding blocks entered "
+        "at raw scale, and with a stacked-probability late fusion (one logistic model per "
+        "channel, out-of-fold training probabilities, a logistic meta-head) in place of "
+        "concatenation. Its contrasts are post hoc and carry corrected $p$-values without "
+        "Benjamini--Hochberg adjustment. "
         + " ".join(frag_parts) + " "
-        + ("The scaling hypothesis is therefore borne out at least in part: equalising the "
-           "block scales moves the linear stack, and the head-capacity reading of "
-           "Section~\\ref{ssec:indataset} must be read alongside a scaling account"
+        + ("Scale therefore matters to the linear stack: at raw scale the URL counts, far from "
+           "unit scale, dilute the three-channel model"
            if any_std_gain else
-           "Standardisation is therefore not what the missing fusion effect was hiding behind "
-           "on this subset, and the head-capacity reading of Section~\\ref{ssec:indataset} "
-           "stands")
-        + (". More consequentially, the headline contrast itself is fusion-architecture "
-           "dependent: under stacked late fusion the URL channel's incremental contribution on "
-           "top of content \\emph{is} resolved for "
+           "Scale does not move the linear stack on this subset")
+        + (". Under late fusion, however, the URL channel's incremental contribution on top of "
+           "content \\emph{is} resolved for "
            + ", ".join({"tfidf": "char-$n$-gram TF-IDF", "xlm-r": "XLM-R"}.get(e, e)
                        for e, hc in headline.items()
                        if hc["late"]["mean"] > 0 and hc["late"]["p"] < 0.05)
-           + ", so the directional asymmetry of Table~\\ref{tab:encsweep} is a property of "
-           "early concatenation into a linear head, not of the channels alone"
+           + ", so the unresolved direction of Table~\\ref{tab:encsweep} is a property of early "
+           "concatenation into a linear head, not of the channels alone"
            if any(hc["late"]["mean"] > 0 and hc["late"]["p"] < 0.05 for hc in headline.values())
-           else ". The headline contrast, however, is resolved under none of the three fusion "
-                "variants for either encoder, so the paper's central finding does not depend on "
-                "how the blocks are scaled or combined")
+           else ". The headline contrast is resolved under none of the three variants for either "
+                "encoder, so that verdict does not depend on how the blocks are scaled or combined")
     )
     write_generated(os.path.join(SEC, "gen_standardization.tex"), frag + ".\n")
 

@@ -117,13 +117,14 @@ not causal tier effects.}
 
 def p3():
     # Importing here avoids the expensive HTML read for --papers selections that exclude P3.
-    from make_p3_assets import _balanced_rows
+    from make_p3_assets import _balanced_rows, STANDARDISE
     from train_content_fusion import evaluate
 
     configs = ["url", "content", "content+url"]
     rows = _balanced_rows()
     agg, curves = evaluate(rows, configs, "tfidf", "lightweight", False, 20,
-                           return_scores=True, return_test_metadata=True)
+                           return_scores=True, return_test_metadata=True,
+                           standardise=STANDARDISE)
     records = []
     for config in configs:
         for seed, (y, score, meta) in enumerate(curves[config]):

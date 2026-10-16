@@ -10,7 +10,8 @@ of the paired (content+url) − (content) F1 difference against symmetric margin
 
 POST-HOC: this analysis was added at revision and the margins are declared, not derived —
 delta=0.02 (a two-point F1 margin, below every resolved effect in the other direction) and
-delta=0.05 (just below the smallest resolved effect, +0.056).
+delta=0.05 (chosen when the smallest resolved effect was +0.056 under the raw-scale head; under
+the standardised head of revision 2 it is +0.038, so the margin is now only a convention).
 
 Reads the sweep cache (data/processed/p3/p3_encoder_sweep.csv) written by make_p3_assets.py;
 never re-runs models. Emits sections/gen_tost.tex.
@@ -28,7 +29,8 @@ from scipy import stats
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "..", "core", "lib"))
 ROOT = os.path.abspath(os.path.join(_HERE, "..", "..", ".."))
-CACHE = os.path.join(ROOT, "data", "processed", "p3", "p3_encoder_sweep.csv")
+# Revision 2: the sweep cache of the standardised linear head (make_p3_assets.STANDARDISE).
+CACHE = os.path.join(ROOT, "data", "processed", "p3", "p3_encoder_sweep_std.csv")
 SEC = os.path.join(ROOT, "papers", "P3_multimodal", "sections")
 TEST_FRAC = 0.30
 MARGINS = (0.02, 0.05)
@@ -83,11 +85,13 @@ def main():
     for enc, mean, cells in rows:
         frag_rows.append(
             f"{ENC_LABEL.get(enc, enc)} ${mean:+.3f}$ ("
-            + ", ".join(f"${p:.3f}$" + ("$^{*}$" if eq else "") for m, p, eq in cells) + ")")
+            + ", ".join(f"${p:.3f}" + ("^{*}" if eq else "") + "$" for m, p, eq in cells) + ")")
     n = len(rows)
     frag = (
         "Because a difference in significance is not a significant difference, the unresolved "
-        "direction is also tested for equivalence (post hoc, with margins declared and not derived). "
+        "direction is also tested for equivalence. This analysis is exploratory: it was added post hoc, "
+        "and its margins are conventions rather than derived from an operational cost "
+        "(two and five F1 points), so no conclusion of the paper rests on it. "
         "The test is a two-one-sided corrected resampled $t$ (TOST) on the paired F1 difference "
         "(content$+$URL) $-$ (content), each side at $\\alpha=0.05$ with the same Nadeau--Bengio "
         "variance as every other test here. "
@@ -97,7 +101,8 @@ def main():
         "$^{*}$ for $p<0.05$): " + "; ".join(frag_rows) + ". "
         "The URL channel's incremental F1 contribution on top of content is therefore neither "
         "resolved as positive nor, for every encoder, bounded inside $\\pm 0.02$. Where the TOST "
-        "rejects, the data do bound it below the stated margin"
+        "rejects, the data bound it below that margin, a statement that is only as meaningful as the "
+        "margin"
     )
     sys.path.insert(0, os.path.join(_HERE, "..", "..", "core", "lib"))
     from genfile import write_generated, write_results

@@ -79,6 +79,21 @@ runs the three drivers; the remaining arms take their own flags.
   They write LaTeX into a manuscript tree that is not part of this repository; they ship so the
   path from a stored result to a printed number is inspectable.
 
+## Content study: what wrote each text artefact
+The page-fusion study reads crawled pages only. The repository also archives the simulated
+message corpus of an earlier evasion study, which is no longer part of that paper; this is who
+or what wrote each of its texts:
+- **LLM-written** (Anthropic Claude, `claude-fable-5`): the simulated SMS and e-mail phishing
+  lures, the benign message controls (written under a service-notification instruction, not by
+  people), and both paraphrase sets in `p3_band_rewrites.tsv` and the pilot/extension rewrites.
+- **Script-written**: `p3_gemini_rewrites.tsv`, despite its file name, is the output of the
+  local template script `p3_template_rewriter_withdrawn.py`, which calls no language model. It is
+  not Gemini output and no analysis uses it.
+- **Written by people**: none of the message texts. People assigned labels and, for 50 pairs,
+  rated rewrites; they wrote no text.
+The generation prompts are withheld; the scripts that called the model and checked every row
+against the guardrails are released.
+
 ## Citation
 See `CITATION.cff`. Please cite the dataset DOI and credit the upstream sources
 (NCSC "Tin Nhiem Mang" and the Tranco list).

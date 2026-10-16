@@ -228,12 +228,42 @@ def make_head(head, seed, ytr):
     return LogisticRegression(max_iter=4000, class_weight="balanced")
 
 
+# URL-only reference models with a tree head (revision R2, R3.1): lexical URL counts are the
+# textbook input of tree ensembles, so "content+URL beats URL" is also tested against the
+# strongest default URL model, not only against the linear head. Default hyperparameters, as
+# for every other head in the paper.
+URL_TREE_CONFIGS = {"url@rf": "rf", "url@xgb": "xgboost"}
+
+
+def _url_tree(kind, seed, ytr):
+    if kind == "rf":
+        from sklearn.ensemble import RandomForestClassifier
+        return RandomForestClassifier(random_state=seed, n_jobs=-1)
+    return make_head("xgboost", seed, ytr)
+
+
+def _standardise(text_pair, kind, blocks_tr, blocks_te):
+    """Per-block StandardScaler fit on the training portion of the split: every dense block
+    (URL, JS, image, transformer embedding); sparse TF-IDF is left as it is."""
+    from sklearn.preprocessing import StandardScaler
+    out_tr, out_te = [], []
+    for btr, bte in zip(blocks_tr, blocks_te):
+        sc = StandardScaler().fit(btr)
+        out_tr.append(sc.transform(btr)); out_te.append(sc.transform(bte))
+    if kind == "dense" and text_pair[0] is not None:
+        sc = StandardScaler().fit(text_pair[0])
+        text_pair = (sc.transform(text_pair[0]), sc.transform(text_pair[1]))
+    return text_pair, out_tr, out_te
+
+
 def evaluate(rows, configs, text_enc, js_enc, use_img, seeds, head="logreg",
-             return_scores=False, return_test_metadata=False):
+             return_scores=False, return_test_metadata=False, standardise=False):
     """With return_scores, also hands back the per-split (y_true, score) pairs behind the
     aggregates. The PR-curve figure needs the curves the TABLE was computed from: re-running the
     splits to draw them would be a second experiment, and a figure that disagrees with the table
-    beside it by a resampling accident is worse than no figure."""
+    beside it by a resampling accident is worse than no figure. standardise=True scales every
+    dense block on the split's training portion before the head (see _standardise); configs
+    named in URL_TREE_CONFIGS fit a tree model on the raw URL block instead."""
     y = np.array([r["y"] for r in rows])
     idx = np.arange(len(rows))
     precompute_js(rows, js_enc)  # attach r["js_emb"] once (esp. for CodeBERT)
@@ -253,6 +283,12 @@ def evaluate(rows, configs, text_enc, js_enc, use_img, seeds, head="logreg",
             img_tr, img_te = image_block(trr, ter)
 
         for cfg in configs:
+            if cfg in URL_TREE_CONFIGS:
+                clf = _url_tree(URL_TREE_CONFIGS[cfg], s, ytr)
+                clf.fit(url_tr, ytr)
+                sc = clf.predict_proba(url_te)[:, 1]
+                _record(agg, curves, cfg, yte, sc, te, rows, return_scores, return_test_metadata)
+                continue
             txt = (tmat_tr, tmat_te, kind) if "content" in cfg else (None, None, "dense")
             blocks_tr, blocks_te = [], []
             if "url" in cfg:
@@ -261,6 +297,10 @@ def evaluate(rows, configs, text_enc, js_enc, use_img, seeds, head="logreg",
                 blocks_tr.append(js_tr); blocks_te.append(js_te)
             if "image" in cfg and img_tr is not None:
                 blocks_tr.append(img_tr); blocks_te.append(img_te)
+            if standardise and head == "logreg":
+                (t_tr, t_te), blocks_tr, blocks_te = _standardise(
+                    (txt[0], txt[1]), txt[2], blocks_tr, blocks_te)
+                txt = (t_tr, t_te, txt[2])
             Xtr = stack(txt[0], blocks_tr, txt[2])
             Xte = stack(txt[1], blocks_te, txt[2])
             if Xtr is None:
@@ -268,20 +308,24 @@ def evaluate(rows, configs, text_enc, js_enc, use_img, seeds, head="logreg",
             clf = make_head(head, s, ytr)
             clf.fit(Xtr, ytr)
             sc = clf.predict_proba(Xte)[:, 1]
-            pred = (sc >= 0.5).astype(int)
-            agg[cfg]["F1"].append(f1_score(yte, pred, zero_division=0))
-            agg[cfg]["PR-AUC"].append(average_precision_score(yte, sc))
-            agg[cfg]["ROC-AUC"].append(roc_auc_score(yte, sc) if len(set(yte)) > 1 else float("nan"))
-            agg[cfg]["FPR@R0.90"].append(fpr_at_recall(yte, sc))
-            if return_scores:
-                if return_test_metadata:
-                    curves[cfg].append((yte.copy(), sc.copy(), {
-                        "tier": np.asarray([rows[i].get("tier", "unassigned") for i in te]),
-                        "provenance": np.asarray([rows[i].get("provenance", "unknown") for i in te]),
-                    }))
-                else:
-                    curves[cfg].append((yte.copy(), sc.copy()))
+            _record(agg, curves, cfg, yte, sc, te, rows, return_scores, return_test_metadata)
     return (agg, curves) if return_scores else agg
+
+
+def _record(agg, curves, cfg, yte, sc, te, rows, return_scores, return_test_metadata):
+    pred = (sc >= 0.5).astype(int)
+    agg[cfg]["F1"].append(f1_score(yte, pred, zero_division=0))
+    agg[cfg]["PR-AUC"].append(average_precision_score(yte, sc))
+    agg[cfg]["ROC-AUC"].append(roc_auc_score(yte, sc) if len(set(yte)) > 1 else float("nan"))
+    agg[cfg]["FPR@R0.90"].append(fpr_at_recall(yte, sc))
+    if return_scores:
+        if return_test_metadata:
+            curves[cfg].append((yte.copy(), sc.copy(), {
+                "tier": np.asarray([rows[i].get("tier", "unassigned") for i in te]),
+                "provenance": np.asarray([rows[i].get("provenance", "unknown") for i in te]),
+            }))
+        else:
+            curves[cfg].append((yte.copy(), sc.copy()))
 
 
 def main():

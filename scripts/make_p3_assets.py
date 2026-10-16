@@ -54,6 +54,15 @@ SEEDS = 5
 # p3_paired_test.py compares paired on identical splits.
 FUSION_SEEDS = 20
 CONFIGS = ["url", "content", "js", "content+url", "content+url+js"]
+# Revision 2 (2026-10, R3.1): every dense block is standardised on the split's training
+# portion before the linear head. The raw-scale run (STANDARDISE=False) is the one the first
+# two submissions reported; data/processed/p3/p3_encoder_sweep.csv keeps its per-split scores.
+STANDARDISE = True
+# URL-only reference models with tree heads, fitted on the same splits (R3.1): the strongest
+# default URL model, not only the linear one, is what "content+URL beats URL" is tested against.
+URL_REFS = ["url@rf", "url@xgb"]
+REF_LABELS = {"url@rf": "URL only, random forest (reference)",
+              "url@xgb": "URL only, XGBoost (reference)"}
 LABELS = {"url": "URL / infrastructure only", "content": "Content (page text) only",
           "js": "JavaScript only", "content+url": "Content $+$ URL (fusion)",
           "content+url+js": "Content $+$ URL $+$ JS"}
@@ -154,8 +163,8 @@ def make_content_fusion_table(text_encoder="tfidf", tag=""):
     (e.g. '_xlmr') emits a sibling table/verdict for that content encoder on the same subset."""
     rows = _balanced_rows()
     n_ph = n_be = sum(r["y"] for r in rows)
-    agg, curves = evaluate(rows, CONFIGS, text_encoder, "lightweight", False, FUSION_SEEDS,
-                           return_scores=True)
+    agg, curves = evaluate(rows, CONFIGS + URL_REFS, text_encoder, "lightweight", False,
+                           FUSION_SEEDS, return_scores=True, standardise=STANDARDISE)
     _PR_PANELS.append((tag or "tfidf", curves, agg, n_ph, n_be))
 
     def row(cfg):
@@ -164,6 +173,7 @@ def make_content_fusion_table(text_encoder="tfidf", tag=""):
                           for k in ("F1", "PR-AUC", "ROC-AUC", "FPR@R0.90"))
     body = "\n".join(f"{LABELS[c]} & {row(c)} \\\\" +
                      ("\n\\midrule" if c == "js" else "") for c in CONFIGS)
+    body += "\n\\midrule\n" + "\n".join(f"{REF_LABELS[c]} & {row(c)} \\\\" for c in URL_REFS)
 
     def f1(cfg):
         return f"{np.mean(agg[cfg]['F1']):.3f}"
@@ -237,7 +247,8 @@ Configuration & F1 & PR-AUC & ROC-AUC & FPR@90\\%rec. \\\\
     return rows, agg
 
 
-SWEEP_CACHE = os.path.join("data", "processed", "p3", "p3_encoder_sweep.csv")
+SWEEP_CACHE = os.path.join("data", "processed", "p3",
+                           "p3_encoder_sweep_std.csv" if STANDARDISE else "p3_encoder_sweep.csv")
 
 
 def _sweep_scores(encoders, refresh=False):
@@ -257,11 +268,12 @@ def _sweep_scores(encoders, refresh=False):
                   f"--refresh-sweep to re-measure")
             return {e: agg[e] for e in present}, []
     rows = _balanced_rows()
-    cfgs = ["url", "content", "content+url"]
+    cfgs = ["url", "content", "content+url"] + URL_REFS
     out, skipped, recs = {}, [], []
     for enc in encoders:
         try:
-            a = evaluate(rows, cfgs, enc, "lightweight", False, FUSION_SEEDS)
+            a = evaluate(rows, cfgs, enc, "lightweight", False, FUSION_SEEDS,
+                         standardise=STANDARDISE)
         except Exception as e:
             skipped.append(f"{enc} ({type(e).__name__})")
             continue
@@ -531,11 +543,97 @@ Content encoder & content & content$+$URL \\\\
     write_generated(os.path.join(SEC, "tab_encoder_fpr.tex"), tex_fpr,
                     f"(url {url_cell.split()[0]})")
 
+    _make_url_tree_table(scores, [v["enc"] for v in verdicts], n_ph)
+    _make_mde(scores, [v["enc"] for v in verdicts])
+
     for v in verdicts:
         print(f"[i] {v['enc']:11s} content={v['mean']['content']['F1']:.3f} "
               f"fusion={v['mean']['content+url']['F1']:.3f} | " + " ".join(
                   f"{d}/{m}={v[(d, m)]['mean']:+.3f}(q={float(v[(d, m)]['q']):.3f})"
                   for d, _ in SWEEP_DIRECTIONS for m, _l, _s in SWEEP_METRICS), flush=True)
+
+
+def _make_url_tree_table(scores, encs, n_ph):
+    """Revision 2, R3.1: content+URL (linear head, standardised) against the URL-only tree
+    references on the same splits, per encoder. BH within each column, as in the sweep."""
+    refs = [r for r in URL_REFS if all(r in scores[e] for e in encs)]
+    if not refs:
+        print("[i] no URL tree reference in the sweep cache — run with --refresh-sweep"); return
+    res = {(e, r, m): corrected_paired_t(np.asarray(scores[e]["content+url"][m], float)
+                                         - np.asarray(scores[e][r][m], float))
+           for e in encs for r in refs for m in ("F1", "PR-AUC")}
+    for r in refs:
+        for m in ("F1", "PR-AUC"):
+            q, _ = bh_adjust([res[(e, r, m)]["p"] for e in encs])
+            for e, qi in zip(encs, q):
+                res[(e, r, m)]["q"] = qi
+    ref_mean = {r: {m: float(np.mean(scores[encs[0]][r][m])) for m in ("F1", "PR-AUC")}
+                for r in refs}
+
+    def cell(st):
+        body = f"{st['mean']:+.3f}"
+        return ("\\textbf{" + body + "}" if st["mean"] > 0 and st["q"] < 0.05 else body) + \
+               f" & {{\\scriptsize {_p(st['q'], 'q')}}}"
+    rows = "\n".join(
+        f"{ENC_LABEL.get(e, e)} & " + " & ".join(cell(res[(e, r, m)]) for r in refs
+                                               for m in ("F1", "PR-AUC")) + " \\\\"
+        for e in encs)
+    names = {"url@rf": "random forest", "url@xgb": "XGBoost"}
+    head = " & ".join(f"\\multicolumn{{4}}{{c}}{{vs.\\ URL-only {names[r]} "
+                      f"(F1 {ref_mean[r]['F1']:.3f})}}" for r in refs)
+    sub = " & ".join("\\multicolumn{2}{c}{$\\Delta$F1} & \\multicolumn{2}{c}{$\\Delta$PR-AUC}"
+                     for _ in refs)
+    tex = f"""\\begin{{table*}}[t]
+\\caption{{\\textbf{{Content$+$URL against tree-based URL-only references}}: paired (content$+$URL)
+$-$ (URL-only tree model), same {n_ph}$+${n_ph} pages and {FUSION_SEEDS} splits; the URL trees use
+default hyperparameters on the raw $21$ features. BH $q$ per column. \\textbf{{Bold}}: improvement
+at $q<0.05$.}}
+\\label{{tab:urltree}}
+\\small\\setlength{{\\tabcolsep}}{{4pt}}
+\\begin{{tabular}}{{l {"rl rl " * len(refs)}}}
+\\toprule
+ & {head} \\\\
+Content encoder & {sub} \\\\
+\\midrule
+{rows}
+\\bottomrule
+\\end{{tabular}}
+\\end{{table*}}"""
+    write_generated(os.path.join(SEC, "tab_url_tree.tex"), tex,
+                    "(" + ", ".join(f"{r} F1 {ref_mean[r]['F1']:.3f}" for r in refs) + ")")
+    n_win = {r: sum(1 for e in encs if res[(e, r, "F1")]["mean"] > 0
+                    and res[(e, r, "F1")]["q"] < 0.05) for r in refs}
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "url_tree.json"),
+                  {f"{e}|{r}|{m}": res[(e, r, m)] for e in encs for r in refs
+                   for m in ("F1", "PR-AUC")} | {"ref_mean": ref_mean})
+    print("[i] url-tree wins on F1:", n_win)
+
+
+def _make_mde(scores, encs, power=0.80, alpha=0.05, test_frac=0.30):
+    """Revision 2, R3.3: the smallest paired F1 difference the corrected resampled t at K splits
+    detects with the stated power, from the observed spread of the paired differences
+    (two-sided; normal-free: t quantiles at K-1 degrees of freedom)."""
+    from scipy import stats
+    out = {}
+    for e in encs:
+        for direction, (a, b) in SWEEP_DIRECTIONS:
+            d = np.asarray(scores[e][a]["F1"], float) - np.asarray(scores[e][b]["F1"], float)
+            k = len(d)
+            se = np.sqrt((1 / k + test_frac / (1 - test_frac)) * np.var(d, ddof=1))
+            crit = stats.t.ppf(1 - alpha / 2, k - 1) + stats.t.ppf(power, k - 1)
+            out[(e, direction)] = float(crit * se)
+    uc = [out[(e, "uc")] for e in encs]
+    cu = [out[(e, "cu")] for e in encs]
+    write_results(os.path.join(ROOT, "data", "processed", "p3", "results", "mde.json"),
+                  {f"{e}|{d}": v for (e, d), v in out.items()})
+    write_generated(
+        os.path.join(SEC, "gen_mde.tex"),
+        f"At $K={FUSION_SEEDS}$ splits and a 70/30 split, with the observed spread of the paired "
+        f"F1 differences, the corrected test detects with $80\\%$ power (two-sided $\\alpha=0.05$) "
+        f"a difference of ${min(uc):.3f}$--${max(uc):.3f}$ F1 when URL features are added to content "
+        f"and ${min(cu):.3f}$--${max(cu):.3f}$ when content is added to URL features, depending on "
+        f"the encoder\n", f"(uc {min(uc):.3f}-{max(uc):.3f}, cu {min(cu):.3f}-{max(cu):.3f})")
+    print("[i] MDE", {f"{e}|{d}": round(v, 3) for (e, d), v in out.items()})
 
 
 def make_hybrid_head_table(rows, agg_lin, text_encoder="xlm-r", tag="_xgb"):

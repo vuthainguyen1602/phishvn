@@ -5,7 +5,9 @@ any language model. It maps keywords in each source lure to hard-coded Vietnames
 then assembles "{fixed prefix}: {source tokens} {filler tokens}. {call to action}" strings until
 the token Jaccard lands in [0.20, 0.30]. Its output (data/raw/author/p3_gemini_rewrites.tsv,
 344/386 rows carry one of two fixed prefixes) is a template-based synthetic set, NOT Gemini
-rewrites. The P3 cross-generator ("leave-one-LLM-out") analysis built on it was withdrawn from
+rewrites. Renamed 2026-10-16 from p3_gemini_generator.py so that the file name no longer
+says Gemini; the output file keeps its original name because the Zenodo deposit carries it.
+The P3 cross-generator ("leave-one-LLM-out") analysis built on it was withdrawn from
 the manuscript at revision for that reason. Kept, unchanged below, as the record of what ran.
 
 p3_gemini_generator.py — Gemini generator for P3's Leave-One-LLM-Out study.
