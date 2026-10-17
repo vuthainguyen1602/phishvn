@@ -111,7 +111,8 @@ def main():
         f"every gate are of domains the corpus lists as \\emph{{benign}} (legitimate operators "
         f"such as a carrier and a payment gateway), and the build files them in the benign arm "
         f"under the corpus label. The ${sum(kept_in.values())}$ phishing pages that remain are "
-        f"${kept_in.get('chongluadao_live', 0)}$ captures from the live ChongLuaDao feed and "
+        f"${kept_in.get('chongluadao_live', 0)}$ captures, taken in July and August 2026, of domains "
+        f"on a ChongLuaDao list that has not been updated since May 2024, and "
         f"${kept_in.get('retro', 0)}$ retrospective captures, so the cut narrows the phishing "
         f"class to domains the released corpus lists as phishing\n")
     print(st, dict(kept_in))
