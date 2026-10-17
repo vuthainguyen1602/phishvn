@@ -16,3 +16,14 @@ English.
 
 To run one: `cd sms` (or `qr`, `suffix_blindspot`, `feed_measurement`, `url_benchmark`, `content_paraphrase`, `stream_construction`), `pip install -r requirements.txt` with Python 3.12, open the notebook and run
 all cells. The steps that train small neural networks reproduce exactly only on the pinned library versions.
+
+No setting is needed: every notebook downloads what it uses. To keep the downloads somewhere else, set these environment variables
+in the shell or in a `.env` file next to the notebook (one `NAME=value` per line, never committed). The first cell of each notebook
+lists the ones it reads and prints which are set, never a token's value. They change where files go, not what is computed.
+
+| Variable | What it moves | Default |
+|---|---|---|
+| `PHISHVN_WORK_DIR` | every file the notebook downloads or writes | `<name>_work/` next to the notebook |
+| `PHISHVN_DATA_DIR` | the Zenodo data package (`qr`, `url_benchmark`, `content_paraphrase`) | `<name>_data/` next to the notebook |
+| `PHISHVN_EXPECTED_DIR` | the expected results to compare with | `expected/` next to the notebook |
+| `HF_TOKEN`, `HF_HOME` | Hugging Face rate limits and cache (`sms`, `content_paraphrase`) | the library's defaults |
