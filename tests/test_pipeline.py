@@ -181,6 +181,22 @@ def test_is_vn_target_separators_and_idn():
     assert is_vn_target("homecredit-vn.xyz")
 
 
+def test_is_vn_target_idn_homograph():
+    """A diacritic-swapped brand on a foreign TLD: the decoded spelling meets both token tiers.
+    Measured 2026-10-19 on 417 punycode hosts (project data + phishdb + PhishTank): +2, -0."""
+    import vn_filter
+    from vn_filter import is_vn_target, idn_spelling
+    assert idn_spelling("pay.pubgm.xn--zng-dlz.com") == "pay.pubgm.zing.com"
+    assert idn_spelling("vietcombank.com") == ""
+    assert is_vn_target("vietcómbank".encode("idna").decode() + ".com")   # core token
+    if vn_filter.BRAND_TOKENS is not None:                                      # registry token
+        assert is_vn_target("pay.pubgm.xn--zng-dlz.com")
+    # mBank is Polish; dropping a letter is not a homograph of mbbank
+    assert not is_vn_target("online.xn--mbnk-6q5a.com")
+    # the ccTLD gate still runs first: CIMB Philippines with a dotted i
+    assert not is_vn_target("xn--mbbank-hrf0545c.ph")
+
+
 def test_brand_tokens_are_actually_loaded():
     """A mutation audit found this the one way to break the filter that the suite still passed:
     BRAND_TOKENS silently None costs ~6% of the admissions on a Vietnamese-targeting feed.
