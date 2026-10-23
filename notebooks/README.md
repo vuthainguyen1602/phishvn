@@ -7,6 +7,7 @@ English.
 | Folder | Paper | Data |
 |---|---|---|
 | `sms/` | Vietnamese SMS phishing: text against URL | downloaded by the notebook from Hugging Face at a pinned revision, with PhoBERT |
+| `sms_synthetic/` | LLM-generated scam SMS study: pre-registered design and request list | downloaded by the notebook from Hugging Face at a pinned revision |
 | `qr/` | QR-code phishing in Vietnam | the study's data package on Zenodo, placed in `qr/qr_data/` |
 | `suffix_blindspot/` | the `.vn` suffix blind spot of URL phishing detectors | downloaded by the notebook from the PhishVN deposit on Mendeley Data |
 | `feed_measurement/` | measuring the phishing-intelligence feeds that cover Vietnam | downloaded by the notebook from the PhishVN deposit on Mendeley Data |
@@ -14,7 +15,7 @@ English.
 | `stream_construction/` | how the construction of a time-ordered stream sets the staleness gap of a phishing-URL detector | downloaded by the notebook from the PhishVN deposit on Mendeley Data, and four columns of PhreshPhish from Hugging Face at a pinned revision |
 | `content_paraphrase/` | content and URL fusion for Vietnamese phishing pages (the folder keeps its first name) | the study's data package on Zenodo, placed in `content_paraphrase/content_data/`, and the encoders from Hugging Face at pinned revisions |
 
-To run one: `cd sms` (or `qr`, `suffix_blindspot`, `feed_measurement`, `url_benchmark`, `content_paraphrase`, `stream_construction`), `pip install -r requirements.txt` with Python 3.12, open the notebook and run
+To run one: `cd sms` (or `sms_synthetic`, `qr`, `suffix_blindspot`, `feed_measurement`, `url_benchmark`, `content_paraphrase`, `stream_construction`), `pip install -r requirements.txt` with Python 3.12, open the notebook and run
 all cells. The steps that train small neural networks reproduce exactly only on the pinned library versions.
 
 No setting is needed: every notebook downloads what it uses. To keep the downloads somewhere else, set these environment variables

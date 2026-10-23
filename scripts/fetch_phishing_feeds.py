@@ -6,7 +6,8 @@ global feeds and keeping the VN slice (.vn or a Vietnamese unaccented token in t
 
 Sources (all public; each is optional and failures are tolerated):
   * OpenPhish community feed            (recent, live)
-  * URLhaus online URLs                 (abuse.ch; phishing + malware — tagged by source)
+  * URLhaus recent URLs, still online   (abuse.ch; phishing + malware — tagged by source;
+                                         needs ABUSECH_AUTH_KEY, see src_urlhaus)
   * Phishing.Database ACTIVE domains    (mitchellkrogza; large, freshness-filtered to ACTIVE)
   * ChongLuaDao current denylist        (rotating sample, VN community project)
   * PhishTank online-valid              (community-verified; read from the daily snapshot that
@@ -66,18 +67,27 @@ def src_openphish():
     return [host_of(u) for u in _get("https://openphish.com/feed.txt").text.splitlines() if u.strip()]
 
 
-def src_urlhaus():
-    out = []
-    for line in _get("https://urlhaus.abuse.ch/downloads/csv_online/").text.splitlines():
-        if line.startswith("#") or not line.strip():
-            continue
-        try:
-            parts = next(csv.reader([line]))
-        except Exception:
-            continue
-        if len(parts) > 2:
-            out.append(host_of(parts[2]))
-    return out
+def src_urlhaus(key: "str | None" = None):
+    """URLs added to URLhaus in the last three days (API cap 1000) that are still online.
+
+    Until about 2026-10-21 this read the unauthenticated dump `downloads/csv_online/` (every URL
+    online, ~16k). abuse.ch then retired every unauthenticated download: on 2026-10-23 the
+    csv/text/json/hostfile dumps all answered 410 Gone, and the API answered 401 without a key.
+    The API's recent list is what is left; an hourly collector that only admits names it has not
+    seen loses nothing it needs from the full dump. The free key comes from auth.abuse.ch and is
+    read from scripts/.env, which the cron wrapper sources."""
+    key = key if key is not None else os.environ.get("ABUSECH_AUTH_KEY", "")
+    if not key:
+        # Raise rather than return []: main() only logs a source that raises.
+        raise RuntimeError("ABUSECH_AUTH_KEY not set (free key from auth.abuse.ch)")
+    r = requests.get("https://urlhaus-api.abuse.ch/v1/urls/recent/limit/1000/",
+                     headers={**H, "Auth-Key": key}, timeout=60)
+    r.raise_for_status()
+    d = r.json()
+    if d.get("query_status") != "ok":
+        raise RuntimeError(f"urlhaus query_status={d.get('query_status')!r}")
+    return [host_of(u.get("url") or "") for u in d.get("urls") or []
+            if u.get("url_status") == "online"]
 
 
 def src_phishdb():
