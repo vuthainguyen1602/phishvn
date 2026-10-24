@@ -412,6 +412,7 @@ def make_encoder_sweep_table(encoders=("tfidf", "phobert", "phobert-v2", "visobe
     tex_a = f"""\\begin{{table*}}[t]
 \\caption{{\\textbf{{Adding URL features to content}}: paired (content$+$URL) $-$ (content),
 same {n_ph}$+${n_ph} pages and {FUSION_SEEDS} splits for every encoder. BH $q$ per column. \\textbf{{Bold}}: improvement at $q<0.05$.
+$\\Delta$ is the mean paired difference of unrounded scores, so it can differ from the difference of the rounded F1 columns in the last digit.
 Reverse direction: Table~\\ref{{tab:encsweepcu}}.{note}{FPR_NOTE}}}
 \\label{{tab:encsweep}}
 \\small\\setlength{{\\tabcolsep}}{{4pt}}
