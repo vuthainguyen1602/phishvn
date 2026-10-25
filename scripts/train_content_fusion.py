@@ -38,6 +38,7 @@ except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
 from compphish_features import extract
 from train_html_baseline import html_to_text
+from pii_mask import mask_pii
 from extract_js_features import js_vector, scripts_of, all_js, codebert_embed
 
 URL_NUM = ["url_len", "dom_len", "is_ip", "tld_len", "subdom_cnt", "letter_cnt", "digit_cnt",
@@ -73,6 +74,7 @@ def load_pages(path, dom_col="dom_file", label_col="label"):
         if len(text) < 5 and not scripts_of(html)[0]:
             skipped += 1
             continue
+        text = mask_pii(text)  # after the skip rule, so the row set does not move
         dom = str(r.get("domain", "") or "").strip().lower()
         uf = extract(dom) if dom else {k: 0 for k in URL_NUM}
         jsd = r.get("js_dir", "")

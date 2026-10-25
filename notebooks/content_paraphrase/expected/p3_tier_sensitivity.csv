@@ -119,11 +119,11 @@ content,3,bronze,21,recall,1.000000
 content,3,silver,2,recall,1.000000
 content,3,gold,0,recall,
 content,3,unassigned,39,recall,0.897436
-content,4,overall,125,F1,0.896000
+content,4,overall,125,F1,0.904762
 content,4,bronze,23,recall,1.000000
 content,4,silver,0,recall,
 content,4,gold,0,recall,
-content,4,unassigned,39,recall,0.846154
+content,4,unassigned,39,recall,0.871795
 content,5,overall,125,F1,0.869565
 content,5,bronze,24,recall,1.000000
 content,5,silver,1,recall,1.000000
@@ -199,7 +199,7 @@ content,19,bronze,26,recall,0.961538
 content,19,silver,1,recall,1.000000
 content,19,gold,0,recall,
 content,19,unassigned,36,recall,0.861111
-content+url,0,overall,125,F1,0.878788
+content+url,0,overall,125,F1,0.872180
 content+url,0,bronze,25,recall,0.960000
 content+url,0,silver,1,recall,1.000000
 content+url,0,gold,0,recall,
@@ -259,7 +259,7 @@ content+url,11,bronze,26,recall,0.923077
 content+url,11,silver,0,recall,
 content+url,11,gold,0,recall,
 content+url,11,unassigned,37,recall,0.918919
-content+url,12,overall,125,F1,0.910569
+content+url,12,overall,125,F1,0.903226
 content+url,12,bronze,25,recall,0.960000
 content+url,12,silver,0,recall,
 content+url,12,gold,0,recall,
@@ -289,7 +289,7 @@ content+url,17,bronze,22,recall,0.954545
 content+url,17,silver,0,recall,
 content+url,17,gold,0,recall,
 content+url,17,unassigned,41,recall,0.853659
-content+url,18,overall,125,F1,0.904762
+content+url,18,overall,125,F1,0.912000
 content+url,18,bronze,24,recall,1.000000
 content+url,18,silver,0,recall,
 content+url,18,gold,0,recall,

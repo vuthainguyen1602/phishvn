@@ -37,6 +37,7 @@ except ImportError:  # flat public-mirror layout
 import train_content_fusion as tcf
 from compphish_features import extract
 from train_html_baseline import html_to_text
+from pii_mask import mask_pii
 from vn_filter import is_vietnamese_text, visible_text
 from build_content_manifest import PARKED, NOT_CONTENT
 from genfile import write_generated, write_results
@@ -101,7 +102,7 @@ def load_controls():
                 f[g] += 1; continue
             seen.add(host)
             uf = extract(host)
-            text = html_to_text(html)
+            text = mask_pii(html_to_text(html))
             rows.append({"text": text, "html": html, "y": 0, "batch": name,
                          "url": [float(uf.get(k, 0)) for k in tcf.URL_NUM],
                          "category": category(r), "target": r["domain"],
