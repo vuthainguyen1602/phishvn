@@ -1869,7 +1869,7 @@ def tab_adaptation():
 off-diagonal) without and with CORAL alignment of source features to the unlabelled target,
 off-diagonal cells only; protocol of Table~\\ref{{tab:xdatasetrf}}, mean over five seeds for the
 random forest (logistic regression is deterministic). Every adapted cell, with precision, recall
-and predicted-positive rate, is in Supplementary Table~\\ref{{tab:coralcells}}.}}
+and predicted-positive rate, is in Table~\\ref{{tab:coralcells}}.}}
 \\label{{tab:adapt}}
 \\small
 \\begin{{tabular}}{{l cc cc}}
