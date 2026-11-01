@@ -1,0 +1,379 @@
+probe,pair,class,feature,auc_drop
+corpus_pair,PhishVN vs PhiUSIIL,phishing,url_len,0.11585850585745625
+corpus_pair,PhishVN vs PhiUSIIL,phishing,dom_len,0.06645602610201642
+corpus_pair,PhishVN vs PhiUSIIL,phishing,is_ip,2.2204460492503132e-17
+corpus_pair,PhishVN vs PhiUSIIL,phishing,tld_len,0.020389682619323855
+corpus_pair,PhishVN vs PhiUSIIL,phishing,subdom_cnt,0.013215077488341035
+corpus_pair,PhishVN vs PhiUSIIL,phishing,letter_cnt,0.007694548608143221
+corpus_pair,PhishVN vs PhiUSIIL,phishing,digit_cnt,0.009865411866061788
+corpus_pair,PhishVN vs PhiUSIIL,phishing,special_cnt,0.00662600859102966
+corpus_pair,PhishVN vs PhiUSIIL,phishing,eq_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,phishing,qm_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,phishing,amp_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,phishing,dot_cnt,0.03187939803069634
+corpus_pair,PhishVN vs PhiUSIIL,phishing,dash_cnt,0.002335980296729594
+corpus_pair,PhishVN vs PhiUSIIL,phishing,under_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,phishing,letter_ratio,0.0055398187285338844
+corpus_pair,PhishVN vs PhiUSIIL,phishing,digit_ratio,0.03798042300587382
+corpus_pair,PhishVN vs PhiUSIIL,phishing,spec_ratio,0.0036707394777798046
+corpus_pair,PhishVN vs PhiUSIIL,phishing,slash_cnt,0.007983675883342749
+corpus_pair,PhishVN vs PhiUSIIL,phishing,entropy,0.013910439835059619
+corpus_pair,PhishVN vs PhiUSIIL,phishing,path_len,0.0
+corpus_pair,PhishVN vs PhiUSIIL,phishing,query_len,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,url_len,0.004008512743639825
+corpus_pair,PhishVN vs PhiUSIIL,benign,dom_len,0.023839502211206655
+corpus_pair,PhishVN vs PhiUSIIL,benign,is_ip,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,tld_len,0.12734210311372415
+corpus_pair,PhishVN vs PhiUSIIL,benign,subdom_cnt,0.26698385527750423
+corpus_pair,PhishVN vs PhiUSIIL,benign,letter_cnt,0.0004090688494752826
+corpus_pair,PhishVN vs PhiUSIIL,benign,digit_cnt,-1.500745609117615e-08
+corpus_pair,PhishVN vs PhiUSIIL,benign,special_cnt,1.7549007641948222e-06
+corpus_pair,PhishVN vs PhiUSIIL,benign,eq_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,qm_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,amp_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,dot_cnt,0.0017428288691266538
+corpus_pair,PhishVN vs PhiUSIIL,benign,dash_cnt,-3.0185701127760643e-05
+corpus_pair,PhishVN vs PhiUSIIL,benign,under_cnt,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,letter_ratio,0.00018570026090182875
+corpus_pair,PhishVN vs PhiUSIIL,benign,digit_ratio,-4.170451390859142e-06
+corpus_pair,PhishVN vs PhiUSIIL,benign,spec_ratio,0.00042302609170992157
+corpus_pair,PhishVN vs PhiUSIIL,benign,slash_cnt,0.00010945884630244595
+corpus_pair,PhishVN vs PhiUSIIL,benign,entropy,0.0015130391987710466
+corpus_pair,PhishVN vs PhiUSIIL,benign,path_len,0.0
+corpus_pair,PhishVN vs PhiUSIIL,benign,query_len,0.0
+corpus_pair,PhishVN vs ISCXURL2016,phishing,url_len,0.025539379072778923
+corpus_pair,PhishVN vs ISCXURL2016,phishing,dom_len,0.02708478496484626
+corpus_pair,PhishVN vs ISCXURL2016,phishing,is_ip,6.503244881450598e-07
+corpus_pair,PhishVN vs ISCXURL2016,phishing,tld_len,0.04992046266451591
+corpus_pair,PhishVN vs ISCXURL2016,phishing,subdom_cnt,0.019749569092740095
+corpus_pair,PhishVN vs ISCXURL2016,phishing,letter_cnt,0.015016137915121191
+corpus_pair,PhishVN vs ISCXURL2016,phishing,digit_cnt,0.002168335441167671
+corpus_pair,PhishVN vs ISCXURL2016,phishing,special_cnt,0.001372512052657009
+corpus_pair,PhishVN vs ISCXURL2016,phishing,eq_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,phishing,qm_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,phishing,amp_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,phishing,dot_cnt,0.12053823018582684
+corpus_pair,PhishVN vs ISCXURL2016,phishing,dash_cnt,0.0002858126101730374
+corpus_pair,PhishVN vs ISCXURL2016,phishing,under_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,phishing,letter_ratio,0.019815125023975505
+corpus_pair,PhishVN vs ISCXURL2016,phishing,digit_ratio,0.07863965988479946
+corpus_pair,PhishVN vs ISCXURL2016,phishing,spec_ratio,0.005466284386029585
+corpus_pair,PhishVN vs ISCXURL2016,phishing,slash_cnt,0.006616520345257153
+corpus_pair,PhishVN vs ISCXURL2016,phishing,entropy,0.032318652241984394
+corpus_pair,PhishVN vs ISCXURL2016,phishing,path_len,0.0
+corpus_pair,PhishVN vs ISCXURL2016,phishing,query_len,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,url_len,0.08087798944553726
+corpus_pair,PhishVN vs ISCXURL2016,benign,dom_len,0.007177380653311478
+corpus_pair,PhishVN vs ISCXURL2016,benign,is_ip,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,tld_len,0.06240272584115738
+corpus_pair,PhishVN vs ISCXURL2016,benign,subdom_cnt,0.001492946576110743
+corpus_pair,PhishVN vs ISCXURL2016,benign,letter_cnt,0.0005598440051157949
+corpus_pair,PhishVN vs ISCXURL2016,benign,digit_cnt,0.0017763868945085506
+corpus_pair,PhishVN vs ISCXURL2016,benign,special_cnt,0.014202862155991211
+corpus_pair,PhishVN vs ISCXURL2016,benign,eq_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,qm_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,amp_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,dot_cnt,0.0006416342675059905
+corpus_pair,PhishVN vs ISCXURL2016,benign,dash_cnt,0.002076074558096197
+corpus_pair,PhishVN vs ISCXURL2016,benign,under_cnt,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,letter_ratio,-0.0011972322300042126
+corpus_pair,PhishVN vs ISCXURL2016,benign,digit_ratio,-0.00035320107072219994
+corpus_pair,PhishVN vs ISCXURL2016,benign,spec_ratio,-0.0008471785395376987
+corpus_pair,PhishVN vs ISCXURL2016,benign,slash_cnt,3.921568627442973e-06
+corpus_pair,PhishVN vs ISCXURL2016,benign,entropy,0.013396159308911974
+corpus_pair,PhishVN vs ISCXURL2016,benign,path_len,0.0
+corpus_pair,PhishVN vs ISCXURL2016,benign,query_len,0.0
+corpus_pair,PhishVN vs PhishStorm,phishing,url_len,0.009808584442377593
+corpus_pair,PhishVN vs PhishStorm,phishing,dom_len,0.043763026907650125
+corpus_pair,PhishVN vs PhishStorm,phishing,is_ip,1.500045376356951e-07
+corpus_pair,PhishVN vs PhishStorm,phishing,tld_len,0.0762208504994822
+corpus_pair,PhishVN vs PhishStorm,phishing,subdom_cnt,0.03479931438714033
+corpus_pair,PhishVN vs PhishStorm,phishing,letter_cnt,0.013085119262838868
+corpus_pair,PhishVN vs PhishStorm,phishing,digit_cnt,0.0031839734328213166
+corpus_pair,PhishVN vs PhishStorm,phishing,special_cnt,0.0002090622602428693
+corpus_pair,PhishVN vs PhishStorm,phishing,eq_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,phishing,qm_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,phishing,amp_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,phishing,dot_cnt,0.06555091754821751
+corpus_pair,PhishVN vs PhishStorm,phishing,dash_cnt,0.007609500029247282
+corpus_pair,PhishVN vs PhishStorm,phishing,under_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,phishing,letter_ratio,0.011626819805804236
+corpus_pair,PhishVN vs PhishStorm,phishing,digit_ratio,0.07524879272252269
+corpus_pair,PhishVN vs PhishStorm,phishing,spec_ratio,0.008877885538525082
+corpus_pair,PhishVN vs PhishStorm,phishing,slash_cnt,0.00863494653744418
+corpus_pair,PhishVN vs PhishStorm,phishing,entropy,0.020414223458890077
+corpus_pair,PhishVN vs PhishStorm,phishing,path_len,0.0
+corpus_pair,PhishVN vs PhishStorm,phishing,query_len,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,url_len,0.0019961980064327413
+corpus_pair,PhishVN vs PhishStorm,benign,dom_len,0.004276934723280586
+corpus_pair,PhishVN vs PhishStorm,benign,is_ip,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,tld_len,0.27764679286495425
+corpus_pair,PhishVN vs PhishStorm,benign,subdom_cnt,0.18748616669176196
+corpus_pair,PhishVN vs PhishStorm,benign,letter_cnt,0.0006424115668271524
+corpus_pair,PhishVN vs PhishStorm,benign,digit_cnt,0.00018739639813666997
+corpus_pair,PhishVN vs PhishStorm,benign,special_cnt,0.001850891967858055
+corpus_pair,PhishVN vs PhishStorm,benign,eq_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,qm_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,amp_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,dot_cnt,0.0005406378153653701
+corpus_pair,PhishVN vs PhishStorm,benign,dash_cnt,7.343202712674302e-05
+corpus_pair,PhishVN vs PhishStorm,benign,under_cnt,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,letter_ratio,0.0007296860816542639
+corpus_pair,PhishVN vs PhishStorm,benign,digit_ratio,-1.7115638725555554e-05
+corpus_pair,PhishVN vs PhishStorm,benign,spec_ratio,0.006946677237673912
+corpus_pair,PhishVN vs PhishStorm,benign,slash_cnt,0.00020743091607728915
+corpus_pair,PhishVN vs PhishStorm,benign,entropy,0.0011340515858037658
+corpus_pair,PhishVN vs PhishStorm,benign,path_len,0.0
+corpus_pair,PhishVN vs PhishStorm,benign,query_len,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,url_len,0.039309292202064736
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,dom_len,0.07968517233595954
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,is_ip,0.00021072898792404705
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,tld_len,0.020648250706958436
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,subdom_cnt,0.03125185466592035
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,letter_cnt,0.007678066251005115
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,digit_cnt,0.010395047831951321
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,special_cnt,0.008640721192097961
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,eq_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,qm_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,amp_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,dot_cnt,0.03243159995293503
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,dash_cnt,0.017385264525131682
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,under_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,letter_ratio,0.0068842589482446355
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,digit_ratio,0.009258624576363967
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,spec_ratio,0.014736694963591349
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,slash_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,entropy,0.035720839295798425
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,path_len,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,query_len,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,url_len,9.523225954488625e-06
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,dom_len,0.007666264048284285
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,is_ip,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,tld_len,3.860747016774635e-05
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,subdom_cnt,0.43666976818216263
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,letter_cnt,-4.528085609334375e-06
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,digit_cnt,-2.5046963055719296e-05
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,special_cnt,1.1779355571075457e-05
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,eq_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,qm_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,amp_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,dot_cnt,0.0006325545606608918
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,dash_cnt,-1.5895797034133354e-05
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,under_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,letter_ratio,2.4065350091273527e-06
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,digit_ratio,-4.116441463044574e-06
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,spec_ratio,9.499480298380547e-08
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,slash_cnt,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,entropy,0.00025008158616721235
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,path_len,0.0
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,query_len,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,url_len,0.007700125022508461
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,dom_len,0.054373805780214376
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,is_ip,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,tld_len,0.014420765454533583
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,subdom_cnt,0.15796210170156239
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,letter_cnt,0.010879726254653574
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,digit_cnt,0.009065999038105236
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,special_cnt,0.0009093193994730742
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,eq_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,qm_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,amp_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,dot_cnt,0.02265006605173494
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,dash_cnt,0.012114716712223415
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,under_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,letter_ratio,0.005277572099739279
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,digit_ratio,0.0015528504692503687
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,spec_ratio,0.0013027418372407594
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,slash_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,entropy,0.008764351576641998
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,path_len,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,query_len,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,url_len,0.029976774431153468
+corpus_pair,PhiUSIIL vs PhishStorm,benign,dom_len,0.2524651616400755
+corpus_pair,PhiUSIIL vs PhishStorm,benign,is_ip,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,tld_len,0.018521205587358498
+corpus_pair,PhiUSIIL vs PhishStorm,benign,subdom_cnt,0.02177756270299378
+corpus_pair,PhiUSIIL vs PhishStorm,benign,letter_cnt,0.0022750730758768654
+corpus_pair,PhiUSIIL vs PhishStorm,benign,digit_cnt,0.0005292630991117519
+corpus_pair,PhiUSIIL vs PhishStorm,benign,special_cnt,0.00029114195031195946
+corpus_pair,PhiUSIIL vs PhishStorm,benign,eq_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,qm_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,amp_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,dot_cnt,0.005326930425997638
+corpus_pair,PhiUSIIL vs PhishStorm,benign,dash_cnt,0.0021956962172263285
+corpus_pair,PhiUSIIL vs PhishStorm,benign,under_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,letter_ratio,0.005518804020706156
+corpus_pair,PhiUSIIL vs PhishStorm,benign,digit_ratio,0.00312799012563306
+corpus_pair,PhiUSIIL vs PhishStorm,benign,spec_ratio,0.03781334767832799
+corpus_pair,PhiUSIIL vs PhishStorm,benign,slash_cnt,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,entropy,0.01788347203484905
+corpus_pair,PhiUSIIL vs PhishStorm,benign,path_len,0.0
+corpus_pair,PhiUSIIL vs PhishStorm,benign,query_len,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,url_len,0.0264969109005537
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,dom_len,0.03307716138147294
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,is_ip,-2.2957928684630425e-05
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,tld_len,0.014495364193848398
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,subdom_cnt,0.09114902183829832
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,letter_cnt,0.013465145615534455
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,digit_cnt,0.0031944793043472376
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,special_cnt,0.0027462721239968693
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,eq_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,qm_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,amp_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,dot_cnt,0.00014862466419291576
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,dash_cnt,0.00017120789026304535
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,under_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,letter_ratio,0.005792707729479818
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,digit_ratio,0.0013092289518930802
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,spec_ratio,0.003515846362559461
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,slash_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,entropy,0.04475358327513057
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,path_len,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,query_len,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,url_len,0.011666193553142062
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,dom_len,0.004596111780540544
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,is_ip,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,tld_len,0.004884935095341389
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,subdom_cnt,0.27681835446620423
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,letter_cnt,-0.0013421407811368001
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,digit_cnt,-5.9671046153000345e-05
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,special_cnt,-0.0012452059663013105
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,eq_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,qm_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,amp_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,dot_cnt,0.00011292094866130143
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,dash_cnt,0.00042859184842601204
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,under_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,letter_ratio,-0.0007182174223330095
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,digit_ratio,0.00017709250697118596
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,spec_ratio,-8.091129027138597e-05
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,slash_cnt,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,entropy,-0.0036555209682069155
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,path_len,0.0
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,query_len,0.0
+class,PhishVN,both,url_len,0.004009748883642885
+class,PhishVN,both,dom_len,0.011566789836847655
+class,PhishVN,both,is_ip,0.0
+class,PhishVN,both,tld_len,0.15192887790314824
+class,PhishVN,both,subdom_cnt,0.14489927765635324
+class,PhishVN,both,letter_cnt,0.001055352451079723
+class,PhishVN,both,digit_cnt,0.008830469764920289
+class,PhishVN,both,special_cnt,0.0019366278055439959
+class,PhishVN,both,eq_cnt,0.0
+class,PhishVN,both,qm_cnt,0.0
+class,PhishVN,both,amp_cnt,0.0
+class,PhishVN,both,dot_cnt,0.187458926907839
+class,PhishVN,both,dash_cnt,0.0008274565931145617
+class,PhishVN,both,under_cnt,0.0
+class,PhishVN,both,letter_ratio,0.0031391476974253285
+class,PhishVN,both,digit_ratio,0.010084904838204336
+class,PhishVN,both,spec_ratio,0.002696508711629888
+class,PhishVN,both,slash_cnt,0.00012537683188438287
+class,PhishVN,both,entropy,0.003331686822838349
+class,PhishVN,both,path_len,0.00015181770605535494
+class,PhishVN,both,query_len,0.0
+class,PhiUSIIL,both,url_len,0.07041547432906983
+class,PhiUSIIL,both,dom_len,0.1349979736572743
+class,PhiUSIIL,both,is_ip,0.0
+class,PhiUSIIL,both,tld_len,0.016191334578113566
+class,PhiUSIIL,both,subdom_cnt,0.05719847927806049
+class,PhiUSIIL,both,letter_cnt,0.0036068287658120118
+class,PhiUSIIL,both,digit_cnt,0.05263436767380112
+class,PhiUSIIL,both,special_cnt,0.0017605144133471119
+class,PhiUSIIL,both,eq_cnt,0.0
+class,PhiUSIIL,both,qm_cnt,0.0
+class,PhiUSIIL,both,amp_cnt,0.0
+class,PhiUSIIL,both,dot_cnt,0.015423007405394627
+class,PhiUSIIL,both,dash_cnt,0.015137568165207522
+class,PhiUSIIL,both,under_cnt,0.0
+class,PhiUSIIL,both,letter_ratio,0.012497033765130831
+class,PhiUSIIL,both,digit_ratio,0.0003547769800657275
+class,PhiUSIIL,both,spec_ratio,0.017830223427113163
+class,PhiUSIIL,both,slash_cnt,0.0
+class,PhiUSIIL,both,entropy,0.019404171395414872
+class,PhiUSIIL,both,path_len,0.0
+class,PhiUSIIL,both,query_len,0.0
+class,ISCXURL2016,both,url_len,0.06788487979321498
+class,ISCXURL2016,both,dom_len,0.006713900495436772
+class,ISCXURL2016,both,is_ip,0.0
+class,ISCXURL2016,both,tld_len,0.004891197030929444
+class,ISCXURL2016,both,subdom_cnt,0.12159222652778294
+class,ISCXURL2016,both,letter_cnt,0.0041108608195116365
+class,ISCXURL2016,both,digit_cnt,-0.0044516213472287096
+class,ISCXURL2016,both,special_cnt,-0.002674820344041349
+class,ISCXURL2016,both,eq_cnt,0.0
+class,ISCXURL2016,both,qm_cnt,0.0
+class,ISCXURL2016,both,amp_cnt,0.0
+class,ISCXURL2016,both,dot_cnt,-6.17713192732028e-05
+class,ISCXURL2016,both,dash_cnt,0.00360648478035158
+class,ISCXURL2016,both,under_cnt,0.0
+class,ISCXURL2016,both,letter_ratio,-0.00274266660553744
+class,ISCXURL2016,both,digit_ratio,-0.0002766905631391969
+class,ISCXURL2016,both,spec_ratio,0.0009824552008611542
+class,ISCXURL2016,both,slash_cnt,0.0
+class,ISCXURL2016,both,entropy,0.012446289024719163
+class,ISCXURL2016,both,path_len,0.0
+class,ISCXURL2016,both,query_len,0.0
+class,PhishStorm,both,url_len,0.0043624759844958835
+class,PhishStorm,both,dom_len,0.05033973799554894
+class,PhishStorm,both,is_ip,0.0
+class,PhishStorm,both,tld_len,0.028039927082765592
+class,PhishStorm,both,subdom_cnt,0.1783197502750142
+class,PhishStorm,both,letter_cnt,0.00016884102338659898
+class,PhishStorm,both,digit_cnt,0.0026940292137694667
+class,PhishStorm,both,special_cnt,0.00024902006384354804
+class,PhishStorm,both,eq_cnt,0.0
+class,PhishStorm,both,qm_cnt,0.0
+class,PhishStorm,both,amp_cnt,0.0
+class,PhishStorm,both,dot_cnt,0.00014202461722894635
+class,PhishStorm,both,dash_cnt,0.0008611089228275359
+class,PhishStorm,both,under_cnt,0.0
+class,PhishStorm,both,letter_ratio,-0.0008973746846009601
+class,PhishStorm,both,digit_ratio,0.004063752618632019
+class,PhishStorm,both,spec_ratio,0.009936974061631654
+class,PhishStorm,both,slash_cnt,0.0
+class,PhishStorm,both,entropy,0.008469651623191382
+class,PhishStorm,both,path_len,0.0
+class,PhishStorm,both,query_len,0.0
+phishvn_feed,tranco vs tinnhiem,benign,url_len,0.0074359721949476265
+phishvn_feed,tranco vs tinnhiem,benign,dom_len,0.0008257497476192555
+phishvn_feed,tranco vs tinnhiem,benign,is_ip,0.0
+phishvn_feed,tranco vs tinnhiem,benign,tld_len,0.0172886496554989
+phishvn_feed,tranco vs tinnhiem,benign,subdom_cnt,0.04375305777670809
+phishvn_feed,tranco vs tinnhiem,benign,letter_cnt,0.003801701465256007
+phishvn_feed,tranco vs tinnhiem,benign,digit_cnt,0.00028320006697827525
+phishvn_feed,tranco vs tinnhiem,benign,special_cnt,0.0020496122838769932
+phishvn_feed,tranco vs tinnhiem,benign,eq_cnt,0.0
+phishvn_feed,tranco vs tinnhiem,benign,qm_cnt,0.0
+phishvn_feed,tranco vs tinnhiem,benign,amp_cnt,0.0
+phishvn_feed,tranco vs tinnhiem,benign,dot_cnt,0.03847923603669391
+phishvn_feed,tranco vs tinnhiem,benign,dash_cnt,0.002474190644193879
+phishvn_feed,tranco vs tinnhiem,benign,under_cnt,0.0
+phishvn_feed,tranco vs tinnhiem,benign,letter_ratio,0.0010210032020599026
+phishvn_feed,tranco vs tinnhiem,benign,digit_ratio,0.000250543408603705
+phishvn_feed,tranco vs tinnhiem,benign,spec_ratio,0.0009218731259901025
+phishvn_feed,tranco vs tinnhiem,benign,slash_cnt,0.0005456169050663684
+phishvn_feed,tranco vs tinnhiem,benign,entropy,0.0033711467675591905
+phishvn_feed,tranco vs tinnhiem,benign,path_len,0.0
+phishvn_feed,tranco vs tinnhiem,benign,query_len,0.0
+phishvn_feed,chongluadao vs other,phishing,url_len,0.02103016305772481
+phishvn_feed,chongluadao vs other,phishing,dom_len,0.09367637818232734
+phishvn_feed,chongluadao vs other,phishing,is_ip,0.0
+phishvn_feed,chongluadao vs other,phishing,tld_len,0.019433815764556796
+phishvn_feed,chongluadao vs other,phishing,subdom_cnt,0.04142706677983114
+phishvn_feed,chongluadao vs other,phishing,letter_cnt,0.006225643754240902
+phishvn_feed,chongluadao vs other,phishing,digit_cnt,-0.0001670554041679173
+phishvn_feed,chongluadao vs other,phishing,special_cnt,-0.00016653104420309982
+phishvn_feed,chongluadao vs other,phishing,eq_cnt,0.0
+phishvn_feed,chongluadao vs other,phishing,qm_cnt,0.0
+phishvn_feed,chongluadao vs other,phishing,amp_cnt,0.0
+phishvn_feed,chongluadao vs other,phishing,dot_cnt,0.0018303490305649726
+phishvn_feed,chongluadao vs other,phishing,dash_cnt,0.001264112316310144
+phishvn_feed,chongluadao vs other,phishing,under_cnt,0.0
+phishvn_feed,chongluadao vs other,phishing,letter_ratio,0.00844644006841111
+phishvn_feed,chongluadao vs other,phishing,digit_ratio,0.0668018432018823
+phishvn_feed,chongluadao vs other,phishing,spec_ratio,0.023702437042731263
+phishvn_feed,chongluadao vs other,phishing,slash_cnt,0.04347907315393458
+phishvn_feed,chongluadao vs other,phishing,entropy,0.060279339290967925
+phishvn_feed,chongluadao vs other,phishing,path_len,0.0
+phishvn_feed,chongluadao vs other,phishing,query_len,0.0

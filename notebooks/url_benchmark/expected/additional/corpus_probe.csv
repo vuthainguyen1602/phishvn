@@ -1,0 +1,19 @@
+probe,pair,class,n_each,roc_auc
+corpus_pair,PhishVN vs PhiUSIIL,phishing,10000,0.8955940793337234
+corpus_pair,PhishVN vs PhiUSIIL,benign,10000,0.9971959541829106
+corpus_pair,PhishVN vs ISCXURL2016,phishing,7947,0.8736286158807088
+corpus_pair,PhishVN vs ISCXURL2016,benign,7947,0.7949959521685558
+corpus_pair,PhishVN vs PhishStorm,phishing,10000,0.8446704240903238
+corpus_pair,PhishVN vs PhishStorm,benign,10000,0.9797642322558847
+corpus_pair,PhiUSIIL vs ISCXURL2016,phishing,7947,0.7859540479397171
+corpus_pair,PhiUSIIL vs ISCXURL2016,benign,7947,0.9982594986509861
+corpus_pair,PhiUSIIL vs PhishStorm,phishing,10000,0.8245836321365081
+corpus_pair,PhiUSIIL vs PhishStorm,benign,10000,0.741867902594258
+corpus_pair,ISCXURL2016 vs PhishStorm,phishing,7947,0.718160358825437
+corpus_pair,ISCXURL2016 vs PhishStorm,benign,7947,0.9653084194079051
+class,PhishVN,both,16410,0.9513851689935866
+class,PhiUSIIL,both,10000,0.8882976660045063
+class,ISCXURL2016,both,7947,0.9092507194332958
+class,PhishStorm,both,10000,0.8481363210185915
+phishvn_feed,tranco vs tinnhiem,benign,7905,0.9535951549867712
+phishvn_feed,chongluadao vs other,phishing,2883,0.8012059367144726
