@@ -174,9 +174,18 @@ def main():
                     help="drop the URL scheme before encoding, as the transfer-matrix arm does; "
                          "the tabular schema excludes is_https for the same reason")
     ap.add_argument("--device", default="cpu")
+    # Capacity and regularisation, for the sensitivity run of revision 1 (2026-10-31): the
+    # defaults are the architecture the paper reports; any change must write its own CSV.
+    ap.add_argument("--emb", type=int, default=EMB)
+    ap.add_argument("--filters", type=int, default=FILTERS)
+    ap.add_argument("--dropout", type=float, default=DROPOUT)
+    ap.add_argument("--lr", type=float, default=LR)
     a = ap.parse_args()
-    if (a.benign_grouped or a.strip_scheme) and a.out == "data/processed/p2/p2_charcnn.csv":
-        raise SystemExit("--benign-grouped/--strip-scheme write their own CSV: pass --out and --curves ''")
+    tuned = (a.emb, a.filters, a.dropout, a.lr) != (EMB, FILTERS, DROPOUT, LR) or a.epochs != 12
+    if (a.benign_grouped or a.strip_scheme or tuned) and a.out == "data/processed/p2/p2_charcnn.csv":
+        raise SystemExit("--benign-grouped/--strip-scheme/a changed configuration write their own "
+                         "CSV: pass --out and --curves ''")
+    globals().update(EMB=a.emb, FILTERS=a.filters, DROPOUT=a.dropout, LR=a.lr)
     os.chdir(ROOT)
 
     df = load()

@@ -33,7 +33,14 @@ try:
     add_script_dirs()
 except ImportError:  # flat public-mirror layout
     ROOT = os.path.dirname(_HERE)
-from genfile import write_generated, write_results
+from genfile import write_generated as _write_generated, write_results
+from p2_supp import article_refs
+
+
+def write_generated(path: str, text: str, note: str = "") -> str:
+    """genfile.write_generated, with references to tables that moved to the Supplementary Material
+    rewritten for the article (p2_supp.py, revision 1)."""
+    return _write_generated(path, article_refs(text, path) if text else text, note)
 
 # The numbers the generators COMPUTE (tests, bootstraps, recounts from the corpus), as opposed to
 # merely format from an experiment CSV; main() writes them to results/p2_generated.json so the
@@ -372,7 +379,9 @@ def tab_families():
     lines = [
         "\\begin{table*}[t]\\centering",
         "\\caption{Family benchmark under the corpus' bundled splits, mean$\\pm$std over 5 seeds."
-        " FPR@0.90 = false-positive rate at 0.90 phishing recall.}",
+        " FPR@0.90 = false-positive rate at 0.90 phishing recall. The random column is the"
+        " leakage-prone full-corpus baseline of Section~\\ref{ssec:randomsplit}, not an estimate of"
+        " generalisation.}",
         "\\label{tab:families}",
         "\\small\\setlength{\\tabcolsep}{4pt}",
         # ROC-AUC always sat in p2_benchmark.csv but was never printed; a benchmark reviewer
@@ -834,7 +843,10 @@ def tab_decomp():
         "\\begin{table}[t]\\centering",
         "\\caption{Decomposing the \\textbf{F1} drop. $\\Delta_{\\mathrm{comp}}$ = dated-subset random"
         " minus full-corpus random (\\emph{composition}, protocol unchanged); $\\Delta_{\\mathrm{proto}}$"
-        " = phishing-temporal minus dated-subset random (\\emph{protocol}, rows unchanged).}",
+        " = phishing-temporal minus dated-subset random (\\emph{protocol}, rows unchanged). F1 at"
+        " $\\tau = 0.5$, mean over five seeds; the full-corpus random split is the leakage-prone"
+        " baseline, and the controls here are unguarded (the matched contrast is"
+        " Table~\\ref{tab:protocol}).}",
         "\\label{tab:decomp}",
         "\\begin{tabular}{lccccc}\\toprule",
         "Family & Random (full) & Random (dated rows) & Phishing-temporal & $\\Delta_{\\mathrm{comp}}$ &"
@@ -1506,11 +1518,13 @@ def gen_charcnn():
         f"protocol and ${g_r:.3f}$ against ${s_r:.3f}$ under a random split of the same rows. "
         f"The gain is largest on the deployment metric, which is the one Section~"
         f"\\ref{{sec:discussion}} argues a benchmark should be read on.",
-        f"Capacity is not free of the protocol, however: the character-CNN carries the largest "
-        f"$\\Delta_{{\\mathrm{{proto}}}}$ in the study (${dp_cnn:+.3f}$ F1 against "
-        f"${dp_best:+.3f}$ for the most protocol-sensitive tabular family and "
-        f"${dp_worst:+.3f}$ for the least), so the model that gains most from a random split is "
-        f"also the model that loses most when the split moves forward in time.",
+        # 2026-11-01: a linear n-gram model over the same string carries a protocol gap as large,
+        # so the gap is the representation's, not the network's capacity (run_p2_ngram.py)
+        f"Reading the string is not free of the protocol, however: the character-CNN carries a "
+        f"larger $\\Delta_{{\\mathrm{{proto}}}}$ than any feature-based family "
+        f"(${dp_cnn:+.3f}$ F1 against ${dp_best:+.3f}$ for the most protocol-sensitive tabular "
+        f"family and ${dp_worst:+.3f}$ for the least), so the representation that gains most from "
+        f"a random split also loses most when the split moves forward in time.",
     ]
 
     if os.path.exists(sp):
@@ -1739,7 +1753,8 @@ def tab_xdataset_rf():
         "\\begin{table}[t]", "\\centering",
         "\\caption{Random-forest cross-dataset transfer, F1 and ROC-AUC (rows = train corpus,"
         " columns = test corpus); the matrix every later intervention re-runs. Diagonal bold;"
-        " \\underline{underlined} ROC-AUC cells are below chance ($<0.5$).}",
+        " \\underline{underlined} ROC-AUC cells are below chance ($<0.5$). Mean over five model"
+        " seeds; every corpus at host level, diagonal split grouped by registrable domain.}",
         "\\label{tab:xdatasetrf}", "\\small",
         "\\begin{tabular}{l cccc}", "\\toprule",
         "\\multicolumn{5}{l}{\\emph{F1}} \\\\",
@@ -1852,7 +1867,9 @@ def tab_adaptation():
 \\centering
 \\caption{{The domain-adaptation intervention: generalisation gap (mean diagonal $-$ mean
 off-diagonal) without and with CORAL alignment of source features to the unlabelled target,
-off-diagonal cells only; protocol of Table~\\ref{{tab:xdatasetrf}}.}}
+off-diagonal cells only; protocol of Table~\\ref{{tab:xdatasetrf}}, mean over five seeds for the
+random forest (logistic regression is deterministic). Every adapted cell, with precision, recall
+and predicted-positive rate, is in Supplementary Table~\\ref{{tab:coralcells}}.}}
 \\label{{tab:adapt}}
 \\small
 \\begin{{tabular}}{{l cc cc}}
@@ -2494,8 +2511,8 @@ def tab_xdataset_charcnn():
         "\\begin{table}[t]", "\\centering",
         "\\caption{Table~\\ref{tab:xdatasetrf}'s four-corpus design refitted with the"
         " character-CNN that reads the URL string (scheme stripped, so the string is the host"
-        " in every corpus), F1 and ROC-AUC; diagonal bold, \\underline{underlined} ROC-AUC"
-        " cells below chance.}",
+        " in every corpus), F1 and ROC-AUC, mean over five seeds; diagonal bold,"
+        " \\underline{underlined} ROC-AUC cells below chance.}",
         "\\label{tab:xdatasetcnn}", "\\small",
         "\\begin{tabular}{l cccc}", "\\toprule",
         "\\multicolumn{5}{l}{\\emph{F1}} \\\\",

@@ -44,6 +44,10 @@ SPACE = {
     "XGBoost": [("n_estimators", 100, 600, "int"), ("max_depth", 3, 10, "int"),
                 ("learning_rate", -2, -0.5, "logfloat"), ("subsample", 0.5, 1.0, "float"),
                 ("colsample_bytree", 0.5, 1.0, "float")],
+    # added 2026-10-31 (revision 1), so the tuning arm covers all seven families
+    "LightGBM": [("n_estimators", 100, 600, "int"), ("num_leaves", 15, 255, "int"),
+                 ("learning_rate", -2, -0.5, "logfloat"), ("min_child_samples", 5, 100, "int"),
+                 ("colsample_bytree", 0.5, 1.0, "float")],
 }
 
 
