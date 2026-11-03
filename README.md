@@ -78,11 +78,12 @@ runs the three drivers; the remaining arms take their own flags.
 - `run_p2_scores.py`, `analyse_p2_scores.py`, `audit_p2_harmonisation.py`,
   `run_p2_corpus_probe.py`, `run_p2_coral_cells.py`, `run_p2_phreshphish_temporal.py`,
   `run_p2_group_value.py`, `run_p2_attribution_stability.py`, `run_p2_cost.py`,
-  `run_p2_ngram.py`, `run_p2_label_screen_settings.py` — the analyses
+  `run_p2_ngram.py`, `run_p2_ngram_xdata.py`, `run_p2_label_screen_settings.py` — the analyses
   added in the first revision: operating points and calibration, domain-resampled intervals and
   label-error scenarios, the transfer corpora's host reduction, the within-class corpus probe,
   every CORAL cell, the two-class temporal split on PhreshPhish, the value of the undated rows,
-  attribution stability and cost.
+  attribution stability, cost, and the character n-gram model on the dated rows and in the
+  transfer matrix.
 - `make_p2_bench_assets.py`, `make_p2_revision_assets.py`, `make_p2_shiftmatrix_figure.py`,
   `p2_supp.py` — the table and figure generators.
   They write LaTeX into a manuscript tree that is not part of this repository; they ship so the

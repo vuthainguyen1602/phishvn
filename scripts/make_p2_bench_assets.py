@@ -2578,6 +2578,24 @@ def gen_charcnn_xdata():
                    "collapse is not a property of the 21-feature schema but of the corpus pairs, "
                    "and the sentence above can now be read without its scope.")
     best = c["best_cell"]
+    ngram = ""
+    if os.path.exists("data/processed/p2/cross_dataset_ROC-AUC_CharNgramLR.csv"):
+        # the second string model (run_p2_ngram_xdata.py): does the CNN's softening come from
+        # reading the string, or from the network? Decided from the matrices, never typed.
+        g = _xdata_summary("_CharNgramLR")
+        if g["roc_off"] < c["roc_off"] - 0.02:
+            g_verdict = (f"between the forest's ${r['roc_off']:.3f}$ and the CNN's: on transfer "
+                         f"the string alone recovers less than the network does, unlike under "
+                         f"time, where the two string models agree")
+        elif g["roc_off"] > c["roc_off"] + 0.02:
+            g_verdict = "so reading the string, not the network, carries what transfer there is"
+        else:
+            g_verdict = "so the two string models transfer alike"
+        ngram = (
+            f" The linear character n-gram model of Section~\\ref{{ssec:charcnn}}, run in the same "
+            f"design, reaches an off-diagonal ROC-AUC of ${g['roc_off']:.3f}$ with "
+            f"{WORDS[g['below_chance']]} of twelve cells below chance (diagonal "
+            f"${g['roc_diag']:.3f}$), {g_verdict}; neither string model repairs the ranking.")
     return (
         f"Table~\\ref{{tab:xdatasetcnn}} refits the "
         f"character-CNN of Section~\\ref{{ssec:charcnn}} in the same four-corpus design "
@@ -2590,7 +2608,7 @@ def gen_charcnn_xdata():
         f"off-diagonal mean is ${c['roc_off']:.3f}$ against the forest's ${r['roc_off']:.3f}$, "
         f"with {WORDS[c['below_chance']]} of twelve cells below chance ({WORDS[r['below_chance']]} "
         f"for the forest), spanning ${c['roc_min']:.3f}$ to ${c['roc_max']:.3f}$ "
-        f"({best[0]}$\\to${best[1]}). {verdict}")
+        f"({best[0]}$\\to${best[1]}). {verdict}{ngram}")
 
 
 
