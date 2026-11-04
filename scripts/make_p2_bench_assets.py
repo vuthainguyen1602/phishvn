@@ -1558,8 +1558,8 @@ def gen_charcnn():
             f"is higher than that: the ranking inverts. The "
             f"21~features are aggregate string statistics, and the two benign populations differ in "
             f"exactly those coordinates. The effect is one-directional, and we report it as such: "
-            f"trained on the narrow registry population every model collapses "
-            f"(${cnn_ti:+.3f}$ and ${cb_ti:+.3f}$ F1 respectively) and the character-CNN holds no "
+            f"trained on the narrow registry population the character-CNN and CatBoost fall by "
+            f"${abs(cnn_ti):.3f}$ and ${abs(cb_ti):.3f}$ F1 and the character-CNN holds no "
             f"advantage. Because every source in PhishVN is single-class, this one-sided swap does "
             f"not identify provenance separately from label; it is a sensitivity analysis, not "
             f"evidence that benign provenance has been ruled out.")
@@ -2570,9 +2570,8 @@ def gen_charcnn_xdata():
     elif better_rank:
         verdict = ("Reading the string transfers ranking better than reading the features, but "
                    "not well: the collapse is softened, not repaired, and the corpus pairs that "
-                   "invert for the forest mostly invert for the network too. What fails to "
-                   "transfer is therefore not only the hand-built schema; the URL modality "
-                   "itself, as these four corpora sample it, carries most of the collapse.")
+                   "invert for the forest mostly invert for the network too, so what fails to "
+                   "transfer is not only the hand-built schema.")
     else:
         verdict = ("Reading the string does not transfer better than reading the features: the "
                    "collapse is not a property of the 21-feature schema but of the corpus pairs, "
@@ -2584,18 +2583,19 @@ def gen_charcnn_xdata():
         # reading the string, or from the network? Decided from the matrices, never typed.
         g = _xdata_summary("_CharNgramLR")
         if g["roc_off"] < c["roc_off"] - 0.02:
-            g_verdict = (f"between the forest's ${r['roc_off']:.3f}$ and the CNN's: on transfer "
-                         f"the string alone recovers less than the network does, unlike under "
-                         f"time, where the two string models agree")
+            g_verdict = (f", between the forest's ${r['roc_off']:.3f}$ and the CNN's. Under time "
+                         f"the two string models agree; across corpora the string alone recovers "
+                         f"less than the network does, and neither repairs the ranking.")
         elif g["roc_off"] > c["roc_off"] + 0.02:
-            g_verdict = "so reading the string, not the network, carries what transfer there is"
+            g_verdict = (". Across corpora the string alone transfers better than the network, "
+                         "and neither repairs the ranking.")
         else:
-            g_verdict = "so the two string models transfer alike"
+            g_verdict = ". The two string models transfer alike, and neither repairs the ranking."
         ngram = (
             f" The linear character n-gram model of Section~\\ref{{ssec:charcnn}}, run in the same "
             f"design, reaches an off-diagonal ROC-AUC of ${g['roc_off']:.3f}$ with "
             f"{WORDS[g['below_chance']]} of twelve cells below chance (diagonal "
-            f"${g['roc_diag']:.3f}$), {g_verdict}; neither string model repairs the ranking.")
+            f"${g['roc_diag']:.3f}$){g_verdict}")
     return (
         f"Table~\\ref{{tab:xdatasetcnn}} refits the "
         f"character-CNN of Section~\\ref{{ssec:charcnn}} in the same four-corpus design "
@@ -2667,7 +2667,8 @@ def gen_twosided_verdict():
     harder = all(v < 0 for v in d_roc.values()) and all(v > 0 for v in d_fpr.values())
     if easier:
         reading = ("the temporal arm scores \\emph{higher} than its own random control for every "
-                   "family, which no drift can produce. The benign rows dated after the cut are "
+                   "family, so the cut changes which rows are tested more than how old they are. The "
+                   "benign rows dated after the cut are "
                    "almost entirely \\texttt{.gov.vn} and \\texttt{.edu.vn} registry entries, a "
                    "narrower population than the rows before it, so the two-sided split measures "
                    "how the registry was collected, not how the classes moved in time")
