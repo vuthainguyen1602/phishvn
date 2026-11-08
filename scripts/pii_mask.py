@@ -8,14 +8,22 @@ Three kinds of identifier are replaced by a fixed token, in this order:
     the usual space/dot/dash grouping)       -> [PHONE]
   * any other standalone run of 9-19 digits (bank account, card, citizen-ID, tax numbers)
                                               -> [NUMBER]
-Personal names are not masked: no rule separates a person's name from a brand or place name in
-Vietnamese page text reliably enough to apply blind.
+  * Vietnamese personal names (name_mask: surname + title-case syllables, places, streets and
+    historical figures kept)                  -> [NAME]
+Names are masked last, so a name inside an e-mail address is already gone. The name rule
+over-masks some title-case headings and brands, and misses foreign names written without an
+honorific (see name_mask.py). Added 2026-11-08 after the first two public packages shipped names.
 
 The function is deterministic and idempotent (masking masked text changes nothing), so a text
 masked here equals the text the release builder masks from the same HTML.
 """
 from __future__ import annotations
 import re
+
+try:
+    from name_mask import mask_names
+except ImportError:  # imported as a package module
+    from .name_mask import mask_names  # type: ignore
 
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 # +84 / 84 / 0 prefix, then 9-10 more digits optionally grouped by space, dot or dash; or a
@@ -29,7 +37,8 @@ def mask_pii(text: str) -> str:
         return text
     text = EMAIL_RE.sub("[EMAIL]", text)
     text = PHONE_RE.sub("[PHONE]", text)
-    return LONGNUM_RE.sub("[NUMBER]", text)
+    text = LONGNUM_RE.sub("[NUMBER]", text)
+    return mask_names(text)
 
 
 if __name__ == "__main__":
