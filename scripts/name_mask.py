@@ -14,8 +14,17 @@ Lâm, Mai, Tô, Đoàn, ...) is masked only when it has three or more syllables 
 Văn/Thị. Any title-case run of 1-4 syllables after a person honorific (ông, bà, anh, chị, Mr, Ms,
 Mrs) is masked whatever its first syllable, which covers names without a Vietnamese surname.
 
+Since 2026-11-08 (v1.3 of the content package, after an audit of the published v1.2 found names
+that had escaped): forms of address and academic or professional titles (đồng chí, PGS.TS.,
+giảng viên, kỹ thuật viên ...) count as honorifics, and the name after one stops at the office
+that follows it; a Western given name before a Vietnamese surname (Emily Hoang) is masked; a
+two-syllable historical name followed by a further syllable is a person; a bare number before a
+run is a house number only at the start of an address, never a year; and two-word cues
+("công viên", "tiểu học") are matched as phrases, not as their single words.
+
 The rule over-masks some brands named after a person (better for privacy than the reverse) and
-leaves foreign names without an honorific unmasked. Deterministic and idempotent.
+leaves foreign names without an honorific or a Vietnamese surname unmasked. Deterministic and
+idempotent.
 """
 from __future__ import annotations
 import re
@@ -25,7 +34,7 @@ STRONG = set("""Nguyễn Trần Lê Phạm Hoàng Huỳnh Phan Vũ Võ Đặng B
 Đinh Lương Nguyen Tran Pham Hoang Huynh Dang Bui Ngo Duong Truong Dinh Luong Trinh""".split())
 WEAK = set("""Hà Cao Thái Châu Lâm Mai Tô Đoàn Lại Tạ Kiều Tăng Lưu Quách Vương Đào Hứa Mạc
 Triệu Từ Thân Doãn Khúc Phùng Âu Tôn Thạch Lò Lục
-Chu Cấn Quàng Khuất Nông Hầu Giáp Đồng Cà Lã Ninh Phí Ông Bế""".split())
+Chu Cấn Quàng Khuất Nông Hầu Giáp Đồng Cà Lã Ninh Phí Ông Bế Phù Kha Diệp Thiều""".split())
 MIDDLE = {"Văn", "Thị", "Van", "Thi"}
 
 # Places whose name begins with a surname-like syllable. Matched on the first two syllables.
@@ -33,9 +42,9 @@ PLACES = set("""Hà Nội|Hồ Chí|Lâm Đồng|Hà Tĩnh|Cao Bằng|Thái Nguy
 Châu Đốc|Hà Giang|Hà Đông|Cao Lãnh|Hà Nam|Châu Âu|Châu Á|Châu Phi|Châu Mỹ|Châu Úc|Châu Phú|Châu Thành|
 Văn Giang|Dương Kinh|Lê Chân|Ngô Quyền|Hoàng Mai|Hoàng Kiếm|Phan Rang|Phan Rí|Hồ Tây|Hồ Gươm|Hà Tiên|
 Hà Trung|Hà Quảng|Hà Hòa|Mai Châu|Mai Sơn|Thái Thụy|Thái Hòa|Lâm Hà|Lâm Thao|Cao Phong|Văn Lâm|Văn Yên|
-Văn Chấn|Văn Quan|Văn Lãng|Văn Bàn|Đông Anh|Vũng Tàu|Tô Châu|Lý Nhân|Phan Thiết|Bùi Viện|Đỗ Sơn|
+Văn Chấn|Văn Quan|Văn Lãng|Văn Bàn|Đông Anh|Vũng Tàu|Tô Châu|Lý Nhân|Phan Thiết|Bùi Viện|
 Hồ Tràm|Hồ Núi|Lương Sơn|Lương Tài|Trần Văn Thời|Châu Đức|Hoàng Su|Hoàng Hóa|Hà Lan|Hà Quang|
-Mai Dịch|Dương Nội|Cao Xà|Đào Duy|Văn Miếu|Văn Điển""".replace("\n", "").split("|"))
+Mai Dịch|Dương Nội|Cao Xà|Đào Duy|Văn Miếu|Văn Điển|Phù Đổng|Phù Ninh|Phù Cát|Phù Mỹ|Phù Yên|Phù Cừ|Phù Lưu""".replace("\n", "").split("|"))
 # Historical figures whose names are also the commonest street, school and ward names. A public
 # historical person is not personal data, and masking them would erase most addresses.
 HISTORIC = set("""Trần Hưng Đạo|Lê Lợi|Nguyễn Trãi|Lê Quý Đôn|Phan Đăng Lưu|Lý Tự Trọng|Võ Thị Sáu|
@@ -61,15 +70,47 @@ Biên Hòa|Nha Trang|Đà Lạt|Vũng Tàu|Phan Thiết|Quy Nhơn|Buôn Ma|Pleik
 Hoàng Sa|Trường Sa|Phú Quốc|Côn Đảo|Hạ Long|Sài Gòn|Gò Vấp|Bình Thạnh|Tân Bình|Hóc Môn|Củ Chi"""
 # compared WITH diacritics: unaccented "phuong" is also the given name Phương, "huyen" Huyền
 PLACE_WORDS = {"Xã", "Phường", "Quận", "Huyện", "Tỉnh", "Thôn", "Ấp", "Thị Xã", "Thị Trấn"}
-TITLES = {"Lương Y", "Văn Hóa", "Hà Huy Tập", "Lương Y Như"}
+TITLES = {"Lương Y", "Văn Hóa", "Hà Huy Tập", "Lương Y Như", "Ông Già", "Ông Táo", "Bà Rịa", "Bà Triệu",
+          # Title Case headings and common words that begin with a surname-like syllable
+          "Lý Do", "Lý Thuyết", "Lý Lịch", "Phù Hợp", "Tăng Cường", "Tăng Trưởng", "Từ Vựng", "Từ Điển",
+          "Cao Ốc", "Cao Cấp", "Cao Điểm", "Đoàn Kết", "Đoàn Viên", "Mai Táng", "Lưu Ý", "Lưu Trữ",
+          "Dương Lịch", "Đào Tạo", "Hà Lan", "Thái Độ", "Lâm Nghiệp", "Lâm Sàng", "Châu Báu"}
+# the word before a surname-like syllable that turns it into an ordinary compound
+PREV_COMPOUND = {("đại", "Lý"), ("thành", "Đoàn"), ("công", "Đoàn"), ("trấn", "Dương"), ("đại", "Dương"),
+                 ("thái", "Bình"), ("ấn", "Độ"), ("quản", "Lý"), ("xử", "Lý"), ("vật", "Lý"), ("địa", "Lý"),
+                 ("tâm", "Lý"), ("trợ", "Lý"), ("hợp", "Lý"), ("chân", "Lý"), ("nguyên", "Lý"), ("bảo", "Vũ")}
 # Cue words: the name that follows is a street, school, ward, bridge, market or similar.
 # Administrative words (tỉnh, xã, huyện, quận, phường) are NOT cues: on government pages they
 # precede an official's name ("Chủ tịch HĐND tỉnh Nguyễn Văn Sơn") more often than a place.
-CUES = set("""đường phố ngõ hẻm kiệt ngách số đ. Đ. tp tp. thành phố q. p.
-cầu chợ trường thpt thcs th mầm non tiểu học đại lộ khu kđt chung cư tòa bến cảng lăng tượng
-công viên bảo tàng giải quỹ ấp thôn tổ thị trấn street st. st road rd.""".split())
+CUES = set("""đường phố ngõ hẻm kiệt ngách số đ. Đ. tp tp. q. p.
+cầu chợ trường thpt thcs th khu kđt tòa bến cảng lăng tượng giải quỹ ấp thôn tổ
+street st. st road rd.""".split())
+# Two-word cues are matched as phrases only: split into single words, "viên" (công viên) and "học"
+# (tiểu học) made every "kỹ thuật viên Võ Văn Tài" and "giảng viên ..." read as an address.
+CUE_PHRASES = {"thành phố", "mầm non", "tiểu học", "đại lộ", "chung cư", "công viên", "bảo tàng",
+               "thị trấn", "trung học", "phổ thông", "cơ sở", "đại học"}
 HONORIFIC = {"ông", "bà", "anh", "chị", "cô", "chú", "mr", "mr.", "ms", "ms.", "mrs", "mrs.",
-             "bapak", "ibu", "pak"}  # last three: the Indonesian-language feed pages
+             "bapak", "ibu", "pak",  # the Indonesian-language feed pages
+             # forms of address and academic or professional titles written before a name
+             "đồng chí", "đồng chí:", "các đồng chí:", "đ/c", "thầy", "gs.", "pgs.", "ts.", "ths.", "bs.", "ks.", "ls.", "cn.",
+             "gs.ts.", "pgs.ts.", "gs.tskh.", "ths.bs.", "bsckii.", "bscki.", "ncs.",
+             "tiến sĩ", "thạc sĩ", "bác sĩ", "luật sư", "dược sĩ", "kiến trúc sư",
+             "kỹ thuật viên", "giảng viên", "giáo viên", "tác giả", "chủ biên:", "tác giả:",
+             "đại tá", "thượng tá", "trung tá", "thiếu tá", "đại úy", "thượng úy", "trung úy", "thiếu úy",
+             "đại tướng", "thượng tướng", "trung tướng", "thiếu tướng"}
+# after these the name must begin with a surname: Title Case headings follow them as well
+# ("Giáo viên Có Học Sinh Giỏi", "Giáo viên Tiếng Anh")
+NEEDS_SURNAME = {"tiến sĩ", "thạc sĩ", "bác sĩ", "luật sư", "dược sĩ", "kiến trúc sư", "kỹ thuật viên",
+                 "giảng viên", "giáo viên", "tác giả", "chủ biên:", "tác giả:", "ts.", "ths.", "bs.",
+                 "ks.", "ls.", "cn.", "ncs."}
+# a name after an honorific stops at these: they begin the title or office that follows it
+# (not Thành, Trung, Công, Tiến, Khoa, Đại, Trường: those are common given names as well)
+NAME_STOP = {"Phó", "Bí", "Chủ", "Tỉnh", "Giám", "Trưởng", "Ủy", "Uỷ", "Tổng", "Kỹ", "Giảng",
+             "Phường", "Xã", "Huyện", "Quận", "Sở", "Ban", "Viện", "Hội", "Đảng", "Bộ",
+             "Cục", "Vụ", "Tòa", "Nhà", "Giáo", "Thạc", "Thường", "Cô", "Thầy", "Thuốc", "Ý", "Môn",
+             "Quyền", "Hiệu", "Bs", "Ths", "Ts"}
+# the first word of a rank or office written after "đồng chí": the name, if any, follows the rank
+RANK_HEAD = {"Đại", "Thượng", "Trung", "Thiếu"}
 
 WORD_RE = re.compile(r"[^\W\d_]+")
 TOKEN = "[NAME]"
@@ -82,6 +123,10 @@ def _plain(w: str) -> str:
 
 _PROV = {_plain(x.strip()) for x in PROVINCES.replace("\n", "").split("|")} | \
         {_plain(x) for x in PLACES}
+
+
+# with diacritics, for the honorific rule: unaccented, "Lâm Đông" (a name) is Lâm Đồng (a province)
+_PROV_ACCENTED = {x.strip() for x in PROVINCES.replace("\n", "").split("|")} | PLACES | {"Việt Nam"}
 
 
 def _looks_like_place_list(words: list[str]) -> bool:
@@ -109,18 +154,35 @@ def _keep_as_place(words: list[str], text: str, start: int) -> bool:
         return True
     if _looks_like_place_list(words):
         return True
-    if any(" ".join(words[:k]) in HISTORIC for k in range(2, len(words) + 1)):
+    # a historic name is kept when it is the whole run, or when it has three or more syllables
+    # ("Hoàng Văn Thụ Ban"); a two-syllable one followed by another syllable is a person
+    # ("Nguyễn Hiền Phương" is not the scholar Nguyễn Hiền)
+    if " ".join(words) in HISTORIC or any(" ".join(words[:k]) in HISTORIC for k in range(3, len(words) + 1)):
         return True
     prev = _prev_words(text, start)
     if not prev:
         return False
-    if prev[-1] in CUES or (len(prev) == 2 and " ".join(prev) in CUES):
+    if prev[-1] in CUES or (len(prev) == 2 and " ".join(prev) in CUE_PHRASES):
         return True
-    # house number (12, 12a, 464/60/8, 12-14), but not a date such as 19/06/2025
+    # house number (12, 12a, 464/60/8, 12-14), but not a date such as 19/06/2025, not a year
+    # ("năm 1945, Nguyễn Lan Dung") and not a bare number after an ordinary word ("Win 11
+    # Nguyễn Đức Lợi"). A bare number counts only at the start of an address: after "số", "địa
+    # chỉ", a colon or the start of the text, or when the run is followed by a ward or district.
     w = prev[-1].rstrip(",")
     if re.fullmatch(r"\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?", w):
         return False
-    return bool(re.fullmatch(r"\d{1,4}[a-z]?(?:[/-]\d{1,4}[a-z]?)*", w))
+    if re.fullmatch(r"\d{1,4}[a-z]?(?:[/-]\d{1,4}[a-z]?)+|\d{1,4}[a-z]", w):
+        return True                                   # 464/60/8, 12a: only addresses look like this
+    if not re.fullmatch(r"\d{1,4}", w) or re.fullmatch(r"(19|20)\d\d", w):
+        return False
+    before = prev[-2] if len(prev) == 2 else ""
+    if before in ("số", "chỉ:", "chỉ", "sở", "address:", "add:", "đc:", "") or before.endswith(":") or before in CUES:
+        return True
+    after = text[start:start + 90]
+    if re.match(r"(?i)[^\n,]{0,40},?\s*(p\.|q\.|phường|quận|huyện|xã|tp\.?|thành phố|ward|district)", after):
+        return True
+    # an address list: two more comma- or dash-separated place names after the street
+    return bool(re.match(r"[^\n,–-]{0,40}(?:,|\s[-–])\s*[A-ZÀ-ỸĐ][^\n,–-]{1,30}(?:,|\s[-–])\s*[A-ZÀ-ỸĐ]", after))
 
 
 def _name_spans(text: str) -> list[tuple[int, int]]:
@@ -128,7 +190,9 @@ def _name_spans(text: str) -> list[tuple[int, int]]:
     spans, i = [], 0
     while i < len(words):
         w = words[i].group()
-        if (w in STRONG or w in WEAK) and not text[max(0, words[i].start() - 1):words[i].start()] == "[":
+        prev_w = words[i - 1].group().lower() if i else ""
+        if (w in STRONG or w in WEAK) and (prev_w, w) not in PREV_COMPOUND \
+                and not text[max(0, words[i].start() - 1):words[i].start()] == "[":
             tail = [words[i]]
             j = i + 1
             # extend over title-case syllables joined by exactly one space, up to four in all
@@ -147,27 +211,110 @@ def _name_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+# honorifics after which a single given name is still a person ("chị Hoa", "anh Nam")
+_SHORT_OK = {"ông", "bà", "anh", "chị", "cô", "chú", "mr", "mr.", "ms", "ms.", "mrs", "mrs.", "bapak",
+             "ibu", "pak", "thầy", "đồng chí", "đồng chí:", "các đồng chí:", "đ/c"}
+
+
+# honorific + word sequences that are places or set phrases, not a person
+# places and set phrases, kept whatever follows them ("Bà Chúa Xứ Núi Sam", "Bà Nà Hills")
+HON_FIXED = {"Bà Rịa", "Ông Già", "Bà Chúa", "Bà Đen", "Bà Triệu", "Bà Trưng", "Ông Táo", "Bà Nà",
+             "Bà Huyện", "Bà Chiểu", "Bà Điểm", "Bà Hom", "Cô Tô", "Ông Lãnh", "Ông Ích", "Bà Ký",
+             "Bà Quẹo", "Bà Hạt"}
+# kept only when nothing name-like follows: "Anh Quốc" is England, "anh Quốc Bảo" a person
+HON_FIXED_ALONE = {"Anh Quốc", "Anh Đào", "Cô Ba", "Chị Hằng"}
+
+
 def _mask_honorific(text: str) -> str:
     def rep(m: re.Match) -> str:
         return m.group(1) + TOKEN
     hon = "|".join(re.escape(h) for h in sorted(HONORIFIC, key=len, reverse=True))
-    pat = re.compile(rf"(?i:(?<![\w])((?:{hon}) ))((?-i:[^\W\d_a-zà-ỹ][^\W\d_]{{0,6}}(?: [^\W\d_a-zà-ỹ][^\W\d_]{{0,6}}){{0,3}}))(?![\w])")
-    out, last = [], 0
-    for m in pat.finditer(text):
+    pat = re.compile(rf"(?i:(?<![\w])((?:{hon}) ))([^\W\d_]{{1,7}}(?: [^\W\d_]{{1,7}}){{0,3}})(?![\w])")
+    # case is checked word by word below (_title): a character class for "upper case" written as
+    # [^...a-zà-ỹ] also excluded Đ (U+0110 lies inside à-ỹ), so no name starting with Đ was masked
+    out, last, pos = [], 0, 0
+    # searched by hand rather than with finditer: a match reads up to four words whatever their
+    # case, and "ông Park Jin và bà Kim Narae" must resume after "Jin", not after "bà"
+    while True:
+        m = pat.search(text, pos)
+        if not m:
+            break
+        pos = m.start(2)
         words = m.group(2).split(" ")
-        if not all(_title(w) for w in words):
+        keep = []
+        for w in words:
+            if w in NAME_STOP or not _title(w):
+                break
+            keep.append(w)
+        if not keep or (len(keep) == 1 and m.group(1).strip().lower() not in _SHORT_OK):
             continue
-        out.append(text[last:m.start()])
-        out.append(rep(m))
-        last = m.end()
+        hon_word = m.group(1).strip()
+        low = hon_word.lower()
+        nxt = text[m.start(2) + len(keep[0]):m.start(2) + len(keep[0]) + 6].lower()
+        if keep[0] in RANK_HEAD and re.match(r" (tá|tướng|úy|uý)\b", nxt):
+            pos = m.start(2)                           # "đồng chí Đại tá X": the rank's own honorific reads X
+            continue
+        if keep[-1] == "Thành" and re.match(r" (ủy|uỷ|phố|viên)\b", text[m.start(2) + len(" ".join(keep)):][:7].lower()):
+            keep = keep[:-1]                           # "Thành ủy viên", "Thành phố"
+            if not keep:
+                continue
+        if low in NEEDS_SURNAME and keep[0] not in STRONG and keep[0] not in WEAK:
+            continue
+        if low in ("anh", "chị", "cô", "bà", "ông") and text[max(0, m.start() - 6):m.start()].lower().endswith("tiếng "):
+            continue                                   # "Tiếng Anh", not the honorific anh
+        if " ".join(keep) in HISTORIC:
+            continue                                   # "đồng chí Phạm Văn Đồng", a historical figure
+        pair = f"{hon_word[:1].upper()}{hon_word[1:]} {keep[0]}"
+        if pair in HON_FIXED or (pair in HON_FIXED_ALONE and len(keep) == 1) or \
+                _plain(f"{hon_word} {keep[0]}") in _PROV or " ".join(keep[:2]) in _PROV_ACCENTED:
+            continue
+        end = m.start(2) + len(" ".join(keep))
+        out.append(text[last:m.start(2)])
+        out.append(TOKEN)
+        last = pos = end
     out.append(text[last:])
     return "".join(out)
+
+
+_ROMAN = re.compile(r"(?<![\w\[])([A-Z][a-z]{2,11}) (" + "|".join(sorted(
+    STRONG | {"Hoang", "Pham", "Nguyen", "Tran", "Le", "Vu", "Vo", "Do", "Ho", "Ly", "Dao", "Mai", "Cao"},
+    key=len, reverse=True)) + r")(?![\w])")
+_ROMAN_STOP = {"Saigon", "Hanoi", "Viet", "Vietnam", "Tower", "Group", "Hotel", "Plaza", "Street",
+               "The", "Ben", "Cho", "Pho", "Bun", "Banh", "Com", "Cafe", "Coffee", "Spa", "Mall", "Center",
+               "Park", "Bank", "Land", "Home", "House", "Holdings", "Bay"}
+
+
+# one Vietnamese syllable written without diacritics: initial consonants, a vowel cluster and
+# an allowed final. A given name that fits it ("Lan", "Long", "Hue") is Vietnamese text, not
+# a Western given name, and "Lan Mai" or "Long Phan" stay as they are.
+_VN_SYLLABLE = re.compile(r"(?i)(?:ngh|ng|nh|ch|gh|gi|kh|ph|qu|th|tr|[bcdghklmnpqrstvx])?"
+                          r"[aeiouy]{1,3}(?:ch|ng|nh|[cmnpt])?")
+
+
+# common Western given names that Vietnamese people use with their surname (staff pages, authors,
+# streamers). A list, not a shape: "Media Do", "Melamine Cao" and "Tour Phan" are not people.
+WESTERN_GIVEN = set("""Emily Anna Anne John David Michael Peter Charlie Rosie Kevin Tony Jenny Linda Lisa
+Mary James Robert William Daniel Henry Jack Kelly Lily Lucy Sophie Amy Helen Vivian Tina Jimmy Jason
+Ryan Eric Alex Andy Steven Steve Thomas Richard Paul Mark Sarah Jessica Emma Olivia Grace Chloe Rachel
+Hannah Jennifer Julia Julie Kate Katie Laura Leo Lena Lina Louis Luna Maria Mia Mike Nancy Nick Nina
+Oliver Patrick Rose Ruby Sam Sandy Sean Selina Simon Sophia Stella Sunny Susan Ted Tom Tommy Victor
+Vincent Vicky Wendy Winnie Yuki Ken Ben Bella Bill Bob Cindy Daisy Dan Dennis Diana Elena Ella Elsa
+Eva Frank George Harry Hellen Ivy Jacky Jane Jasmine Jay Jenna Jerry Joe Joey Jolie Josh Joy Judy
+Kai Kathy Kenny Kris Kyle Lana Lee Lilly Liz Lola Lynn Max Megan Mina Molly Nathan Noah Rita Robin
+Roy Sabrina Sally Shawn Sky Sofia Stephen Teresa Tiffany Tracy Tyler Vanessa Vera Zoe Ivan Ian Ethan
+Adam Aaron Ann Annie Ashley Brian Bryan Carol Cathy Chris Christina Christine""".split())
+
+
+def _mask_roman(text: str) -> str:
+    """A Western given name before a Vietnamese surname, as staff pages write them."""
+    return _ROMAN.sub(lambda m: TOKEN if m.group(1) in WESTERN_GIVEN else m.group(0), text)
 
 
 def mask_names(text: str) -> str:
     if not text:
         return text
     text = _mask_honorific(text)
+    text = _mask_roman(text)
     out, last = [], 0
     for a, b in _name_spans(text):
         out.append(text[last:a]); out.append(TOKEN); last = b
