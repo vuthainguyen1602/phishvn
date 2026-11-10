@@ -378,16 +378,18 @@ def tab_families():
     df = pd.read_csv("data/processed/p2/p2_benchmark.csv")
     lines = [
         "\\begin{table*}[t]\\centering",
-        "\\caption{Family benchmark under the corpus' bundled splits, mean$\\pm$std over 5 seeds."
-        " FPR@0.90 = false-positive rate at 0.90 phishing recall. The random column is the"
+        "\\caption{Family benchmark on the full corpus, mean$\\pm$std over 5 seeds."
+        " FPR@0.90 = false-positive rate at 0.90 phishing recall. The random block is the"
         " leakage-prone full-corpus baseline of Section~\\ref{ssec:randomsplit}, not an estimate of"
-        " generalisation.}",
+        " generalisation. The bundled block is the train and test assignment the corpus ships"
+        " with, which is domain-disjoint and orders only part of the corpus by date. It is not"
+        " the phishing-temporal design of Section~\\ref{sec:method}.}",
         "\\label{tab:families}",
         "\\small\\setlength{\\tabcolsep}{4pt}",
         # ROC-AUC always sat in p2_benchmark.csv but was never printed; a benchmark reviewer
         # will ask for it.
         "\\begin{tabular}{lcccccccc}\\toprule",
-        " & \\multicolumn{4}{c}{Random} & \\multicolumn{4}{c}{Partly-temporal} \\\\",
+        " & \\multicolumn{4}{c}{Random} & \\multicolumn{4}{c}{Bundled split} \\\\",
         "\\cmidrule(lr){2-5}\\cmidrule(lr){6-9}",
         "Family & F1 & PR-AUC & ROC-AUC & FPR@0.90 & F1 & PR-AUC & ROC-AUC & FPR@0.90 \\\\ \\midrule",
     ]
