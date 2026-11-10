@@ -22,6 +22,11 @@ two-syllable historical name followed by a further syllable is a person; a bare 
 run is a house number only at the start of an address, never a year; and two-word cues
 ("công viên", "tiểu học") are matched as phrases, not as their single words.
 
+Since 2026-11-10 (v1.4, after a scan of the published v1.3 found suspects named in police news):
+"tượng" is a monument cue except in "đối tượng", which had kept every name after it as a place;
+and the words that introduce a person in crime reporting (đối tượng, bị can, bị cáo, nghi phạm,
+nạn nhân ...) count as honorifics, so a name after one is masked whatever its first syllable.
+
 The rule over-masks some brands named after a person (better for privacy than the reverse) and
 leaves foreign names without an honorific or a Vietnamese surname unmasked. Deterministic and
 idempotent.
@@ -89,7 +94,12 @@ street st. st road rd.""".split())
 # (tiểu học) made every "kỹ thuật viên Võ Văn Tài" and "giảng viên ..." read as an address.
 CUE_PHRASES = {"thành phố", "mầm non", "tiểu học", "đại lộ", "chung cư", "công viên", "bảo tàng",
                "thị trấn", "trung học", "phổ thông", "cơ sở", "đại học"}
-HONORIFIC = {"ông", "bà", "anh", "chị", "cô", "chú", "mr", "mr.", "ms", "ms.", "mrs", "mrs.",
+# a cue word that is the tail of another word: "đối tượng" (the suspect) is not "tượng" (a statue)
+NOT_CUE_PHRASES = {"đối tượng"}
+# words that introduce a person in crime and court reporting; two or more syllables must follow
+CRIME_ROLES = {"đối tượng", "bị can", "bị cáo", "nghi phạm", "nghi can", "bị hại", "nạn nhân",
+               "phạm nhân", "bị án", "tử tù"}
+HONORIFIC = CRIME_ROLES | {"ông", "bà", "anh", "chị", "cô", "chú", "mr", "mr.", "ms", "ms.", "mrs", "mrs.",
              "bapak", "ibu", "pak",  # the Indonesian-language feed pages
              # forms of address and academic or professional titles written before a name
              "đồng chí", "đồng chí:", "các đồng chí:", "đ/c", "thầy", "gs.", "pgs.", "ts.", "ths.", "bs.", "ks.", "ls.", "cn.",
@@ -162,7 +172,9 @@ def _keep_as_place(words: list[str], text: str, start: int) -> bool:
     prev = _prev_words(text, start)
     if not prev:
         return False
-    if prev[-1] in CUES or (len(prev) == 2 and " ".join(prev) in CUE_PHRASES):
+    if " ".join(prev) in NOT_CUE_PHRASES:
+        pass                                          # "đối tượng X" is a person, not a statue
+    elif prev[-1] in CUES or (len(prev) == 2 and " ".join(prev) in CUE_PHRASES):
         return True
     # house number (12, 12a, 464/60/8, 12-14), but not a date such as 19/06/2025, not a year
     # ("năm 1945, Nguyễn Lan Dung") and not a bare number after an ordinary word ("Win 11
