@@ -52,6 +52,11 @@ def s3(x: float) -> str:
     return f"{(v if v != 0 else 0.0):+.3f}"
 
 
+def s4(x: float) -> str:
+    v = round(float(x), 4)
+    return f"{(v if v != 0 else 0.0):+.4f}"
+
+
 def tn(n: int) -> str:
     return f"{n:,}".replace(",", "{,}")
 
@@ -435,6 +440,66 @@ def group_value() -> None:
     mac("RevValueAdded", tn(int(g.loc[g.arm == "+undated_all", "n_added"].iloc[0])))
 
 
+# --------------------------------------------------------------------------- row-level value
+def row_value() -> None:
+    """R2.6: influence-function values of single training rows, and how far they can be trusted."""
+    g = read(os.path.join(REV, "row_influence.csv"))
+    r = read(os.path.join(REV, "row_influence_removal.csv"))
+    c = read(os.path.join(REV, "row_influence_check.csv"))
+    if g is None or r is None or c is None:
+        write("tab_rev_rowvalue.tex", "% row-level influence absent")
+        return
+    order = list(dict.fromkeys(g.group))
+    m = g.groupby("group")[["n", "share_harmful", "sum_value"]].mean().loc[order]
+    base = r[r.arm == "none"].set_index("seed")
+    d = r[r.arm != "none"].copy()
+    d["d_logloss"] = d.logloss - d.seed.map(base.logloss)
+    d["d_f1"] = d.F1 - d.seed.map(base.F1)
+    arms = list(dict.fromkeys(d.arm))
+    a = d.groupby("arm")[["n_removed", "predicted", "d_logloss", "d_f1"]].mean().loc[arms]
+    lines = [
+        "\\begin{table}[t]\\centering",
+        "\\caption{Value of single training rows to the logistic regression on the dated test"
+        " window, by influence function, means over five seeds. A row's value is the first-order"
+        " change in mean test log-loss if the row is removed: below zero, removing it lowers the"
+        " loss. \\emph{Top}: by group of the training set. \\emph{Bottom}: the summed values of a set"
+        " of rows against the change measured by removing the set and refitting.}",
+        "\\label{tab:rowvalue}",
+        "\\begin{tabular}{@{}lrrr@{}}\\toprule",
+        "Training rows & Rows & Value $<0$ (\\%) & Summed value \\\\ \\midrule",
+    ]
+    for name, row in m.iterrows():
+        lines.append(f"{name[0].upper() + name[1:]} & {tn(int(round(row.n)))} & {pct(row.share_harmful)} & "
+                     f"${s4(row.sum_value)}$ \\\\")
+    lines += ["\\bottomrule\\end{tabular}", "", "\\smallskip",
+              "\\begin{tabular}{@{}lrrrr@{}}\\toprule",
+              "Rows removed & Rows & Summed value & $\\Delta$ log-loss & $\\Delta$F1 \\\\ \\midrule"]
+    for name, row in a.iterrows():
+        label = name.replace("%", "\\%")
+        lines.append(f"{label[0].upper() + label[1:]} & {tn(int(round(row.n_removed)))} & "
+                     f"${s4(row.predicted)}$ & ${s4(row.d_logloss)}$ & ${s4(row.d_f1)}$ \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
+    write("tab_rev_rowvalue.tex", "\n".join(lines))
+    mac("RevRowHarmCLD", pct(m.loc["undated, ChongLuaDao", "share_harmful"], 0))
+    mac("RevRowHarmOP", pct(m.loc["undated, OpenPhish", "share_harmful"], 0))
+    mac("RevRowHarmDated", pct(m.loc["dated phishing", "share_harmful"], 0))
+    mac("RevRowHarmBenign", pct(m.loc["benign", "share_harmful"], 0))
+    lin = c.groupby("seed").apply(lambda t: np.corrcoef(t.predicted, t.actual)[0, 1])
+    mac("RevRowLinMin", f"{lin.min():.2f}")
+    mac("RevRowSubsets", int(c.groupby("seed").size().iloc[0]))
+    und = d[d.arm == "all undated"]
+    mac("RevRowUndLoss", s3(und.d_logloss.mean()))
+    mac("RevRowUndPred", s3(und.predicted.mean()))
+    mac("RevRowUndFOneMin", s3(und.d_f1.min()))
+    mac("RevRowUndFOneMax", s3(und.d_f1.max()))
+    low, top = d[d.arm == "lowest 0.5%"], d[d.arm == "lowest 5.0%"]
+    mac("RevRowLowLoss", s3(low.d_logloss.mean()))
+    mac("RevRowLowPred", s3(low.predicted.mean()))
+    mac("RevRowTopLoss", s3(top.d_logloss.mean()))
+    mac("RevRowTopPred", s3(top.predicted.mean()))
+    mac("RevRowSolverGap", f"{(g.F1 - g.F1_benchmark_solver).abs().max():.4f}")
+
+
 # --------------------------------------------------------------------------- two-class temporal
 def twoclass() -> None:
     """R1.1 / R2.2 / R1.2: the protocol contrast on PhreshPhish, both classes dated."""
@@ -669,7 +734,7 @@ def screen_settings() -> None:
 
 def main() -> int:
     for fn in (protocol_primary, windows, operating, label_noise, harmonisation, corpus_probe,
-               coral_cells, group_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings):
+               coral_cells, group_value, row_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings):
         fn()
     # A macro the text uses but no finished analysis defined prints as a bold ?? and is listed,
     # so the article compiles mid-revision and no pending number can pass unnoticed.

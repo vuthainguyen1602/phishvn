@@ -77,7 +77,7 @@ runs the three drivers; the remaining arms take their own flags.
   studies; run `--papers p2` for this one.
 - `run_p2_scores.py`, `analyse_p2_scores.py`, `audit_p2_harmonisation.py`,
   `run_p2_corpus_probe.py`, `run_p2_coral_cells.py`, `run_p2_phreshphish_temporal.py`,
-  `run_p2_group_value.py`, `run_p2_attribution_stability.py`, `run_p2_cost.py`,
+  `run_p2_group_value.py`, `run_p2_row_influence.py`, `run_p2_attribution_stability.py`, `run_p2_cost.py`,
   `run_p2_ngram.py`, `run_p2_ngram_xdata.py`, `run_p2_label_screen_settings.py` — the analyses
   added in the first revision: operating points and calibration, domain-resampled intervals and
   label-error scenarios, the transfer corpora's host reduction, the within-class corpus probe,
