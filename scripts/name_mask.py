@@ -26,6 +26,7 @@ Since 2026-11-10 (v1.4, after a scan of the published v1.3 found suspects named 
 "tượng" is a monument cue except in "đối tượng", which had kept every name after it as a place;
 and the words that introduce a person in crime reporting (đối tượng, bị can, bị cáo, nghi phạm,
 nạn nhân ...) count as honorifics, so a name after one is masked whatever its first syllable.
+Since 2026-11-11 the same holds when the role is written with a colon ("đối tượng: X").
 
 The rule over-masks some brands named after a person (better for privacy than the reverse) and
 leaves foreign names without an honorific or a Vietnamese surname unmasked. Deterministic and
@@ -99,6 +100,9 @@ NOT_CUE_PHRASES = {"đối tượng"}
 # words that introduce a person in crime and court reporting; two or more syllables must follow
 CRIME_ROLES = {"đối tượng", "bị can", "bị cáo", "nghi phạm", "nghi can", "bị hại", "nạn nhân",
                "phạm nhân", "bị án", "tử tù"}
+# wanted notices write the role with a colon ("Thông báo truy nã đối tượng: X"); without the colon
+# form a name with a surname outside the lists above was left standing (found in v1.4, 2026-11-11)
+CRIME_ROLES |= {r + ":" for r in CRIME_ROLES}
 HONORIFIC = CRIME_ROLES | {"ông", "bà", "anh", "chị", "cô", "chú", "mr", "mr.", "ms", "ms.", "mrs", "mrs.",
              "bapak", "ibu", "pak",  # the Indonesian-language feed pages
              # forms of address and academic or professional titles written before a name
