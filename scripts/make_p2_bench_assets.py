@@ -770,7 +770,7 @@ def gen_stacking_verdict():
              f"and so exploratory, adjusted over its "
              f"own two tests: Stack[CB+LR] beats CatBoost under the phishing-temporal protocol "
              f"(paired $\\Delta$PR-AUC $= {t['mean']:+.4f}$, {t['wins']}/{t['k']} seeds, "
-             f"corrected ${fmt_p(tq, 'q')}$) and loses to it under random-same-rows "
+             f"corrected ${fmt_p(tq, 'q')}$) and loses to it on the dated random split "
              f"($\\Delta = {r['mean']:+.4f}$, {r['k'] - r['wins']}/{r['k']} seeds against, "
              f"corrected ${fmt_p(rq, 'q')}$): at 20 seeds the crossover is significant in "
              f"\\emph{{both}} directions.")
@@ -2356,7 +2356,7 @@ def gen_prior_verdict():
                    "so neither the prior nor the change of rows opens a family margin; what the "
                    "square measures is the level.".format(widest))
     level = ("At the full corpus's own prior the dated rows score ${:.3f}$ F1 for CatBoost against "
-             "${:.3f}$ on the full corpus, so the level drop of Section~\\ref{{ssec:decomp}} is "
+             "${:.3f}$ on the full corpus, so the level drop of the composition step is "
              "{}".format(dm["CatBoost"], fn["CatBoost"],
                          "largely the prior moving the all-positive floor rather than the rows "
                          "becoming harder." if abs(dm["CatBoost"] - fn["CatBoost"]) < 0.02 else
@@ -2594,13 +2594,13 @@ def gen_charcnn_xdata():
         else:
             g_verdict = ". The two string models transfer alike, and neither repairs the ranking."
         ngram = (
-            f" The linear character n-gram model of Section~\\ref{{ssec:charcnn}}, run in the same "
+            f" The linear character n-gram model above, run in the same "
             f"design, reaches an off-diagonal ROC-AUC of ${g['roc_off']:.3f}$ with "
             f"{WORDS[g['below_chance']]} of twelve cells below chance (diagonal "
             f"${g['roc_diag']:.3f}$){g_verdict}")
     return (
-        f"Table~\\ref{{tab:xdatasetcnn}} refits the "
-        f"character-CNN of Section~\\ref{{ssec:charcnn}} in the same four-corpus design "
+        f"\\textbf{{Across the four corpora.}} Table~\\ref{{tab:xdatasetcnn}} refits the "
+        f"character-CNN in the four-corpus design of Section~\\ref{{ssec:xdata}} "
         f"(grouped diagonal split, whole-corpus off-diagonal cells, the scheme stripped so that "
         f"every corpus presents a bare host). Its diagonal mean is ${c['f1_diag']:.3f}$ F1 "
         f"against an off-diagonal mean of ${c['f1_off']:.3f}$, a gap of "
@@ -2810,7 +2810,7 @@ def gen_nowww():
         f"{pc('PhiUSIIL', 'phishing')} of its phishing rows) and on "
         f"{pc('PhishStorm', 'benign')} of PhishStorm's (against {pc('PhishStorm', 'phishing')}); "
         "\\texttt{subdom\\_cnt}, \\texttt{dot\\_cnt} and the length features all count it, so a "
-        "model that learns what the prefix means on one corpus is scored on a corpus where it "
+        "model that learns what the prefix means on one corpus can be scored on a corpus where it "
         "means the opposite. Removing the prefix from every host in all four corpora, with PhishVN "
         "entering one row per host, raises the off-diagonal ROC-AUC mean from "
         f"${rel['off']:.3f}$ (${ded['off']:.3f}$ with one row per host alone) to ${now['off']:.3f}$ "
@@ -2818,8 +2818,9 @@ def gen_nowww():
         "(Table~\\ref{tab:nowww}). The diagonal falls as well, from "
         f"${rel['diag']:.3f}$ to ${now['diag']:.3f}$, because the prefix was a label cue inside each "
         "corpus too, and the gap between the two narrows from "
-        f"${rel['diag'] - rel['off']:.3f}$ to ${now['diag'] - now['off']:.3f}$. Most of the "
-        "below-chance transfer is therefore a disagreement between corpora about one prefix; "
+        f"${rel['diag'] - rel['off']:.3f}$ to ${now['diag'] - now['off']:.3f}$. Removing one prefix "
+        "thus removes most of the below-chance cells, which fits a disagreement between corpora "
+        "about what the prefix means; "
         f"what is left after removing it is weaker transfer, with {now['below']} cells still "
         "below chance. ")
     if "mcc_off" in now:

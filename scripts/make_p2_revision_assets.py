@@ -184,7 +184,9 @@ def windows() -> None:
     allv = pd.concat([per[c][0] for c in CUTS])
     mac("RevWinMin", s3(allv.min()))
     mac("RevWinMax", s3(allv.max()))
-    mac("RevWinNeg", f"{int(sum((per[c][0] < 0).sum() for c in CUTS))} of {len(CUTS) * len(ORDER)}")
+    # count on the values as Table tab:windows prints them, so a reader counting the table agrees
+    mac("RevWinNeg", f"{int(sum((per[c][0].round(3) < 0).sum() for c in CUTS))} of "
+                     f"{len(CUTS) * len(ORDER)}")
     mac("RevWinLRCBMin", s3(min(per[c][1] for c in CUTS)))
     mac("RevWinLRCBMax", s3(max(per[c][1] for c in CUTS)))
     mac("RevWinLRCBPos", f"{sum(per[c][1] > 0 for c in CUTS)} of {len(CUTS)}")
@@ -285,6 +287,33 @@ def label_noise() -> None:
     mac("RevNoiseWorstPos", f"{int((w12 > 0).sum())} of {len(ORDER)}")
     w5 = worst.loc[0.05]
     mac("RevNoiseWorstFivePos", f"{int((w5 > 0).sum())} of {len(ORDER)}")
+    noise_ordering()
+
+
+def noise_ordering() -> None:
+    """Whether the family ordering under the temporal protocol survives label error, with the
+    SAME rows relabelled for every family (analyse_p2_noise_ordering.py)."""
+    o = read(os.path.join(REV, "noise_ordering.csv"))
+    if o is None:
+        return
+    m = o.groupby(["rate", "mode", "family"]).f1.mean().unstack()
+    lrcb = m["LogReg"] - m["CatBoost"]
+    rnd = lrcb.xs("random", level="mode")
+    hard = lrcb.xs("hard", level="mode")
+    mac("RevOrdRandLRCBMin", s3(rnd.min()))
+    mac("RevOrdRandLRCBMax", s3(rnd.max()))
+    rnd_top = [m.loc[(r, "random")].idxmax() for r in rnd.index]
+    mac("RevOrdRandLRTop", "every" if all(t == "LogReg" for t in rnd_top) else "not every")
+    mac("RevOrdHardFiveLRCB", s3(hard.loc[0.05]))
+    mac("RevOrdHardTwelveLRCB", s3(hard.loc[0.121]))
+    mac("RevOrdHardTwentyLRCB", s3(hard.loc[0.20]))
+    row = m.loc[(0.121, "hard")].sort_values(ascending=False)
+    rank = list(row.index).index("LogReg") + 1
+    mac("RevOrdHardTwelveLRRank", "last of seven" if rank == len(row) == 7 else f"{rank} of {len(row)}")
+    mac("RevOrdHardTwelveLRFOne", f3(row["LogReg"]))
+    others = row.drop("LogReg")
+    mac("RevOrdHardTwelveOthersMin", f3(others.min()))
+    mac("RevOrdHardTwelveOthersMax", f3(others.max()))
 
 
 # --------------------------------------------------------------------------- transfer corpora
@@ -624,6 +653,61 @@ def hpo_all() -> None:
         lines.append(f"{NAME.get(f, f)} & {f3(r[1])} & {f3(r[2])} & {s3(r[2] - r[1])} \\\\")
     lines += ["\\bottomrule\\end{tabular}\\end{table}"]
     write("tab_rev_hpoall.tex", "\n".join(lines))
+    hpo_space()
+
+
+# Readable names for the searched parameters (the runner's own names, as the estimators take them).
+PARAM_NAME = {
+    "C": "$C$", "n_estimators": "trees", "iterations": "iterations", "max_iter": "iterations",
+    "max_depth": "depth", "depth": "depth", "min_samples_leaf": "min.\\ leaf size",
+    "max_features": "feature fraction", "learning_rate": "learning rate",
+    "max_leaf_nodes": "leaf nodes", "num_leaves": "leaves", "l2_regularization": "$\\ell_2$",
+    "l2_leaf_reg": "$\\ell_2$ leaf reg.", "mlpclassifier__alpha": "$\\ell_2$ penalty $\\alpha$",
+    "mlpclassifier__learning_rate_init": "initial learning rate",
+    "subsample": "row subsample", "colsample_bytree": "column subsample",
+    "min_child_samples": "min.\\ child samples",
+}
+
+
+def hpo_space() -> None:
+    """R4.9 / R1.7: every family's search space, read from the search code itself, so the table
+    cannot drift from what was searched."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("hpo_gwo", os.path.join(_HERE, "hpo_gwo.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    space = mod.SPACE
+    missing = [f for f in ORDER if f not in space]
+    if missing:
+        raise SystemExit(f"hpo_gwo.SPACE has no entry for {missing}")
+
+    def rng(lo, hi, kind):
+        if kind == "logfloat":
+            return f"$10^{{[{lo:g},\\,{hi:g}]}}$"
+        if kind == "int":
+            return f"{int(lo)}--{int(hi)}"
+        return f"{lo:g}--{hi:g}"
+
+    lines = [
+        "\\begin{table}[t]\\centering",
+        "\\caption{The search space of every family in the tuning arm of Table~\\ref{tab:hpoall},"
+        " as the search code defines it. Both searches get the same 54 evaluations whatever the"
+        " number of searched parameters, so the spaces differ in dimension: a one-parameter"
+        " space is searched far more densely than a five-parameter one.}",
+        "\\label{tab:hpospace}",
+        "\\small",
+        "\\begin{tabular}{lcp{0.62\\linewidth}}\\toprule Family & Dim. & Parameters and ranges"
+        " \\\\ \\midrule",
+    ]
+    for f in ORDER:
+        params = "; ".join(f"{PARAM_NAME.get(n, n.replace('_', ' '))} {rng(lo, hi, k)}"
+                           for n, lo, hi, k in space[f])
+        lines.append(f"{NAME.get(f, f)} & {len(space[f])} & {params} \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
+    write("tab_rev_hpospace.tex", "\n".join(lines))
+    dims = [len(space[f]) for f in ORDER]
+    mac("RevHPODimMin", min(dims))
+    mac("RevHPODimMax", max(dims))
 
 
 # --------------------------------------------------------------------------- attribution stability
@@ -674,20 +758,37 @@ def cost() -> None:
     if c is None:
         write("tab_rev_cost.tex", "% cost run absent")
         return
+    curve = read(os.path.join(REV, "cost_cnn_batch.csv"))
+    batch_note = ""
+    if curve is not None:
+        # the batch size after which the CNN's per-URL time jumps, read from the logged curve
+        cv = curve.sort_values("batch").reset_index(drop=True)
+        jump = int((cv.ms_per_url / cv.ms_per_url.shift()).idxmax())
+        lo, hi = cv.iloc[jump - 1], cv.iloc[jump]
+        batch_note = (" On one thread the CNN is slower per URL in a large batch than alone: its"
+                      f" per-URL time is {lo.ms_per_url:.2f}~ms at {int(lo.batch)} URLs and"
+                      f" {hi.ms_per_url:.2f}~ms at {int(hi.batch)}, where its activations no longer"
+                      " fit in cache.")
+        mac("RevCostCNNBatchLoN", int(lo.batch))
+        mac("RevCostCNNBatchHiN", int(hi.batch))
     lines = ["\\begin{table}[t]\\centering",
              "\\caption{Cost on one machine (" + str(c.machine.iloc[0]).replace("_", "\\_")
-             + ", one thread for the tabular models), phishing-temporal training window of seed 0."
-             " Latency per URL in a batch of 1{,}000 and for a single URL (median of 200 calls)."
-             " The CNN's fit time is that of the reported CPU run; every tabular model also pays"
-             " feature extraction.}",
+             + ", one thread for every model), phishing-temporal training window of seed 0."
+             " Latency per URL in a batch of 1{,}000 (median of 5 batches, in microseconds) and"
+             " for a single URL (median of 200 calls, in milliseconds), both after warm-up calls."
+             " The machine was not idle, so the whole measurement was repeated"
+             f" {int(c.rounds.iloc[0]) if 'rounds' in c else 1} times and each entry is the lowest"
+             " of those rounds. The CNN's fit time is that of the"
+             " reported CPU run; every tabular model also pays feature extraction."
+             + batch_note + "}",
              "\\label{tab:cost}", "\\small\\setlength{\\tabcolsep}{4pt}",
-             "\\begin{tabular}{lrrrr}\\toprule Model & Fit (s) & Size (kB) & ms/URL (batch) &"
+             "\\begin{tabular}{lrrrr}\\toprule Model & Fit (s) & Size (kB) & $\\mu$s/URL (batch) &"
              " ms (single) \\\\ \\midrule"]
     for r in c.itertuples():
         def num(v, d):
             return "--" if pd.isna(v) else f"{v:,.{d}f}".replace(",", "{,}")
         lines.append(f"{NAME.get(r.model, r.model)} & {num(r.fit_s, 1)} & {num(r.size_kb, 0)} & "
-                     f"{num(r.ms_per_url_batch, 4)} & {num(r.ms_single, 2)} \\\\")
+                     f"{num(r.ms_per_url_batch * 1e3, 2)} & {num(r.ms_single, 2)} \\\\")
     lines += ["\\bottomrule\\end{tabular}\\end{table}"]
     write("tab_rev_cost.tex", "\n".join(lines))
     tab = c[c.model.isin(ORDER)]

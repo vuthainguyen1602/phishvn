@@ -75,7 +75,7 @@ runs the three drivers; the remaining arms take their own flags.
 - `run_ml_label_sensitivity.py` — recall by provenance tier, the sensitivity analysis that
   answers the corpus audit's 12.1% positive-label error rate. One script serves several
   studies; run `--papers p2` for this one.
-- `run_p2_scores.py`, `analyse_p2_scores.py`, `audit_p2_harmonisation.py`,
+- `run_p2_scores.py`, `analyse_p2_scores.py`, `analyse_p2_noise_ordering.py`, `audit_p2_harmonisation.py`,
   `run_p2_corpus_probe.py`, `run_p2_coral_cells.py`, `run_p2_phreshphish_temporal.py`,
   `run_p2_group_value.py`, `run_p2_row_influence.py`, `run_p2_attribution_stability.py`, `run_p2_cost.py`,
   `run_p2_ngram.py`, `run_p2_ngram_xdata.py`, `run_p2_label_screen_settings.py` — the analyses

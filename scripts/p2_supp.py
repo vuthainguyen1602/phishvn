@@ -24,7 +24,7 @@ SUPP = {
     "tab:pruned_models": "tab_pruned_models", "tab:combined": "tab_combined",
     "tab:shiftmatrix": "tab_shiftmatrix", "tab:stacking": "tab_stacking", "tab:hpo": "tab_hpo",
     "tab:twosided": "tab_twosided", "tab:harmonisation": "tab_rev_harmonisation",
-    "tab:coralcells": "tab_rev_coral", "tab:attrstab": "tab_rev_attr", "tab:hpoall": "tab_rev_hpoall",
+    "tab:coralcells": "tab_rev_coral", "tab:attrstab": "tab_rev_attr", "tab:hpoall": "tab_rev_hpoall", "tab:hpospace": "tab_rev_hpospace",
     "fig:shiftmatrix": None, "fig:repairattempts": None, "fig:prauc_designs": None,
     "fig:prauc_cost": None, "alg:forecast": None,
 }
