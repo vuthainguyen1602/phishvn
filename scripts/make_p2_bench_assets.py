@@ -1151,7 +1151,7 @@ def gen_strict_verdict():
     else:
         close = " Every difference is about a point or less."
     return (
-        f"Paired by seed (the benign split mask is shared within a seed), CatBoost minus"
+        f"Paired by seed (the benign split is shared within a seed), CatBoost minus"
         f" logistic regression under the phishing-temporal protocol is "
         f"${f1['mean']:+.4f}$ F1 (95\\% CI $\\pm{ci:.4f}$, corrected resampled $t$-test "
         f"${fmt_p(f1['p'])}$, $n={n}$ seeds). {f1_txt} On the other three quantities the same "
