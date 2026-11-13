@@ -2453,7 +2453,7 @@ def gen_valthr_verdict():
                          f"spread reduction than under the random designs: its spread is "
                          f"${sp_val[2]:.3f}$ against the oracle's ${sp_orc[2]:.3f}$, where the random "
                          f"designs match the oracle to within ${max(abs(sp_val[0] - sp_orc[0]), abs(sp_val[1] - sp_orc[1])):.3f}$. "
-                         f"That is itself the protocol at work: the "
+                         f"The protocol accounts for the difference: the "
                          f"most recent tenth of the training window is not the test window, and a "
                          f"threshold tuned on it ages like the model does.")
     lead_txt = (f"{PROSE_NAME.get(leader, leader)} is at the top under the temporal protocol"

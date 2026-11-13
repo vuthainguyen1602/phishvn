@@ -691,9 +691,9 @@ def hpo_space() -> None:
     lines = [
         "\\begin{table}[t]\\centering",
         "\\caption{The search space of every family in the tuning arm of Table~\\ref{tab:hpoall},"
-        " as the search code defines it. Both searches get the same 54 evaluations whatever the"
-        " number of searched parameters, so the spaces differ in dimension: a one-parameter"
-        " space is searched far more densely than a five-parameter one.}",
+        " as the search code defines it. The spaces differ in dimension, and both searches get"
+        " the same 54 evaluations whatever the dimension, so a one-parameter space is searched"
+        " far more densely than a five-parameter one.}",
         "\\label{tab:hpospace}",
         "\\small",
         "\\begin{tabular}{lcp{0.62\\linewidth}}\\toprule Family & Dim. & Parameters and ranges"
@@ -767,8 +767,8 @@ def cost() -> None:
         lo, hi = cv.iloc[jump - 1], cv.iloc[jump]
         batch_note = (" On one thread the CNN is slower per URL in a large batch than alone: its"
                       f" per-URL time is {lo.ms_per_url:.2f}~ms at {int(lo.batch)} URLs and"
-                      f" {hi.ms_per_url:.2f}~ms at {int(hi.batch)}, where its activations no longer"
-                      " fit in cache.")
+                      f" {hi.ms_per_url:.2f}~ms at {int(hi.batch)}, likely because its activations"
+                      " outgrow the processor cache.")
         mac("RevCostCNNBatchLoN", int(lo.batch))
         mac("RevCostCNNBatchHiN", int(hi.batch))
     lines = ["\\begin{table}[t]\\centering",
