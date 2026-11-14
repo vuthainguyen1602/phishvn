@@ -302,6 +302,9 @@ def source_control() -> None:
     mac("RevSrcCLDCutsMax", s3(allc.max()))
     mac("RevSrcTNMMin", s3(tnm.min()))
     mac("RevSrcTNMMax", s3(tnm.max()))
+    tnm_pr = step(files[("tnm", 0.7)], "PR-AUC")
+    mac("RevSrcTNMPRMin", s3(tnm_pr.min()))
+    mac("RevSrcTNMPRMax", s3(tnm_pr.max()))
     tnm_auc = steps["ROC-AUC"][-1]
     mac("RevSrcTNMAUCMin", s3(tnm_auc.min()))
     mac("RevSrcTNMAUCMax", s3(tnm_auc.max()))
