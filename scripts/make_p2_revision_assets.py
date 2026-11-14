@@ -192,6 +192,131 @@ def windows() -> None:
     mac("RevWinLRCBPos", f"{sum(per[c][1] > 0 for c in CUTS)} of {len(CUTS)}")
 
 
+# --------------------------------------------------------------------------- nested cut-offs
+def windows_nesting() -> None:
+    """R2.4 / R1.5: how far the four forward cut-offs share their test windows (2026-11-14)."""
+    from run_p2_temporal_strict import load, split_phishing
+    df = load()
+    ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)
+    te = {c: split_phishing(ph, c)[1] for c in CUTS}
+    ids = {c: set(t.index) for c, t in te.items()}
+    for a, b in zip(CUTS[1:], CUTS[:-1]):
+        if not ids[a] <= ids[b]:
+            raise SystemExit(f"test window at {a} is not inside the one at {b}: the text says nested")
+    ends = {t.date.max() for t in te.values()}
+    if len(ends) != 1:
+        raise SystemExit("the forward test windows do not share their last date")
+    starts = [t.date.min() for t in te.values()]
+    mac("RevWinNestRows", tn(len(ids[CUTS[-1]])))
+    mac("RevWinStartMonths", str(int(round((max(starts) - min(starts)).days / 30.44))))
+
+
+# --------------------------------------------------------------------------- threshold transfer
+def threshold_transfer() -> None:
+    """R1.4: a validation threshold carried from one corpus to another (2026-11-14)."""
+    d = read(os.path.join(REV, "threshold_transfer.csv"))
+    if d is None:
+        write("tab_rev_thrtransfer.tex", "% threshold-transfer run absent")
+        return
+    fams = [("LogReg", "Logistic regression"), ("RandomForest", "Random forest"), ("CatBoost", "CatBoost")]
+    cell = d.groupby(["family", "source", "target"]).mean(numeric_only=True).reset_index()
+    on, off = cell[cell.source == cell.target], cell[cell.source != cell.target]
+    lines = [
+        "\\begin{table}[t]\\centering",
+        "\\caption{A threshold chosen on one corpus, carried to another. Per family, the mean over"
+        " source corpora (in-corpus) and over the twelve source--target pairs (transfer), five seeds."
+        " $\\tau_{\\mathrm{src}}$: the F1-maximising threshold on a validation slice of the source;"
+        " $\\tau_{\\mathrm{tgt}}$: the same rule on a $10\\%$ labelled slice of the target, scored by the"
+        " same source model. Every reading uses the same model and the same target test rows.}",
+        "\\label{tab:thrtransfer}",
+        "\\small\\setlength{\\tabcolsep}{3pt}",
+        "\\begin{tabular}{llcccccc}\\toprule",
+        " & & \\multicolumn{3}{c}{At $\\tau_{\\mathrm{src}}$} & \\multicolumn{3}{c}{At $\\tau_{\\mathrm{tgt}}$} \\\\",
+        "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}",
+        "Family & Cells & FPR & Recall & F1 & FPR & Recall & F1 \\\\ \\midrule",
+    ]
+    for f, label in fams:
+        for tag, sub in (("in-corpus", on), ("transfer", off)):
+            r = sub[sub.family == f].mean(numeric_only=True)
+            lines.append(f"{label if tag == 'in-corpus' else ''} & {tag} & " + " & ".join(
+                f3(r[k]) for k in ("FPR_src", "recall_src", "F1_src", "FPR_tgt", "recall_tgt", "F1_tgt"))
+                + " \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
+    write("tab_rev_thrtransfer.tex", "\n".join(lines))
+    mac("RevThrInFPRMin", f3(on.FPR_src.min()))
+    mac("RevThrInFPRMax", f3(on.FPR_src.max()))
+    mac("RevThrOffFPRMin", f3(off.FPR_src.min()))
+    mac("RevThrOffFPRMax", f3(off.FPR_src.max()))
+    mac("RevThrOffFPRMean", f3(off.FPR_src.mean()))
+    mac("RevThrOffFPRHalf", f"{int((off.FPR_src > 0.5).sum())} of {len(off)}")
+    mac("RevThrTgtLow", f"{int((off.tau_tgt < 0.05).sum())} of {len(off)}")
+    mac("RevThrTgtFPRHigh", f"{int((off.FPR_tgt > 0.9).sum())} of {len(off)}")
+    mac("RevThrTgtFGain", f3((off.F1_tgt - off.F1_src).mean()))
+
+
+# --------------------------------------------------------------------------- one phishing feed
+def source_control() -> None:
+    """R1.2 / R4.4: the protocol contrast with the phishing class restricted to one feed, so the
+    cut cannot change the phishing source mix (2026-11-14)."""
+    sc = os.path.join(REV, "source_control")
+    files = {("cld", c): os.path.join(sc, f"cld_cut{c:.2f}.csv") for c in CUTS}
+    files[("tnm", 0.7)] = os.path.join(sc, "tnm_cut0.70.csv")
+    base = os.path.join(PROC, "p2_temporal_strict_guarded_pm.csv")
+    if not all(os.path.exists(p) for p in [base, *files.values()]):
+        write("tab_rev_sourcectl.tex", "% single-feed runs incomplete")
+        return
+
+    def step(path, met="F1"):
+        m = pd.read_csv(path).groupby(["family", "protocol"])[met].mean().unstack()
+        return m["temporal_strict"] - m["random_same_rows_guarded"]
+    paths = [("All feeds", 0.7, base)] + [("ChongLuaDao", c, files[("cld", c)]) for c in CUTS] \
+        + [("NCSC", 0.7, files[("tnm", 0.7)])]
+    lines = [
+        "\\begin{table}[t]\\centering",
+        "\\caption{The protocol contrast with the phishing class restricted to one feed: phishing-temporal"
+        " minus the guard- and prior-matched random control, mean over five seeds, on F1 at $\\tau = 0.5$"
+        " and on ROC-AUC. The benign rows are those of every other table. Columns give the feed and the"
+        " share of its dated rows in training; All feeds at $0.70$ is Table~\\ref{tab:protocol}.}",
+        "\\label{tab:sourcectl}",
+        "\\scriptsize\\setlength{\\tabcolsep}{2.5pt}",
+        "\\begin{tabular}{l" + "c" * len(paths) + "}\\toprule",
+        "Family & " + " & ".join(f"{n} {c:.2f}" for n, c, _ in paths) + " \\\\ \\midrule",
+    ]
+    steps = {}
+    for met, head in (("F1", "$\\Delta$F1"), ("ROC-AUC", "$\\Delta$ROC-AUC")):
+        steps[met] = [step(p, met) for _, _, p in paths]
+        lines.append(f"\\multicolumn{{{len(paths) + 1}}}{{l}}{{{head}}} \\\\")
+        for f in ORDER:
+            lines.append(f"{NAME.get(f, f)} & " + " & ".join(s3(v[f]) for v in steps[met]) + " \\\\")
+        lines.append("\\midrule" if met == "F1" else "")
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
+    write("tab_rev_sourcectl.tex", "\n".join(lines))
+    all7, cld7, tnm = steps["F1"][0], steps["F1"][3], steps["F1"][-1]
+    mac("RevSrcCLDMin", s3(cld7.min()))
+    mac("RevSrcCLDMax", s3(cld7.max()))
+    k = cld7.idxmin()
+    mac("RevSrcCLDWorst", NAME[k][0].lower() + NAME[k][1:] if k in NAME else k)
+    mac("RevSrcMaxDiff", f3((cld7 - all7).abs().max()))
+    allc = pd.concat(steps["F1"][1:1 + len(CUTS)])
+    mac("RevSrcCLDCutsMin", s3(allc.min()))
+    mac("RevSrcCLDCutsMax", s3(allc.max()))
+    mac("RevSrcTNMMin", s3(tnm.min()))
+    mac("RevSrcTNMMax", s3(tnm.max()))
+    tnm_auc = steps["ROC-AUC"][-1]
+    mac("RevSrcTNMAUCMin", s3(tnm_auc.min()))
+    mac("RevSrcTNMAUCMax", s3(tnm_auc.max()))
+    # the two feeds' weight among dated phishing, and the national blacklist's share of training
+    from run_p2_temporal_strict import URL_CSV, load, split_phishing
+    src = pd.read_csv(URL_CSV, usecols=["url_norm", "source"], dtype=str) \
+        .drop_duplicates("url_norm").rename(columns={"url_norm": "url"})
+    df = load().merge(src, on="url", how="left")
+    ph = df[(df.y == 1) & df.date.notna()]
+    mac("RevSrcCLDShare", pct((ph.source == "chongluadao").mean(), 0))
+    tnm_ph = ph[ph.source == "tinnhiemmang"].sort_values("date").reset_index(drop=True)
+    n_tr = len(split_phishing(tnm_ph, 0.7)[0])
+    mac("RevSrcTNMTrainShare", pct(n_tr / (n_tr + 0.7 * int((df.y == 0).sum())), 0))
+
+
 # --------------------------------------------------------------------------- operating points
 def operating() -> None:
     """R1.4 / R1.11: calibration and deployable operating points under both protocols."""
@@ -834,7 +959,7 @@ def screen_settings() -> None:
 
 
 def main() -> int:
-    for fn in (protocol_primary, windows, operating, label_noise, harmonisation, corpus_probe,
+    for fn in (protocol_primary, windows, windows_nesting, threshold_transfer, source_control, operating, label_noise, harmonisation, corpus_probe,
                coral_cells, group_value, row_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings):
         fn()
     # A macro the text uses but no finished analysis defined prints as a bold ?? and is listed,

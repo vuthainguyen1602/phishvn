@@ -151,21 +151,34 @@ def main():
                          "variable. Writes protocols temporal_strict + random_same_rows_guarded.")
     ap.add_argument("--benign-grouped", action="store_true",
                     help="split benign rows by registrable domain instead of row by row")
+    ap.add_argument("--phish-source", default=None, choices=("chongluadao", "tinnhiemmang"),
+                    help="keep only the dated phishing rows of one feed (benign unchanged), so the "
+                         "time cut cannot change the phishing source mix; writes its own CSV")
     ap.add_argument("--match-prior", action="store_true",
                     help="with --guard-control: subsample the control's benign test rows to the "
                          "temporal arm's test prior")
     args = ap.parse_args()
     if args.match_prior and not args.guard_control:
         raise SystemExit("--match-prior applies to the guarded control; add --guard-control")
-    if (args.benign_grouped or args.match_prior) and (
+    if (args.benign_grouped or args.match_prior or args.phish_source) and (
             os.path.abspath(args.out) in {os.path.abspath(OUT), os.path.abspath(
                 "data/processed/p2/p2_temporal_strict_guarded.csv")} or args.curves):
-        raise SystemExit("--benign-grouped/--match-prior write their own CSV: pass --out and --curves ''")
+        raise SystemExit("--benign-grouped/--match-prior/--phish-source write their own CSV: "
+                         "pass --out and --curves ''")
 
     refuse_canonical(args.out, OUT, "data/processed/p2/p2_temporal_strict_guarded.csv")
     refuse_canonical(args.curves, CURVES)
     df = load()
     feats = [c for c in COMPPHISH if c in df.columns]
+    if args.phish_source:
+        # SOURCE CONTROL (2026-11-14). Every PhishVN source is single-class, and the canonical cut
+        # lowers the national blacklist's share of phishing from 15% of training to 9% of test,
+        # so part of the protocol step can be a change of feed. Restricted to one feed, the two
+        # arms hold the same source on both sides of the cut and only the assignment differs.
+        src = pd.read_csv(URL_CSV, usecols=["url_norm", "source"], dtype=str) \
+            .drop_duplicates("url_norm").rename(columns={"url_norm": "url"})
+        df = df.merge(src, on="url", how="left")
+        df = df[(df.y == 0) | (df.source == args.phish_source)].drop(columns="source")
     ph = df[(df.y == 1) & df.date.notna()].sort_values("date").reset_index(drop=True)
     be = df[df.y == 0].reset_index(drop=True)
     ph_tr, ph_te, n_leaked = split_phishing(ph, args.cut, args.test_after)
