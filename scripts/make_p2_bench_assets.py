@@ -959,7 +959,7 @@ def gen_weighting_verdict():
         f"regression by ${mc:+.3f}$) where the uniform configuration of "
         f"Table~\\ref{{tab:families}} has ${uf:.3f}$ (${uc:+.3f}$), while the PR-AUC spread barely "
         f"moves (${mp:.3f}$ against ${up:.3f}$). Under the phishing-temporal protocol the mixed "
-        f"configuration ties the two families (${tc:+.3f}$) where the uniform one puts logistic "
+        f"configuration leaves the two families level (${tc:+.3f}$) where the uniform one puts logistic "
         f"regression ahead (${vc:+.3f}$). Reweighting changes where each family's scores fall "
         f"relative to $\\tau = 0.5$ and nothing about how they rank, so a family table that mixes "
         f"weighted and unweighted models reports a margin of several F1 points that is a property "
