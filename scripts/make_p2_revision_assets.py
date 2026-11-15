@@ -775,7 +775,7 @@ def hpo_all() -> None:
         "\\begin{table}[t]\\centering",
         "\\caption{Default against tuned configuration for all seven families, tuned on the"
         " phishing-temporal training window only (54 evaluations per search, the higher of random"
-        " search and Grey Wolf adopted) and scored once on the temporal test window; F1 at"
+        " search and Grey Wolf adopted) and scored once on the temporal test window. F1 at"
         " $\\tau = 0.5$, mean over three model seeds.}",
         "\\label{tab:hpoall}",
         "\\small",
@@ -898,21 +898,20 @@ def cost() -> None:
         cv = curve.sort_values("batch").reset_index(drop=True)
         jump = int((cv.ms_per_url / cv.ms_per_url.shift()).idxmax())
         lo, hi = cv.iloc[jump - 1], cv.iloc[jump]
-        batch_note = (" On one thread the CNN is slower per URL in a large batch than alone: its"
-                      f" per-URL time is {lo.ms_per_url:.2f}~ms at {int(lo.batch)} URLs and"
-                      f" {hi.ms_per_url:.2f}~ms at {int(hi.batch)}, likely because its activations"
+        batch_note = (" On one thread the CNN is slower per URL in a large batch than alone"
+                      f" ({lo.ms_per_url:.2f}~ms at {int(lo.batch)} URLs,"
+                      f" {hi.ms_per_url:.2f}~ms at {int(hi.batch)}), likely because its activations"
                       " outgrow the processor cache.")
         mac("RevCostCNNBatchLoN", int(lo.batch))
         mac("RevCostCNNBatchHiN", int(hi.batch))
     lines = ["\\begin{table}[t]\\centering",
              "\\caption{Cost on one machine (" + MACHINE.get(str(c.machine.iloc[0]), str(c.machine.iloc[0]).replace("_", "\\_"))
-             + ", one thread for every model), phishing-temporal training window of seed 0."
-             " Latency per URL in a batch of 1{,}000 (median of 5 batches, in microseconds) and"
-             " for a single URL (median of 200 calls, in milliseconds), both after warm-up calls."
-             " The machine was not idle, so the whole measurement was repeated"
-             f" {int(c.rounds.iloc[0]) if 'rounds' in c else 1} times and each entry is the lowest"
-             " of those rounds. The CNN's fit time is that of the"
-             " reported CPU run; every tabular model also pays feature extraction."
+             + ", one thread per model), phishing-temporal training window of seed 0."
+             " Latency per URL in a batch of 1{,}000 (median of 5 batches, microseconds) and"
+             " for a single URL (median of 200 calls, milliseconds), after warm-up."
+             f" Each entry is the lowest of {int(c.rounds.iloc[0]) if 'rounds' in c else 1} repeated"
+             " rounds, because the machine was not idle. The CNN's fit time is that of the"
+             " reported CPU run, and every tabular model also pays feature extraction."
              + batch_note + "}",
              "\\label{tab:cost}", "\\small\\setlength{\\tabcolsep}{4pt}",
              "\\begin{tabular}{lrrrr}\\toprule Model & Fit (s) & Size (kB) & $\\mu$s/URL (batch) &"

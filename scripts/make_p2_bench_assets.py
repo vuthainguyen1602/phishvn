@@ -1753,9 +1753,9 @@ def tab_xdataset_rf():
     lines = [
         "\\begin{table}[t]", "\\centering",
         "\\caption{Random-forest cross-dataset transfer, F1 and ROC-AUC (rows = train corpus,"
-        " columns = test corpus); the matrix every later intervention re-runs. Diagonal bold;"
+        " columns = test corpus); the matrix every later intervention re-runs. Diagonal cells are bold and"
         " \\underline{underlined} ROC-AUC cells are below chance ($<0.5$). Mean over five model"
-        " seeds; every corpus at host level, diagonal split grouped by registrable domain.}",
+        " seeds, every corpus at host level, diagonal split grouped by registrable domain.}",
         "\\label{tab:xdatasetrf}", "\\small",
         "\\begin{tabular}{l cccc}", "\\toprule",
         "\\multicolumn{5}{l}{\\emph{F1}} \\\\",
@@ -2184,7 +2184,7 @@ def tab_hpo():
     lines = [
         "\\begin{table*}[t]\\centering",
         "\\caption{Tuned vs.\\ default configurations, tuned on the phishing-temporal"
-        " train window only and evaluated once on the test window; mean$\\pm$std over 3 model"
+        " train window only and evaluated once on the test window. Mean$\\pm$std over 3 model"
         " seeds.}",
         "\\label{tab:hpo}",
         "\\begin{tabular}{llcccc}\\toprule",
@@ -2407,7 +2407,7 @@ def tab_val_threshold():
         " of the training window (the most recent tenth of the phishing training window under the"
         " temporal protocol, a stratified random tenth otherwise), beside $\\tau = 0.5$ and the"
         " oracle test-curve maximum for the \\emph{same} fitted model (trained on the remaining"
-        " 90\\%); mean over 5 seeds.}",
+        " 90\\%). Mean over 5 seeds.}",
         "\\label{tab:valthr}",
         "\\small\\setlength{\\tabcolsep}{4pt}",
         "\\begin{tabular}{lccccccccc}\\toprule",
@@ -2516,8 +2516,8 @@ def tab_xdataset_charcnn():
         "\\begin{table}[t]", "\\centering",
         "\\caption{Table~\\ref{tab:xdatasetrf}'s four-corpus design refitted with the"
         " character-CNN that reads the URL string (scheme stripped, so the string is the host"
-        " in every corpus), F1 and ROC-AUC, mean over five seeds; diagonal bold,"
-        " \\underline{underlined} ROC-AUC cells below chance.}",
+        " in every corpus), F1 and ROC-AUC, mean over five seeds. Diagonal cells are bold and"
+        " \\underline{underlined} ROC-AUC cells are below chance.}",
         "\\label{tab:xdatasetcnn}", "\\small",
         "\\begin{tabular}{l cccc}", "\\toprule",
         "\\multicolumn{5}{l}{\\emph{F1}} \\\\",
@@ -2641,7 +2641,7 @@ def tab_twosided():
         f"\\caption{{The temporal protocol with \\emph{{both}} classes cut by the calendar at"
         f" {n['cut']}: the $19{{,}}635$ dated phishing rows and the $2{{,}}026$ dated benign rows"
         f" (all gold-tier registry entries), guard on both classes, against the same rows re-split"
-        f" at random per class with the same guard; mean over 5 seeds. The test window holds"
+        f" at random per class with the same guard. Mean over 5 seeds. The test window holds"
         f" {n['n_test_benign']} benign rows against {n['n_test'] - n['n_test_benign']:,} phishing,"
         f" so F1 sits on a floor no other design shares and the step is read on ROC-AUC and"
         f" FPR@0.90.}}",
