@@ -626,8 +626,8 @@ def gen_forecastability():
                f"Section~\\ref{{ssec:xdata}} reads a below-chance AUC, that is an "
                f"\\emph{{inverted}} signal, not an absent one: the errors concentrate on the "
                f"rows most \\emph{{like}} the training window, which is the opposite of the "
-               f"premise a novelty gate is built on. Either way no gate clears the pre-set "
-               f"keep-alive bar of $0.65$: the usable discrimination is "
+               f"premise a novelty gate is built on. Either way no gate clears the bar of "
+               f"$0.65$ set in advance: the usable discrimination is "
                f"$\\max(\\mathrm{{AUC}}, 1{{-}}\\mathrm{{AUC}}) = {usable:.3f}$, and a "
                f"backoff rule keyed on \\emph{{familiarity}} would defer exactly the traffic a "
                f"deployment least wants deferred.")
@@ -1518,8 +1518,7 @@ def gen_charcnn():
         f"Measured against the spread of the seven under the same protocol, the F1 gain over the "
         f"best tabular family is ${g_t:.3f}$ against a spread of ${s_t:.3f}$ under the temporal "
         f"protocol and ${g_r:.3f}$ against ${s_r:.3f}$ under a random split of the same rows. "
-        f"The gain is largest on the deployment metric, which is the one Section~"
-        f"\\ref{{sec:discussion}} argues a benchmark should be read on.",
+        f"The gain is largest on the false-positive rate at 90\\% recall.",
         # 2026-11-01: a linear n-gram model over the same string carries a protocol gap as large,
         # so the gap is the representation's, not the network's capacity (run_p2_ngram.py)
         f"Reading the string is not free of the protocol, however: the character-CNN carries a "
@@ -2474,8 +2473,8 @@ def gen_valthr_verdict():
         f"at the oracle), and the validation-chosen threshold lands within ${gap:.3f}$ F1 of the "
         f"oracle for every family under every design. CatBoost minus logistic regression at "
         f"$\\tau^*$ is ${cb_lr[0]:+.3f}$, ${cb_lr[1]:+.3f}$ and ${cb_lr[2]:+.3f}$ across the "
-        f"three designs; {lead_txt}. The oracle of Table~\\ref{{tab:maxf1}} was therefore not "
-        f"doing the work: a threshold selected without test access reproduces its reading"
+        f"three designs; {lead_txt}. The reading therefore does not depend on the oracle of "
+        f"Table~\\ref{{tab:maxf1}}: a threshold selected without test access reproduces it"
         + (", and the full-corpus margin the fixed threshold reports is gone at $\\tau^*$ as it was "
            "at the oracle." if sp_fix[0] - sp_val[0] > 0.01 else
            ", and with every family fitted the same way the fixed threshold already gives the "
