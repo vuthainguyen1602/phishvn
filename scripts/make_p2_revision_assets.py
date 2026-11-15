@@ -213,6 +213,82 @@ def windows_nesting() -> None:
     mac("RevWinStartMonths", str(int(round((max(starts) - min(starts)).days / 30.44))))
 
 
+# --------------------------------------------------------------------------- disjoint windows
+def disjoint_windows() -> None:
+    """The protocol contrast on forward test blocks that share no phishing row
+    (run_p2_disjoint_windows.py, 2026-11-16). Exploratory: added after the nested cut-offs."""
+    d = read(os.path.join(REV, "disjoint_windows.csv"))
+    if d is None:
+        write("tab_rev_disjoint.tex", "% disjoint-window run absent")
+        return
+    blocks = sorted(d.block.unique())
+    g = d.groupby(["block", "family", "protocol"]).F1.mean().unstack()
+    step = (g["temporal"] - g["random_guarded_pm"]).unstack(0)[blocks]
+    info = d.drop_duplicates("block").set_index("block").loc[blocks]
+    month = lambda iso: pd.Timestamp(iso).strftime("%b %Y")
+    span = lambda b: f"{month(info.test_first[b])}--{month(info.test_last[b])}"
+    pv = d.pivot_table(index=["block", "seed"], columns=["protocol", "family"], values="F1")
+    lead = {p: pv[(p, "LogReg")] - pv[(p, "CatBoost")] for p in ("temporal", "temporal_canonprior")}
+    lead_m = {p: v.groupby("block").mean()[blocks] for p, v in lead.items()}
+    wins = (lead["temporal_canonprior"] > 0).groupby("block").sum()[blocks].astype(int)
+    n_seed = int(d.seed.nunique())
+    prior = d[d.protocol == "temporal"].groupby("block").test_prior.mean()[blocks]
+    lines = [
+        "\\begin{table}[t]\\centering",
+        "\\caption{The protocol contrast on four forward test blocks that share no phishing row. Each"
+        " block is scored by models trained on every dated phishing row before it, with the guard and"
+        " the prior-matched random control of Table~\\ref{tab:protocol}. $\\Delta$F1 = phishing-temporal"
+        " minus control at $\\tau = 0.5$, mean over five seeds. The last two rows give logistic"
+        " regression minus CatBoost F1 under the temporal protocol, at the block's own test prior and"
+        " with the benign test rows thinned to the canonical test prior, and the seeds on which"
+        " logistic regression leads at that prior. The last block is the $0.80$ cut of"
+        " Table~\\ref{tab:windows}.}",
+        "\\label{tab:disjoint}",
+        "\\small\\setlength{\\tabcolsep}{4pt}",
+        "\\begin{tabular}{l" + "c" * len(blocks) + "}\\toprule",
+        "Test block (share of dated phishing) & " + " & ".join(
+            b.replace("-", "--") for b in blocks) + " \\\\",
+        "Detection dates & " + " & ".join(span(b) for b in blocks) + " \\\\",
+        "Phishing test rows & " + " & ".join(tn(int(info.n_test_phish[b])) for b in blocks) + " \\\\",
+        "Test prior & " + " & ".join(f"{prior[b]:.2f}" for b in blocks) + " \\\\ \\midrule",
+    ]
+    for f in ORDER:
+        lines.append(f"{NAME.get(f, f)} & " + " & ".join(s3(step.loc[f, b]) for b in blocks) + " \\\\")
+    lines.append("\\midrule LR $-$ CatBoost, own prior & "
+                 + " & ".join(s3(lead_m["temporal"][b]) for b in blocks) + " \\\\")
+    lines.append("LR $-$ CatBoost, canonical prior & " + " & ".join(
+        f"{s3(lead_m['temporal_canonprior'][b])} ({wins[b]}/{n_seed})" for b in blocks) + " \\\\")
+    lines += ["\\bottomrule\\end{tabular}\\end{table}"]
+    write("tab_rev_disjoint.tex", "\n".join(lines))
+
+    # The text says the step is positive in the two earlier blocks and that logistic regression
+    # leads CatBoost only in the two later ones. Both sentences are written for that pattern.
+    early, late = blocks[:2], blocks[2:]
+    lr_leads = [bool(lead_m["temporal_canonprior"][b] > 0 and lead_m["temporal"][b] > 0) for b in blocks]
+    cb_leads = [bool(lead_m["temporal_canonprior"][b] < 0 and lead_m["temporal"][b] < 0) for b in blocks]
+    if lr_leads != [False, False, True, True] or cb_leads != [True, True, False, False]:
+        raise SystemExit(f"disjoint windows: logistic regression leads in {lr_leads}; the article "
+                         "says 'only in the two later blocks' - rewrite those sentences")
+    if not (step[early].values > 0).all():
+        raise SystemExit("disjoint windows: a step in the two earlier blocks is not positive; the "
+                         "article says every family gains there")
+    mac("RevDisjEarlyMin", f3(step[early].values.min()))
+    mac("RevDisjEarlyMax", f3(step[early].values.max()))
+    mac("RevDisjLateMin", s3(step[late].values.min()))
+    mac("RevDisjLateMax", s3(step[late].values.max()))
+    mac("RevDisjLateNeg", f"{int((step[late].round(3).values < 0).sum())} of {step[late].size}")
+    cb_lead = -lead_m["temporal_canonprior"][early]
+    mac("RevDisjCBLeadMin", f3(cb_lead.min()))
+    mac("RevDisjCBLeadMax", f3(cb_lead.max()))
+    mac("RevDisjLRLeadMin", s3(lead_m["temporal_canonprior"][late].min()))
+    mac("RevDisjLRLeadMax", s3(lead_m["temporal_canonprior"][late].max()))
+    mac("RevDisjCBSeeds", f"{int((n_seed - wins[early]).min())} of {n_seed}")
+    mac("RevDisjLRSeeds", f"{int(wins[late].min())} of {n_seed}")
+    mac("RevDisjFirst", pd.Timestamp(info.test_first[blocks[0]]).strftime("%B %Y"))
+    mac("RevDisjLateStart", pd.Timestamp(info.test_first[late[0]]).strftime("%-d %B %Y"))
+    mac("RevDisjEarlyRows", f"{tn(int(info.n_test_phish[blocks[:3]].min()))}--{tn(int(info.n_test_phish[blocks[:3]].max()))}")
+
+
 # --------------------------------------------------------------------------- threshold transfer
 def threshold_transfer() -> None:
     """R1.4: a validation threshold carried from one corpus to another (2026-11-14)."""
@@ -966,7 +1042,7 @@ def screen_settings() -> None:
 
 
 def main() -> int:
-    for fn in (protocol_primary, windows, windows_nesting, threshold_transfer, source_control, operating, label_noise, harmonisation, corpus_probe,
+    for fn in (protocol_primary, windows, windows_nesting, disjoint_windows, threshold_transfer, source_control, operating, label_noise, harmonisation, corpus_probe,
                coral_cells, group_value, row_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings):
         fn()
     # A macro the text uses but no finished analysis defined prints as a bold ?? and is listed,
