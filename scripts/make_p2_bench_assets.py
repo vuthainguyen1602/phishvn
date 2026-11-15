@@ -2158,7 +2158,9 @@ def tab_hpo():
     if not os.path.exists(path):
         return "% p2_hpo.csv not generated yet -- run scripts/run_p2_hpo.py\n[HPO table to be filled]"
     df = pd.read_csv(path)
-    if "search_seed" in df.columns and df["search_seed"].notna().any():
+    # run_p2_hpo.py records the search seed on every tuned row. The per-search layout is for a
+    # run with several search seeds; the default run has one, and prints the article's table.
+    if "search_seed" in df.columns and df["search_seed"].nunique(dropna=True) > 1:
         lines = [
             "\\begin{table*}[t]\\centering",
             "\\scriptsize",
