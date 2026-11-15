@@ -530,15 +530,15 @@ def tab_confusion():
         "\\caption{CatBoost confusion counts at recall $0.90$, derived from"
         " Table~\\ref{tab:strict}. Benign size is the seed mean; the phishing count is the"
         " temporal arm's (the random arm re-draws it per seed, mean"
-        f" ${n_ph_rand:,}$).}}",
+        f" {n_ph_rand:,}).}}",
         "\\label{tab:confusion}",
         "\\small\\setlength{\\tabcolsep}{5pt}",
         "\\begin{tabular}{lcccc}\\toprule",
         " & \\multicolumn{2}{c}{Random (same rows)} & \\multicolumn{2}{c}{Phishing-temporal} \\\\",
         "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}",
         "Actual $\\backslash$ Pred. & phish & benign & phish & benign \\\\ \\midrule",
-        f"Phishing ($n = {n_ph:,}$) & {tp:,} & {fn:,} & {tp:,} & {fn:,} \\\\",
-        f"Benign ($n = {n_be:,}$) & {cells['random_same_rows'][0]:,} & "
+        f"Phishing ($n =$ {n_ph:,}) & {tp:,} & {fn:,} & {tp:,} & {fn:,} \\\\",
+        f"Benign ($n =$ {n_be:,}) & {cells['random_same_rows'][0]:,} & "
         f"{cells['random_same_rows'][1]:,} & {cells['temporal_strict'][0]:,} & "
         f"{cells['temporal_strict'][1]:,} \\\\",
         "\\bottomrule\\end{tabular}\\end{table}"]
@@ -1077,7 +1077,7 @@ def gen_dedup_sensitivity():
         f"prefix itself sits on phishing rows. Keeping one row per such URL, the dated row where "
         f"there is one, leaves {num(n_dd)} rows. That choice decides one result in advance: the "
         f"deduplicated corpus keeps only {num(undated_ph_left)} undated phishing rows (and drops "
-        f"{num(dated_dropped)} dated ones), so it is nearly the dated design itself, and its "
+        f"{num(dated_dropped)} dated rows), so it is nearly the dated design itself, and its "
         f"composition step of ${comp1.min():.3f}$--${comp1.max():.3f}$ F1, against "
         f"${comp0.min():.3f}$--${comp0.max():.3f}$ on the released rows, is close to zero by "
         f"construction. What the arm does show is where the full-corpus level came from: the best "
@@ -1413,10 +1413,10 @@ def gen_leakage_verdict():
     return (
         f"\\textbf{{What the full-corpus random split leaks.}} The $0.922$ is produced by a "
         f"plain stratified split with neither a domain guard nor de-duplication, and the "
-        f"$21$-feature schema is coarse: ${int(r.rows):,}$ rows occupy only "
-        f"${int(r.unique_featvec):,}$ distinct feature vectors over ${int(r.unique_regdom):,}$ "
-        f"registrable domains, and ${int(r.rows_in_mixed_groups):,}$ of those rows sit in "
-        f"${int(r.mixed_featvec_groups):,}$ vector groups carrying both labels, a schema "
+        f"$21$-feature schema is coarse: {int(r.rows):,} rows occupy only "
+        f"{int(r.unique_featvec):,} distinct feature vectors over {int(r.unique_regdom):,} "
+        f"registrable domains, and {int(r.rows_in_mixed_groups):,} of those rows sit in "
+        f"{int(r.mixed_featvec_groups):,} vector groups carrying both labels, a schema "
         f"ceiling of ${r.schema_ceiling_f1:.3f}$ F1 that no model on these features can pass. "
         f"Under the benchmark's own splitter, ${100*d.test_twin_rate.mean():.0f}\\%$ of test "
         f"rows have an exact feature-vector twin in training and "

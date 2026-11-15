@@ -33,6 +33,8 @@ PROC = "data/processed/p2"
 REV = os.path.join(PROC, "revision")
 ORDER = ["CatBoost", "MLP", "XGBoost", "LightGBM", "RandomForest", "HistGB", "LogReg"]
 NAME = {"RandomForest": "Random forest", "LogReg": "Logistic regression"}
+# The cost log records platform.machine()/processor()/system(); the caption prints it readably.
+MACHINE = {"arm64 arm Darwin": "Apple silicon, macOS"}
 CUTS = (0.5, 0.6, 0.7, 0.8)
 MACROS: dict[str, str] = {}
 
@@ -458,7 +460,10 @@ def harmonisation() -> None:
         " the study, and that subsample reduced to the host. Rows sharing = rows whose host"
         " (registrable domain) occurs on another row of the same corpus; both labels = hosts"
         " (registrable domains) carrying phishing and benign rows. PhishVN enters at host"
-        " level as released.}",
+        " level as released. Registrable domains here follow the full Public Suffix List, under which"
+        " subdomains of hosting platforms and of provincial zones are separate domains; the split guard"
+        " folds those into their parent, which gives PhishVN the " + f"{int(pd.read_csv('data/processed/p2/p2_dup_leakage.csv').unique_regdom.iloc[0]):,}".replace(",", "{,}")
+        + " domains of the article.}",
         "\\label{tab:harmonisation}",
         "\\small\\setlength{\\tabcolsep}{3pt}",
         "\\begin{tabular}{llrrrrrrrrr}\\toprule",
@@ -900,7 +905,7 @@ def cost() -> None:
         mac("RevCostCNNBatchLoN", int(lo.batch))
         mac("RevCostCNNBatchHiN", int(hi.batch))
     lines = ["\\begin{table}[t]\\centering",
-             "\\caption{Cost on one machine (" + str(c.machine.iloc[0]).replace("_", "\\_")
+             "\\caption{Cost on one machine (" + MACHINE.get(str(c.machine.iloc[0]), str(c.machine.iloc[0]).replace("_", "\\_"))
              + ", one thread for every model), phishing-temporal training window of seed 0."
              " Latency per URL in a batch of 1{,}000 (median of 5 batches, in microseconds) and"
              " for a single URL (median of 200 calls, in milliseconds), both after warm-up calls."
