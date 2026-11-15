@@ -1427,7 +1427,7 @@ def gen_leakage_verdict():
         f"(Table~\\ref{{tab:trivialfloor}}) and ${best.max():.3f}$ for {top}. Two readings "
         f"follow, and only the second is licensed. The models do \\emph{{more}} than memorise: "
         f"they clear the memorisation oracle by "
-        f"${best.max() - oracle:.3f}$ F1. But ${100*d.test_twin_rate.mean():.0f}\\%$ of the "
+        f"${best.max() - oracle:.2f}$ F1. But ${100*d.test_twin_rate.mean():.0f}\\%$ of the "
         f"test window being a copy of training means this design does not estimate "
         f"generalisation to unseen URLs at all, and the level it reports should not be read as "
         f"if it did: the same objection this paper raises to single-corpus benchmarks, owed "
