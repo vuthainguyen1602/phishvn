@@ -113,6 +113,15 @@
   concept drift and to add channels/coverage. **Contact:** thaivn_ph@utc.edu.vn.
 
 ## 7. Limitations & bias
+- **The same URL is recorded twice on 16,855 rows.** With the scheme and a leading `www.` set aside,
+  16,855 URLs occur on two rows each: almost always a dated row and an undated `www.`-prefixed copy of
+  it from the community feed. The two copies always share a split and a label, because the official
+  split groups rows by registrable domain, so the official train/validation/test split does not leak
+  through them. A row-level random split of the whole table does not keep them together: 59% of its
+  test rows share a registrable domain with training, and 23% once one row per URL is kept. Use the official split, split by registrable domain, or keep one row per URL
+  first. `data/url_duplicates.csv` (from v3.1.1) lists every duplicate row with the row to keep (the
+  dated one where there is one, then the one without `www.`); dropping its `drop_id` rows leaves 36,261
+  rows. The released tables keep every row so that their counts stay those of the published article.
 - **URL-only:** the released data is the URL modality; the "Vietnamese" signal is strongest in page
   content, which is only a small preliminary subset here.
 - **Benign composition:** dominated by a curated trusted-organisation registry; the Tranco sample

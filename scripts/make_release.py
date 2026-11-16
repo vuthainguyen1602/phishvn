@@ -130,6 +130,8 @@ Released {_dt.date.today().isoformat()} under CC BY 4.0 (see LICENSE). Cite via 
 - `data/dataset_url.csv` — full record table ({n} rows).
 - `data/vn_compphish.csv` — the same URLs as 21 lexical features computed from the URL string alone (the file name is historical; the features are PhishVN's own, not CompPhish's).
 - `data/splits/url_{{train,val,test}}.csv` — the official group-aware temporal split.
+- `data/url_duplicates.csv` — the rows that repeat a URL (scheme and leading `www.` aside), with the row to keep;
+  drop its `drop_id` rows for one row per URL.
 - `data/attacks/p3_paraphrase{{,_band}}.csv` — the 386 paraphrased lures of the evasion study and
   their Jaccard-controlled counterparts. Every lure carries the simulated link
   `http://sim.example.vn/x` and no other URL, contains no real brand token, and is stripped of

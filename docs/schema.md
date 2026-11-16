@@ -45,6 +45,19 @@ The file name is historical: these are PhishVN's own features, not CompPhish's 7
 > column is kept in the file but is a **collection artefact** and is **excluded from
 > modelling**.
 
+## `url_duplicates.csv` — one row per URL (from v3.1.1)
+
+One line per row that repeats a URL already in the table, once the scheme and a leading `www.` are set aside
+(16,855 lines). Drop the `drop_id` rows to keep one row per URL (36,261 rows remain).
+
+| Column | Meaning |
+|---|---|
+| `url_key` | the URL lower-cased, without scheme and leading `www.` |
+| `keep_id` | `id` of the row to keep: the dated one where there is one, then the one without `www.` |
+| `drop_id` | `id` of the duplicate row |
+| `keep_reason` | `dated` or `no_www` (why `keep_id` was preferred) |
+| `split`, `label` | shared by both rows (no duplicate pair crosses a split or carries two labels) |
+
 ## Preliminary content subset (gated tier)
 For ~112 phishing URLs a captured `landing/*.html` page and ~104 `landing_shots/*.png` screenshots
 are available, referenced by record id, with `title`, `num_forms`, `html_len` where captured.
