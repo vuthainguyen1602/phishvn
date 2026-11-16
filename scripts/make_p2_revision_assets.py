@@ -1042,6 +1042,14 @@ def cost() -> None:
     mac("RevCostCNNFit", f"{cnn.fit_s:.0f}")
     mac("RevCostLRSingle", f"{float(c[c.model == 'LogReg'].ms_single.iloc[0]):.2f}")
     mac("RevCostCNNSingle", f"{cnn.ms_single:.2f}")
+    size = c.set_index("model").size_kb
+    mac("RevCostSizeLR", f"{size['LogReg']:.0f}")
+    mac("RevCostSizeRF", f"{size['RandomForest'] / 1024:.0f}")
+    mac("RevCostSizeCNN", f"{size['CharCNN']:.0f}")
+    b = read(os.path.join(PROC, "p2_benchmark.csv"))
+    if b is not None:
+        f = b[b.protocol == "random"].groupby("family").F1.mean()
+        mac("RevFullSpread", f3(f.max() - f.min()))
 
 
 # --------------------------------------------------------------------------- second string model
