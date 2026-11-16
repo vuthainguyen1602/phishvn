@@ -12,7 +12,7 @@ Input : a CSV with a URL column (+ optional label). Works on data/processed/data
 Output: CSV with exactly: <25 schema columns>, label
 
 RUN:
-  # our VN dataset -> CompPhish format
+  # our VN dataset -> the lexical schema (output file name is historical)
   python align_compphish.py --in data/processed/dataset_url.csv --out data/processed/vn_compphish.csv
   # an EXTERNAL corpus -> same schema. CHECK THE POLARITY FIRST: to_label() below reads a
   # numeric 1 as PHISHING, and not every corpus agrees. PhiUSIIL ships 1 = LEGITIMATE

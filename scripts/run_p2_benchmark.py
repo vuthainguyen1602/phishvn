@@ -3,7 +3,7 @@
 run_p2_benchmark.py — The P2 benchmark: which classical ML family fits Vietnamese phishing URLs?
 
 Seven model families (LogReg, RandomForest, HistGB, MLP from train_url_baseline, plus XGBoost,
-LightGBM, CatBoost) on the CompPhish 21-feature schema, under BOTH evaluation protocols:
+LightGBM, CatBoost) on the 21-feature lexical schema, under BOTH evaluation protocols:
 
   * random   — stratified 70/30, repeated over --seeds (the optimistic, most-published protocol)
   * temporal — normalize_merge's group-aware time split baked into vn_compphish.csv's `split`

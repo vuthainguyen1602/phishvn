@@ -4,7 +4,7 @@ train_fusion.py — Multi-channel FUSION detector (P1b core): fuse Vietnamese CO
 INFRASTRUCTURE (URL) features, with optional ADVERSARIAL TRAINING for robustness.
 
 Content encoder is frozen PhoBERT or char n-gram TF-IDF (default; runs anywhere, auto-fallback);
-infrastructure is the CompPhish lexical features of the URL found inside the message (zeros if
+infrastructure is the 21 lexical features of the URL found inside the message (zeros if
 none); an optional frozen ResNet18 embedding of the page screenshot adds the visual branch when
 --img-col is given and torch is available.
 

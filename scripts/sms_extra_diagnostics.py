@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Post-hoc, NOT registered: URL-character probe, truncation, error analysis and floor intervals.
 
-  url_char     Is "the URL channel is weak" a statement about URLs or about the 21 CompPhish
+  url_char     Is "the URL channel is weak" a statement about URLs or about the 21 lexical
                columns? A character 2-5-gram TF-IDF over the first URL (public-suffix rule),
                logistic regression, scored on the test rows that carry a URL and on all test rows
                (a message with no URL is predicted negative, as the URL arm effectively does).

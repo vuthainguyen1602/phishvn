@@ -384,8 +384,8 @@ CompPhish ({comp['nfeat']} feat.) & LogReg        & {lr(comp)} \\\\
 
 # ---------- reference benchmark (model suite on canonical split) ----------
 def _load_bench():
-    """CompPhish-schema features + labels + tier/split, plus the benign `source` stratum joined
-    from the raw table (keyed on url_norm == the CompPhish `url`). Single-dataset only."""
+    """Lexical-schema features + labels + tier/split, plus the benign `source` stratum joined
+    from the raw table (keyed on url_norm == the feature table's `url`). Single-dataset only."""
     df, feats = load(COMPPHISH_CSV)
     raw = pd.read_csv(DATASET, low_memory=False)
     df["source"] = df["url"].map(raw.set_index("url_norm")["source"])
@@ -457,7 +457,7 @@ def _basic_logreg():
 
 
 def make_benchmark(df, feats):
-    """Reference in-distribution benchmark: the 4-model suite on the CompPhish canonical split.
+    """Reference in-distribution benchmark: the 4-model suite on the lexical features, canonical split.
     Returns the make_model key of the best model by mean PR-AUC (for the difficulty table)."""
     res, ntr, nte, scores, yte = _suite_eval(df, feats)
     basic, bfeat = _basic_logreg()
@@ -566,7 +566,7 @@ def ci_str(p, n):
 
 # ---------- per-tier / per-stratum difficulty breakdown ----------
 def make_difficulty(df, feats, best_key, seed=0):
-    """Train the leaderboard's best model on the gold+silver CompPhish TRAIN split, then on TEST
+    """Train the leaderboard's best model on the gold+silver lexical-feature TRAIN split, then on TEST
     report phishing recall per label-confidence tier (gold/silver/bronze; bronze is unseen at
     train time) and benign FPR per negative stratum (registry, .vn-popular, global hard-negative).
     Fixed seed + threshold 0.5 for reproducibility."""

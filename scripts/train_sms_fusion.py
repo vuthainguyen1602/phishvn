@@ -10,7 +10,7 @@ DESIGN, as registered and not re-decided here. Split by SHA-1 of the message tex
 a repeated message lands on one side; 10 seeds; positive-class F1 on the test rows. The registered
 Nadeau-Bengio test over optimization seeds is retained as an audit record but is NOT valid
 inference: the split is fixed, so these are not repeated train/test samples. A post-hoc
-distinct-text cluster bootstrap supplies sampling intervals instead. URL channel is the 21 CompPhish columns the web studies model,
+distinct-text cluster bootstrap supplies sampling intervals instead. URL channel is the 21 lexical columns the web studies model,
 is_https excluded there and excluded here. Text channel is PhoBERT base, mean-pooled over the last
 hidden state, NOT fine-tuned. Fusion concatenates the two into R^789 and fits one MLP head.
 

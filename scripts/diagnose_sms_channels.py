@@ -3,7 +3,7 @@
 
 The fusion arm came out 0.002 below text-only descriptively, and the question that
 leaves is why 21 URL features add nothing at all. The hypothesis tested here was that they are
-redundant because PhoBERT reads the whole message including the URL, so the CompPhish columns are
+redundant because PhoBERT reads the whole message including the URL, so the lexical URL columns are
 derived from a substring the encoder already saw.
 
 That hypothesis is WRONG, and the result is stronger than it. Masking the URL out of the message

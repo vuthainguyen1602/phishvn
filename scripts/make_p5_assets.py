@@ -8,7 +8,7 @@ in the manuscript never drift from the code. Produces (all on ONE 20-window, PSI
   papers/P5_temporal_drift/sections/tab_drift.tex          — drift-detection accuracy & lag
   papers/P5_temporal_drift/sections/tab_budget.tex         — labelling-budget frontier
 
-Preliminary: RandomForest on the CompPhish URL features, streamed over the temporally-ordered
+Preliminary: RandomForest on the 21 lexical URL features, streamed over the temporally-ordered
 PhishVN+feeds data (NCSC + reconstructed-date ChongLuaDao phishing; benign held stationary).
 
 RUN:  python scripts/make_p5_assets.py

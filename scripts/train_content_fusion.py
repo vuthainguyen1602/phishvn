@@ -3,7 +3,7 @@
 train_content_fusion.py — P1b content/JS fusion detector on crawled landing pages.
 
 Fuses up to four modalities of a captured page and ablates each: CONTENT (char/word TF-IDF or
-frozen PhoBERT), JS (obfuscation features or CodeBERT), URL (CompPhish lexical) and optionally
+frozen PhoBERT), JS (obfuscation features or CodeBERT), URL (21 lexical features) and optionally
 IMAGE (frozen ResNet18 of the screenshot). Input is a manifest CSV from build_content_manifest.py.
 The fusion head is Logistic Regression by default or XGBoost (--head), i.e. a hybrid
 transformer->boosted-trees stack. Stratified splits, because the crawled subset is small and has no

@@ -44,7 +44,7 @@ make test         # unit tests
 ## Key scripts
 - `normalize_merge.py` — merge raw sources -> common schema, scheme-independent URL features,
   scenario inference, group-aware temporal split.
-- `compphish_features.py` / `align_compphish.py` — CompPhish 21-feature schema (cross-dataset).
+- `compphish_features.py` / `align_compphish.py` — the 21-feature lexical schema, computable from any corpus's raw URLs (cross-dataset; file names are historical).
 - `train_url_baseline.py` — URL baseline; `--seeds` (mean±std) and `--bootstrap` (95% CI).
 - `fetch_tranco.py` — hard benign negatives from the Tranco top-list.
 - `make_verification_sample.py` — two-annotator label audit + Cohen's kappa.

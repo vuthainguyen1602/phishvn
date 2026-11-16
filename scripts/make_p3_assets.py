@@ -5,7 +5,7 @@ the manuscript numbers never drift from the code. Produces:
 
   papers/P3_multimodal/sections/tab_content_fusion.tex — modality ablation on the content subset
 
-Preliminary content experiment: TF-IDF Vietnamese page text + CompPhish URL features + lightweight
+Preliminary content experiment: TF-IDF Vietnamese page text + lexical URL features + lightweight
 JavaScript features, fused by Logistic Regression, evaluated over stratified splits (the crawled
 content subset is small and mostly undated, so we use stratified splits and say so). The screenshot
 (ResNet18), PhoBERT and CodeBERT encoders are available as options in train_content_fusion.py but

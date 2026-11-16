@@ -2,13 +2,13 @@
 """
 run_cross_dataset.py — The P1b flagship experiment: a train x test generalisation matrix.
 
-Given several corpora already re-featurised into the CompPhish 21-feature schema (via
+Given several corpora already re-featurised into the 21-feature lexical schema (via
 align_compphish.py), it trains a detector on each corpus and tests on every corpus. Cell (i, j)
 = score of a model trained on corpus i and evaluated on corpus j. The DIAGONAL is in-distribution;
 OFF-DIAGONAL cells measure transfer. A large (diagonal - off-diagonal) gap means models overfit
 corpus-specific artefacts rather than learning transferable phishing signal.
 
-Feature schema is the modelling subset of CompPhish (is_https excluded — a known collection
+Feature schema is the modelling subset of the lexical schema (is_https excluded — a known collection
 artefact). Random Forest is averaged over --seeds for stability.
 
 RUN:
