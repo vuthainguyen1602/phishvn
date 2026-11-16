@@ -1086,9 +1086,30 @@ def screen_settings() -> None:
     mac("RevScreenBronzeMax", pct(m.phish_bronze.max()))
 
 
+def tier_note() -> None:
+    """Supplementary Table S6: gold recall falls forward in time, but on few test rows."""
+    t = read(os.path.join(PROC, "p2_tier_sensitivity.csv"))
+    if t is None:
+        return
+    m = t[t.tier != "overall"].groupby(["family", "protocol", "tier"]).agg(v=("value", "mean"), n=("n", "mean"))
+    T, R = "phishing-temporal", "random-same-rows"
+    for fam, key in (("CatBoost", "CB"), ("LogReg", "LR")):
+        mac(f"RevTierGold{key}Rand", f3(m.loc[(fam, R, "gold"), "v"]))
+        mac(f"RevTierGold{key}Temp", f3(m.loc[(fam, T, "gold"), "v"]))
+    other = max(abs(round(m.loc[(f, T, k), "v"], 3) - round(m.loc[(f, R, k), "v"], 3))
+                for f in ("CatBoost", "LogReg") for k in ("bronze", "silver"))
+    mac("RevTierOtherMaxMove", f3(other))
+    n_t, n_r = m.loc[("CatBoost", T, "gold"), "n"], m.loc[("CatBoost", R, "gold"), "n"]
+    mac("RevTierGoldNTemp", int(round(n_t)))
+    mac("RevTierGoldNRand", int(round(n_r)))
+    lost = max(m.loc[(f, R, "gold"), "v"] - m.loc[(f, T, "gold"), "v"] for f in ("CatBoost", "LogReg")) * n_t
+    mac("RevTierGoldRowsLost", int(round(lost)))
+    mac("RevTierSilverNTemp", int(round(m.loc[("CatBoost", T, "silver"), "n"])))
+
+
 def main() -> int:
     for fn in (protocol_primary, windows, windows_nesting, disjoint_windows, xdata_vn_grouped, threshold_transfer, source_control, operating, label_noise, harmonisation, corpus_probe,
-               coral_cells, group_value, row_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings):
+               coral_cells, group_value, row_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings, tier_note):
         fn()
     # A macro the text uses but no finished analysis defined prints as a bold ?? and is listed,
     # so the article compiles mid-revision and no pending number can pass unnoticed.
