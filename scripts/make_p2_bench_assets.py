@@ -378,7 +378,7 @@ def tab_families():
     df = pd.read_csv("data/processed/p2/p2_benchmark.csv")
     lines = [
         "\\begin{table*}[t]\\centering",
-        "\\caption{Family benchmark on the full corpus, mean$\\pm$std over 5 seeds."
+        "\\caption{Family benchmark on the full corpus, mean$\\pm$std over 5 seeds; F1 at $\\tau = 0.5$."
         " FPR@0.90 = false-positive rate at 0.90 phishing recall. The random block is the"
         " leakage-prone full-corpus baseline of Section~\\ref{ssec:randomsplit}, not an estimate of"
         " generalisation. The bundled block is the train and test assignment the corpus ships"
