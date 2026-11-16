@@ -148,7 +148,7 @@ Released {_dt.date.today().isoformat()} under CC BY 4.0 (see LICENSE). Cite via 
 
 ## Notes
 - Benign = NCSC trusted-organisation registry (easy) + Tranco top-list sample (hard negatives).
-- `is_https` is present for CompPhish compatibility but is a collection artefact — exclude it from
+- `is_https` is kept as a column but is a collection artefact — exclude it from
   modelling (all lexical features are computed on the scheme-stripped URL).
 - The captured phishing HTML/screenshot subset is distributed separately as a GATED bundle
   (research-only; live malicious captures) — not part of this open tier.

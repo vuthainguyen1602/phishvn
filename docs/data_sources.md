@@ -33,7 +33,8 @@ not part of this release.
 - Build with `normalize_merge.py`: common schema, scheme-independent URL features, scenario inference
   from URL brand tokens, deduplication, and a **group-aware temporal split** (grouped by registrable
   domain).
-- Feature parity with CompPhish via `align_compphish.py`; `is_https` excluded from modelling.
+- The 21 lexical features are computed by `align_compphish.py` from the URL string alone, so they can also
+  be extracted from other corpora's raw URLs (CompPhish among them); `is_https` is excluded from modelling.
 - **Open tier (CC BY 4.0):** URL features, labels, splits, docs. **Gated tier (on request):** the
   captured phishing HTML/screenshots (live malicious captures — research use only).
 - Attribution: NCSC "Tin Nhiem Mang"; the Tranco list (Le Pochat et al., NDSS 2019).
