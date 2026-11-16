@@ -39,6 +39,8 @@
 "additional/windows_cut0.5.csv",
 "additional/windows_cut0.6.csv",
 "additional/windows_cut0.8.csv",
+"additional/xdata_vn_grouped_F1.csv",
+"additional/xdata_vn_grouped_ROC-AUC.csv",
 "combined_training.csv",
 "cross_dataset_F1.csv",
 "cross_dataset_F1_CatBoost.csv",

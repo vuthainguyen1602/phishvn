@@ -88,6 +88,20 @@ def ci95(d: np.ndarray, test_frac: float = 0.30) -> tuple[float, float, dict]:
 
 
 # --------------------------------------------------------------------------- protocol, primary
+def _boot_offset(g: pd.DataFrame, boot: pd.DataFrame | None) -> str:
+    """Largest gap between the domain bootstrap's point estimate (validation-carved fits) and the
+    mean per-seed step of Table 6, so the caption can say how far the two intervals' centres sit."""
+    if boot is None:
+        return "??"
+    m = g.groupby(["family", "protocol"]).F1.mean().unstack()
+    step = m["temporal_strict"] - m["random_same_rows_guarded"]
+    b = boot[(boot.contrast == "temporal_minus_random") & (boot.threshold == "p05")] \
+        .set_index("family").estimate
+    gap = float((b - step.reindex(b.index)).abs().max())
+    mac("RevProtoBootOffset", f3(gap))
+    return f"${gap:.3f}$"
+
+
 def protocol_primary() -> None:
     """R4.2 / R4.5: the guard- and prior-matched contrast as the primary protocol table, with the
     per-seed differences, corrected t, interval, and the domain-resampled interval."""
@@ -132,6 +146,7 @@ def protocol_primary() -> None:
                      + f" & $[{lo:+.3f}, {hi:+.3f}]${dom} \\\\")
     lines += ["\\bottomrule\\end{tabular}\\end{table*}"]
     write("tab_rev_protocol.tex", "\n".join(lines))
+    _boot_offset(g, boot)
     mac("RevProtoMin", s3(min(deltas.values())))
     mac("RevProtoMax", s3(max(deltas.values())))
     mac("RevProtoWorst", NAME.get(min(deltas, key=deltas.get), min(deltas, key=deltas.get)).lower()
@@ -211,6 +226,28 @@ def windows_nesting() -> None:
     starts = [t.date.min() for t in te.values()]
     mac("RevWinNestRows", tn(len(ids[CUTS[-1]])))
     mac("RevWinStartMonths", str(int(round((max(starts) - min(starts)).days / 30.44))))
+
+
+# --------------------------------------------------------------------------- PhishVN diagonal
+def xdata_vn_grouped() -> None:
+    """The forest's transfer matrix with PhishVN's diagonal a grouped 70/30 draw, as for the other
+    three corpora, instead of its shipped split (run_p2_xdata_vn_grouped.py, 2026-11-16)."""
+    a = {m: read(os.path.join(REV, f"xdata_vn_grouped_{m}.csv")) for m in ("F1", "ROC-AUC")}
+    b = {m: read(os.path.join(PROC, f"cross_dataset_{m}.csv")) for m in ("F1", "ROC-AUC")}
+    if any(v is None for v in (*a.values(), *b.values())):
+        return
+    gap, TAG = {}, {"F1": "FOne", "ROC-AUC": "ROCAUC"}
+    for m in ("F1", "ROC-AUC"):
+        x, y = a[m].set_index(a[m].columns[0]), b[m].set_index(b[m].columns[0])
+        e = np.eye(len(x), dtype=bool)
+        off = np.abs(x.values[~e] - y.values[~e]).max()
+        if off > 1e-9:
+            raise SystemExit("xdata_vn_grouped: an off-diagonal cell moved; only PhishVN's diagonal may")
+        gap[m] = (x.values[e].mean() - x.values[~e].mean(), y.values[e].mean() - y.values[~e].mean())
+        mac(f"RevXdVNDiag{TAG[m]}", f3(x.loc["PhishVN", "PhishVN"]))
+        mac(f"RevXdVNDiagOld{TAG[m]}", f3(y.loc["PhishVN", "PhishVN"]))
+        mac(f"RevXdVNGap{TAG[m]}", f3(gap[m][0]))
+    mac("RevXdVNGapMove", f3(max(abs(g0 - g1) for g0, g1 in gap.values())))
 
 
 # --------------------------------------------------------------------------- disjoint windows
@@ -1042,7 +1079,7 @@ def screen_settings() -> None:
 
 
 def main() -> int:
-    for fn in (protocol_primary, windows, windows_nesting, disjoint_windows, threshold_transfer, source_control, operating, label_noise, harmonisation, corpus_probe,
+    for fn in (protocol_primary, windows, windows_nesting, disjoint_windows, xdata_vn_grouped, threshold_transfer, source_control, operating, label_noise, harmonisation, corpus_probe,
                coral_cells, group_value, row_value, twoclass, cnn_sensitivity, hpo_all, attribution, cost, ngram, screen_settings):
         fn()
     # A macro the text uses but no finished analysis defined prints as a bold ?? and is listed,
