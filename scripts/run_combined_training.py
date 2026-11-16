@@ -8,7 +8,7 @@ import path moves.
 
 For each held-out corpus j, train on the UNION of the other three and test on all of j — the
 strongest "just add more corpora" baseline the cross-dataset matrix admits. Run once on the full
-21-feature CompPhish schema and once with the three SHAP-named artefact features pruned, so pooling
+21-feature lexical URL schema and once with the three SHAP-named artefact features pruned, so pooling
 and pruning can be compared and stacked against the per-cell matrix numbers. Reference columns are
 read from the matrix rather than recomputed.
 

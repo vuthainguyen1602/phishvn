@@ -42,7 +42,7 @@ BUDGETS = [50, 200, 800]
 
 
 def build_input():
-    """CompPhish features (row-aligned with dataset_url) + collected_at/id/tier -> drift input."""
+    """Lexical URL features (row-aligned with dataset_url) + collected_at/id/tier -> drift input."""
     u = pd.read_csv(os.path.join(ROOT, "data", "processed", "dataset_url.csv"), low_memory=False)
     c = pd.read_csv(os.path.join(ROOT, "data", "processed", "vn_compphish.csv"), low_memory=False)
     if len(u) != len(c):

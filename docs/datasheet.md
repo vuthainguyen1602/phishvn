@@ -6,7 +6,8 @@
 
 ## 1. Motivation
 - **Purpose:** train and evaluate Vietnamese-targeted phishing **URL** detection, and provide a
-  time-stamped, leakage-controlled benchmark aligned with the CompPhish feature schema.
+  time-stamped, leakage-controlled benchmark whose 21 lexical URL features can be computed from the
+  raw URLs of other corpora (CompPhish among them) for cross-dataset study.
 - **Creators:** Thai Nguyen Vu, Campus in Ho Chi Minh City, University of Transport and
   Communications, Ho Chi Minh City, Vietnam, thaivn_ph@utc.edu.vn. **Funding:** [if any].
 
@@ -67,8 +68,8 @@
 
 ## 4. Preprocessing
 - Deduplication by record and by **registrable domain** for splitting.
-- URL features are computed on the **scheme-stripped** URL; `is_https` is retained for CompPhish
-  schema compatibility but is a **collection artefact** and is excluded from modelling.
+- URL features are computed on the **scheme-stripped** URL; `is_https` is retained as a column
+  but is a **collection artefact** and is excluded from modelling.
 - **Group-aware temporal split** (70/15/15) grouped by registrable domain, so campaign subdomains
   never span train/test.
 - **PII redaction** (phone/email/account numbers → tokens); no id↔PII mapping is released.
@@ -89,7 +90,7 @@
   the rest is the anti-fraud (gambling/investment/counterfeit) scope of the dominant feed.
 
 ## 5. Distribution
-- **Open tier (CC BY 4.0):** URL table, CompPhish-aligned features, labels, splits, documentation.
+- **Open tier (CC BY 4.0):** URL table, 21-feature lexical URL table, labels, splits, documentation.
 - **Gated tier (on request):** captured phishing HTML pages and screenshots (live malicious/
   brand-cloning captures; research-use only, not for redistribution).
 - **License:** CC BY 4.0 (data); MIT (code). **Attribution:** NCSC "Tin Nhiem Mang"; the Tranco list.

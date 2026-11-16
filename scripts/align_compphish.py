@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-align_compphish.py — Featurize URLs into the CompPhish 26-column schema so VN data can be
-trained/tested jointly (cross-dataset) with CompPhish (Goenka 2026, 10.17632/fmbs4kp9wz.2).
+align_compphish.py — Featurize URLs into the study's 26-column lexical schema (21 modelling
+features computed from the URL string alone), so any URL corpus can be re-featurised the same way.
+The file name is historical: CompPhish (Goenka et al. 2026) ships its own 70 URL+HTML features;
+this schema is not that set, though it can be computed from CompPhish's raw URLs.
 
 Input : a CSV with a URL column (+ optional label). Works on data/processed/dataset_url.csv
         (uses url_norm/url and maps phishing->1, benign->0) or ANY external URL list, so that
         third-party corpora can be re-featurised into the same schema for a multi-corpus
         cross-dataset study. Column matching is case-insensitive.
-Output: CSV with exactly: <25 CompPhish features>, label
+Output: CSV with exactly: <25 schema columns>, label
 
 RUN:
   # our VN dataset -> CompPhish format
@@ -87,7 +89,7 @@ def main():
             if tcol:
                 feat["tier"] = r.get(tcol, "")
             w.writerow(feat); n += 1
-    print(f"Wrote {n} rows -> {args.out} (CompPhish schema)")
+    print(f"Wrote {n} rows -> {args.out} (lexical URL schema)")
 
 
 if __name__ == "__main__":

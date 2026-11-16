@@ -2,8 +2,9 @@
 
 The released dataset is the **URL** table `dataset_url.csv`, split into `train/val/test` (the
 `splits/` folder) by a **group-aware temporal** rule (grouped by registrable domain). A companion
-`vn_compphish.csv` re-featurises the same URLs into the exact CompPhish schema for cross-dataset
-study. Text-message/email/QR channels are NOT part of this release.
+`vn_compphish.csv` holds 21 lexical features computed from the URL string alone, so the same features
+can be extracted from the raw URLs of other corpora (CompPhish among them) for cross-dataset study.
+The file name is historical: these are PhishVN's own features, not CompPhish's 70-feature set. Text-message/email/QR channels are NOT part of this release.
 
 ## `dataset_url.csv` — core columns
 
@@ -34,14 +35,14 @@ study. Text-message/email/QR channels are NOT part of this release.
 | `url_len`, `num_dots`, `num_subdomains` | Length / dot count / subdomain depth |
 | `has_ip`, `has_at`, `suspicious_tld` | IP-literal / `@` present / scam-prone TLD (0/1) |
 
-## `vn_compphish.csv` — CompPhish-aligned modelling schema (21 features + label)
+## `vn_compphish.csv` — lexical modelling schema (21 features + label)
 
 `url_len, dom_len, is_ip, tld_len, subdom_cnt, letter_cnt, digit_cnt, special_cnt, eq_cnt, qm_cnt,`
 `amp_cnt, dot_cnt, dash_cnt, under_cnt, letter_ratio, digit_ratio, spec_ratio, slash_cnt, entropy,`
 `path_len, query_len` — plus `label` (and `split`).
 
 > All length/count/entropy features are computed on the **scheme-stripped** URL. The `is_https`
-> column is kept for CompPhish compatibility but is a **collection artefact** and is **excluded from
+> column is kept in the file but is a **collection artefact** and is **excluded from
 > modelling**.
 
 ## Preliminary content subset (gated tier)

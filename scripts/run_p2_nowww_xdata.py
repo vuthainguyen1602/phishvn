@@ -7,7 +7,7 @@ corpora: on PhishVN and ISCX-URL2016 it is almost only on phishing rows, on PhiU
 benign row and on PhishStorm on two thirds of them. subdom_cnt, dot_cnt and the length features all
 count it, so a model can learn "www. means phishing" on one corpus and be scored on a corpus where
 it means the opposite. This arm removes the prefix from every host in all four corpora, recomputes
-the CompPhish features, and reruns the matrices, so the share of the below-chance transfer that
+the 21 lexical features, and reruns the matrices, so the share of the below-chance transfer that
 the prefix explains is measured rather than argued. PhishVN enters as one row per host (P2's
 dedup_audit corpus), since stripping the prefix from the released corpus would turn its 16,855
 twin rows into exact duplicates.

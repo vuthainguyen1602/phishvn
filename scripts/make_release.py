@@ -122,13 +122,13 @@ def _readme(version, stats):
     top_scen = ", ".join(f"{k}={v}" for k, v in scen.most_common())
     return f"""# PhishVN v{version} — Vietnamese URL Phishing Dataset (open tier)
 
-Time-stamped Vietnamese URL phishing dataset with a CompPhish-aligned 21-feature lexical schema,
+Time-stamped Vietnamese URL phishing dataset with a 21-feature lexical URL schema,
 impersonation-scenario labels, gold/silver label-confidence tiers, and a group-aware temporal split.
 Released {_dt.date.today().isoformat()} under CC BY 4.0 (see LICENSE). Cite via CITATION.cff / the DOI.
 
 ## Contents
 - `data/dataset_url.csv` — full record table ({n} rows).
-- `data/vn_compphish.csv` — the same URLs re-featurised into the exact CompPhish schema.
+- `data/vn_compphish.csv` — the same URLs as 21 lexical features computed from the URL string alone (the file name is historical; the features are PhishVN's own, not CompPhish's).
 - `data/splits/url_{{train,val,test}}.csv` — the official group-aware temporal split.
 - `data/attacks/p3_paraphrase{{,_band}}.csv` — the 386 paraphrased lures of the evasion study and
   their Jaccard-controlled counterparts. Every lure carries the simulated link

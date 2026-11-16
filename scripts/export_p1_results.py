@@ -5,7 +5,7 @@ per-seed results, no seeds, no prediction files, no fitted artefacts. Nobody can
 confidence intervals or the stratum breakdown without rerunning training").
 
 Re-runs the exact canonical protocol of scripts/make_p1_assets.py (gold+silver core,
-official train/test splits, CompPhish features, threshold 0.5) and exports everything a
+official train/test splits, 21 lexical URL features, threshold 0.5) and exports everything a
 reader needs to verify Tables "benchmark", "difficulty" and "ablation" WITHOUT retraining:
 
   results/p1a_results_bundle/   (name fixed by the published deposit)

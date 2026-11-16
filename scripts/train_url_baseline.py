@@ -3,7 +3,7 @@
 train_url_baseline.py — Baseline phishing detection from URL features (runs out of the box).
 
 Auto-detects the feature schema:
-  * CompPhish schema (Goenka 2026) if its 22 numeric columns are present, or
+  * the 21-feature lexical schema (align_compphish.py) if its 22 numeric columns are present, or
   * our basic schema (from normalize_merge) otherwise.
 
 Supports CROSS-DATASET evaluation via --test-in (train on --in, test on a different file), e.g.
@@ -51,10 +51,10 @@ PARAM_GRID = {
 # our basic schema (from normalize_merge)
 BASIC = ["url_len", "num_dots", "num_subdomains", "has_ip", "has_at", "suspicious_tld",
          "domain_len", "num_hyphens", "num_digits"]
-# CompPhish numeric schema (21 features).
+# The lexical URL schema (21 features; variable name historical).
 # NOTE: is_https is intentionally EXCLUDED — in our collection benign was stored with https
 # and phishing with http, making the scheme a spurious perfect predictor (F1=1.0 artifact).
-# The column still exists in the CSV for CompPhish schema compatibility; we just don't train on it.
+# The column still exists in the CSV; we just don't train on it.
 COMPPHISH = ["url_len", "dom_len", "is_ip", "tld_len", "subdom_cnt", "letter_cnt", "digit_cnt",
              "special_cnt", "eq_cnt", "qm_cnt", "amp_cnt", "dot_cnt", "dash_cnt", "under_cnt",
              "letter_ratio", "digit_ratio", "spec_ratio", "slash_cnt", "entropy",

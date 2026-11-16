@@ -4,7 +4,7 @@ p2_dup_leakage.py — how much of P2's full-corpus random split is memorisable, 
 memorisation alone is worth.
 
 Round-2 review, M3. The `random` protocol behind the abstract's 0.922 is a plain train_test_split
-with no domain guard and no de-duplication, and the 21 CompPhish features are string statistics
+with no domain guard and no de-duplication, and the 21 lexical features are string statistics
 that collapse distinct URLs onto identical vectors in bulk. Measures a census, the twin rate, a
 memorisation ORACLE (a lookup table that learns nothing; its F1 is the value of the leak), an
 all-positive floor, the ceiling any function of these features can reach, and the twin rates of

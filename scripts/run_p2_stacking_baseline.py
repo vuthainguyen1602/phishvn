@@ -7,7 +7,7 @@ WHY. The recent ensemble literature (representative: Connolly & Atlam 2025, JNCA
 RF + XGBoost under a meta-learner, with hybrid feature selection) reports ~99.5% accuracy under
 random splits. P2's claim is that the binding constraint here is temporal shift, not
 in-distribution fit, so the question is whether that recipe closes the temporal gap or merely
-polishes the random-split number. Both ingredients on the CompPhish-21 schema:
+polishes the random-split number. Both ingredients on the 21-feature lexical URL schema:
 
   * Stacking     — RandomForest + XGBoost bases (the same configs the P2 benchmark uses for the
                    single-family rows, so the comparison isolates the ensemble), 5-fold OOF

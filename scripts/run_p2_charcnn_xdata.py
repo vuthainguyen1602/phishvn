@@ -3,7 +3,7 @@
 run_p2_charcnn_xdata.py — the character-CNN in the four-corpus transfer matrix.
 
 WHY. Section 6.7 closes with a scoped claim: what fails to transfer is "this feature space", the
-21-feature CompPhish schema, and a model that reads the URL string might place the boundary
+21-feature lexical URL schema, and a model that reads the URL string might place the boundary
 somewhere the hand-built space cannot. The manuscript left that as a comment marked
 [NEED EXPERIMENT]. The eighth arm already exists (run_p2_charcnn.py) and the matrix already
 exists (run_cross_dataset.py); this runs the one in the other, so the sentence can be a

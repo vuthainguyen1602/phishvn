@@ -191,7 +191,7 @@ def main():
     df = add_label(pd.read_csv(args.inp))
     feats = [c for c in COMPPHISH if c in df.columns]
     if len(feats) != len(COMPPHISH):
-        raise SystemExit(f"corpus lacks CompPhish schema ({len(feats)}/{len(COMPPHISH)} features)")
+        raise SystemExit(f"corpus lacks the lexical URL schema ({len(feats)}/{len(COMPPHISH)} features)")
     df = df.dropna(subset=feats)
 
     protocols = {}

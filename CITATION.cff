@@ -4,7 +4,7 @@ title: "PhishVN: A Time-Stamped Vietnamese URL Phishing Dataset with Impersonati
 abstract: >-
   An open, time-stamped Vietnamese URL phishing dataset of 53,116 URLs (an 18,997-record
   verified core of 2,587 phishing / 16,410 legitimate, plus a 34,119-record community/feed
-  expansion) with a 21-feature CompPhish-aligned lexical schema, impersonation-scenario labels,
+  expansion) with a 21-feature lexical URL schema, impersonation-scenario labels,
   gold/silver label-confidence tiers, and a group-aware temporal split. Includes a preliminary
   paired HTML/screenshot subset.
 type: dataset
@@ -19,7 +19,6 @@ keywords:
   - Vietnamese
   - URL features
   - cybersecurity dataset
-  - CompPhish
   - concept drift
 authors:
   - given-names: Thai

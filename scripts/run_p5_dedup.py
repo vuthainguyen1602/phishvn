@@ -66,7 +66,7 @@ NOWWW = os.path.join(OUT, "drift_compphish_nowww.csv")
 
 
 def build_nowww():
-    """Strip a leading www. from every URL and recompute the CompPhish features with the same
+    """Strip a leading www. from every URL and recompute the lexical URL features with the same
     aligner make_p5_assets.py's input comes from; rows, dates and ids are unchanged."""
     import subprocess, tempfile
     u = pd.read_csv(os.path.join(ROOT, "data", "processed", "dataset_url.csv"), low_memory=False)

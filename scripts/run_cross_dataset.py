@@ -169,7 +169,7 @@ def cell_score(train_df, test_df, same, metric, seeds, model="RandomForest", tun
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpora", nargs="+", required=True,
-                    help="name=path.csv entries, each already in the CompPhish schema.")
+                    help="name=path.csv entries, each already in the lexical URL schema.")
     ap.add_argument("--metric", default="F1", choices=["F1", "PR-AUC", "ROC-AUC", "FPR@R0.90", "MCC", "BalAcc"])
     ap.add_argument("--seeds", type=int, default=5)
     ap.add_argument("--model", default="RandomForest",
@@ -193,7 +193,7 @@ def main():
     drop = {f.strip() for f in args.drop.split(",") if f.strip()}
     unknown = drop - set(COMPPHISH)
     if unknown:
-        raise SystemExit(f"--drop names not in the CompPhish schema: {sorted(unknown)}")
+        raise SystemExit(f"--drop names not in the lexical URL schema: {sorted(unknown)}")
     feats = [c for c in COMPPHISH if c not in drop]
     if drop:
         print(f"[i] artefact-pruning: dropping {sorted(drop)} -> {len(feats)} features")

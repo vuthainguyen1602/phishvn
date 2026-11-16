@@ -2,7 +2,7 @@
 
 Code and documentation for **PhishVN**, an open, time-stamped Vietnamese URL phishing dataset
 (53,116 URLs: an 18,997-record verified core of 2,587 phishing / 16,410 legitimate, plus a
-34,119-record community/feed bronze expansion) with a CompPhish-aligned 21-feature lexical
+34,119-record community/feed bronze expansion) with a 21-feature lexical URL
 schema, impersonation-scenario labels, gold/silver/bronze confidence tiers, and a group-aware
 temporal split.
 
@@ -16,7 +16,7 @@ temporal split.
 > relies on have changed. Reproduce the article from the release; follow the project here.
 
 ## What's here
-- `scripts/` — URL data collection, normalisation, CompPhish features, baselines, audit, release tools.
+- `scripts/` — URL data collection, normalisation, lexical URL features, baselines, audit, release tools.
 - `docs/` — datasheet, column schema, data-source notes.
 - `docs/verify/` — the completed human label audit: time-stamped pre-specified codebook (with its amendment
   log), both annotators' independent sheets, the machine pass, and the arbitration record.
