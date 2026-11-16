@@ -96,7 +96,7 @@
 - **License:** CC BY 4.0 (data); MIT (code). **Attribution:** NCSC "Tin Nhiem Mang"; the Tranco list.
 
 ## 6. Maintenance
-- **Versioning:** semantic version + date (this is **v3.1.0**, DOI `10.17632/b97hxbxtpd.4`).
+- **Versioning:** semantic version + date (this is **v3.1.1**, DOI `10.17632/b97hxbxtpd.5`).
   **Changes since v3.0.0** (DOI `.3`): documentation-only — this datasheet now records the
   **completed** label audit of Section 4 (the v3.0.0 copy predated completion and said "in
   progress"); every data file is byte-identical to v3.0.0.
