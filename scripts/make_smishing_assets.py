@@ -288,7 +288,7 @@ def emit_results():
               % (r["n_test"], pos, r["seeds"]))
     buf.write("\\begin{tabular}{lrrrrr}\n\\toprule\n"
               "Arm & F1 & SD & Precision & Recall & FPR \\\\\n\\midrule\n")
-    for k, name in (("url", "URL only (CompPhish-21)"), ("text", "Text only (frozen PhoBERT)"),
+    for k, name in (("url", "URL only (lexical-21)"), ("text", "Text only (frozen PhoBERT)"),
                     ("fusion", "Fusion")):
         m = r["arms"][k]
         buf.write(f"{name} & {m['f1']:.3f} & {r['arms_sd'][k]:.3f} & {m['precision']:.3f} & "
@@ -726,7 +726,7 @@ def fig_ladder(cues, fus, out):
     nf = (cues.get("language") or {}).get("nonlinear_floor", {})
     ft = (json.load(open(PREDEC["ft"], encoding="utf-8"))["arms"]["text_ft"]["f1"]
           if os.path.exists(PREDEC["ft"]) else 0.0)
-    arms = [("URL only\n(CompPhish-21)", fus["arms"]["url"]["f1"], BLUE),
+    arms = [("URL only\n(lexical-21)", fus["arms"]["url"]["f1"], BLUE),
             ("bracketed-token presence", cues["baselines"]["tokens"]["f1"], GRAY),
             ("diacritics + length\n+ tokens, linear", floor, GRAY),
             ("diacritics + length + format,\nno token names, boosted trees",
