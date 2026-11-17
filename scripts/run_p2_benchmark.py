@@ -202,7 +202,11 @@ def main():
         tr, te = df[df.split == "train"], df[df.split == "test"]
         Xtr, ytr = tr[feats].to_numpy(float), tr["y"].to_numpy(int)
         Xte, yte = te[feats].to_numpy(float), te["y"].to_numpy(int)
-        protocols["temporal"] = lambda s: (Xtr, Xte, ytr, yte)
+        # bind the bundled split now: the loop below reassigns Xtr/Xte/ytr/yte, and a closure over
+        # the names would hand the temporal protocol the last random split instead (the bug in the
+        # runs before 2026-11-17, whose "temporal" rows were the random split of seed 4)
+        split = (Xtr, Xte, ytr, yte)
+        protocols["temporal"] = lambda s, split=split: split
         print(f"temporal split: train={len(tr)} test={len(te)}")
     else:
         print("[!] no `split` column — temporal protocol skipped")

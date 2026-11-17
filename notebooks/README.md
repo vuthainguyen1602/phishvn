@@ -11,7 +11,7 @@ English.
 | `qr/` | QR-code phishing in Vietnam | the study's data package on Zenodo, placed in `qr/qr_data/` |
 | `suffix_blindspot/` | the `.vn` suffix blind spot of URL phishing detectors | downloaded by the notebook from the PhishVN deposit on Mendeley Data |
 | `feed_measurement/` | measuring the phishing-intelligence feeds that cover Vietnam | downloaded by the notebook from the PhishVN deposit on Mendeley Data |
-| `url_benchmark/` | what a phishing-URL benchmark measures: configuration, duplicates and corpus shift | PhishVN from Mendeley Data; the three external corpora from the study's Zenodo package, placed in `url_benchmark/url_data/` |
+| `url_benchmark/` | what a phishing-URL benchmark measures: configuration, duplicates and corpus shift (four notebooks, run 01 to 04; the code is in `p2lib/`) | PhishVN from Mendeley Data; the three external corpora from the study's Zenodo package, placed in `url_benchmark/url_data/` |
 | `stream_construction/` | how the construction of a time-ordered stream sets the staleness gap of a phishing-URL detector | downloaded by the notebook from the PhishVN deposit on Mendeley Data, and four columns of PhreshPhish from Hugging Face at a pinned revision |
 | `content_paraphrase/` | content and URL fusion for Vietnamese phishing pages (the folder keeps its first name) | the study's data package on Zenodo, placed in `content_paraphrase/content_data/`, and the encoders from Hugging Face at pinned revisions |
 
