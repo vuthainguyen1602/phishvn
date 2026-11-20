@@ -572,7 +572,10 @@ def harmonisation() -> None:
         "\\caption{The transfer corpora at each stage: as distributed, the 1:1 subsample that enters"
         " the study, and that subsample reduced to the host. Rows sharing = rows whose host"
         " (registrable domain) occurs on another row of the same corpus; both labels = hosts"
-        " (registrable domains) carrying phishing and benign rows. PhishVN enters at host"
+        " (registrable domains) carrying phishing and benign rows. A host is the exact host string,"
+        " so \\texttt{www.}$x$ and $x$ are two hosts on one registrable domain: almost all of the 16{,}855"
+        " PhishVN rows that repeat another once the scheme and a leading \\texttt{www.} are set aside"
+        " (Section 3) count in the domain columns, not the host column. PhishVN enters at host"
         " level as released. Registrable domains here follow the full Public Suffix List, under which"
         " subdomains of hosting platforms and of provincial zones are separate domains; the split guard"
         " folds those into their parent, which gives PhishVN the " + f"{int(pd.read_csv('data/processed/p2/p2_dup_leakage.csv').unique_regdom.iloc[0]):,}".replace(",", "{,}")

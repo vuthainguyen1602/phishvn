@@ -1662,7 +1662,8 @@ def gen_guard_control():
         f"arm's prior, the F1 step is {rng_(d_pm)} (CatBoost ${d_pm['CatBoost']:+.3f}$), and on "
         f"the metrics that do not depend on the prior the guard leaves a step of "
         f"{rng_(sub(d_roc))} ROC-AUC and {rng_(sub(d_fpr))} FPR@0.90 for every family except "
-        f"logistic regression (${d_roc['LogReg']:+.3f}$ and ${d_fpr['LogReg']:+.3f}$). On "
+        f"logistic regression (${d_roc['LogReg']:+.3f}$ and ${d_fpr['LogReg']:+.3f}$); these steps are "
+        f"against the guarded control, whereas Table~\\ref{{tab:strict}} prints the unguarded ones. On "
         f"ROC-AUC the guard accounts for about ${100*share:.0f}\\%$ of the unguarded step of the "
         f"six non-linear families, so their protocol step is small but not zero, and logistic "
         f"regression is the one family that pays almost nothing for moving forward in time. The "
@@ -2755,7 +2756,10 @@ def _host_arm_summary(d):
     out = {"diag": float(np.mean([roc.loc[n, n] for n in names])),
            "off": float(np.mean([roc.loc[i, j] for i, j in off])),
            "below": sum(roc.loc[i, j] < 0.5 for i, j in off),
-           "f1_below": sum(f1.loc[i, j] < floor[j] for i, j in off), "n": len(off)}
+           "f1_below": sum(f1.loc[i, j] < floor[j] for i, j in off), "n": len(off),
+           "f1_off": float(np.mean([f1.loc[i, j] for i, j in off])),
+           "f1_below_bal": sum(f1.loc[i, j] < floor[j] for i, j in off if i != j and j != "PhishVN"),
+           "floor": floor}
     mcc = os.path.join(d, "cross_dataset_MCC.csv")
     if os.path.exists(mcc):
         m = pd.read_csv(mcc, index_col=0)
@@ -2772,9 +2776,10 @@ def tab_nowww():
     rows = [("As released", "data/processed/p2"),
             ("One row per PhishVN host", "data/processed/p2/dedup_audit"),
             ("\\texttt{www.} removed in all four", "data/processed/p2/nowww")]
-    body = []
+    body, arms = [], []
     for label, d in rows:
         x = _host_arm_summary(d)
+        arms.append(x)
         mcc = f"${x['mcc_off']:.3f}$" if "mcc_off" in x else "--"
         body.append(f"{label} & ${x['diag']:.3f}$ & ${x['off']:.3f}$ & "
                     f"${x['diag'] - x['off']:.3f}$ & {x['below']}/{x['n']} & "
@@ -2784,7 +2789,14 @@ def tab_nowww():
         "\\caption{Random-forest transfer across the four corpora under three host treatments. "
         "ROC-AUC diagonal and off-diagonal means, their gap, the off-diagonal cells below chance, "
         "the off-diagonal cells whose F1 is below the all-positive classifier on their target, "
-        "and the off-diagonal mean MCC (zero for any constant classifier).}",
+        "and the off-diagonal mean MCC (zero for any constant classifier). ROC-AUC reads only how a "
+        "target's rows are ranked; F1 at $\\tau = 0.5$ also reads where their scores fall against the "
+        "threshold, so the two can move apart: with \\texttt{www.} removed the off-diagonal ROC-AUC mean "
+        f"rises from ${arms[0]['off']:.3f}$ to ${arms[2]['off']:.3f}$ while the off-diagonal F1 mean falls "
+        f"from ${arms[0]['f1_off']:.3f}$ to ${arms[2]['f1_off']:.3f}$. The floor is not what moves: it stays "
+        f"${arms[0]['floor']['PhiUSIIL']:.3f}$ on the three balanced targets, where the cells under it go from "
+        f"{arms[0]['f1_below_bal']} to {arms[2]['f1_below_bal']} of 9, and PhishVN's falls from "
+        f"${arms[0]['floor']['PhishVN']:.3f}$ to ${arms[2]['floor']['PhishVN']:.3f}$ with its prior.}}",
         "\\label{tab:nowww}",
         "\\setlength{\\tabcolsep}{3pt}",
         "\\begin{tabular}{lrrrrrr}",
