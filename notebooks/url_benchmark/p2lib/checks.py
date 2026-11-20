@@ -13,6 +13,7 @@ EXPECTED = Path("expected")
 THR_TOL = 1e-3      # columns read at a threshold chosen on validation rows, or PR-AUC on small windows
 ROUND4_TOL = 1.5e-4  # tables rounded to 4 decimals: one step in the last digit is 1e-4
 CNN_TOL = 0.03      # networks the paper trained on Apple's GPU (MPS), refitted here on the CPU
+REL_TOL = 1e-3      # derived numbers: relative tolerance for test statistics and ratios
 
 CHECKS = []
 TIME_COLS = {"fit_seconds", "seconds", "fit_s", "time_s", "elapsed_s", "wall_seconds", "fit_time"}
@@ -96,7 +97,9 @@ def flat(d, prefix=""):
     else:
         yield prefix, d
 
-def check_json(step, mine, saved_name, key=None, tol=0.0):
+def check_json(step, mine, saved_name, key=None, tol=0.0, rel_tol=0.0):
+    # rel_tol: a field also passes within rel_tol of the saved value (test statistics divide by a
+    # small standard error, so the last-digit noise of parallel boosters grows in them)
     saved = json.loads((EXPECTED / saved_name).read_text())
     new, ref = dict(flat(_plain(mine))), dict(flat(saved if key is None else saved[key]))
     keys = sorted(set(new) | set(ref))
@@ -106,12 +109,13 @@ def check_json(step, mine, saved_name, key=None, tol=0.0):
         if isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool):
             d = 0.0 if (a == b or (math.isnan(a) and math.isnan(b))) else abs(a - b)
             worst = max(worst, d)
-            if not d <= tol:
+            if not (d <= tol or d <= rel_tol * abs(b)):
                 bad.append(k)
         elif a != b:
             bad.append(k)
     label = f"{saved_name}[{key}]" if key else saved_name
-    check(step, label, not bad, f"{len(keys)} fields, {len(bad)} differ, max |difference| {worst:.2g} (tolerance {tol:g})")
+    check(step, label, not bad, f"{len(keys)} fields, {len(bad)} differ, max |difference| {worst:.2g} (tolerance {tol:g}"
+          + (f", or {rel_tol:g} relative)" if rel_tol else ")"))
     for k in bad[:8]:
         print(f"    differs: {k}: saved={ref.get(k, '<missing>')!r} notebook={new.get(k, '<missing>')!r}")
 

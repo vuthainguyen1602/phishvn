@@ -84,6 +84,19 @@ runs the three drivers; the remaining arms take their own flags.
   every CORAL cell, the two-class temporal split on PhreshPhish, the value of the undated rows,
   attribution stability, cost, and the character n-gram model on the dated rows and in the
   transfer matrix.
+- `run_p2_prior_control.py`, `run_p2_val_threshold.py`, `run_p2_temporal_twosided.py`,
+  `run_p2_disjoint_windows.py`, `run_p2_dedup_audit.py`, `run_p2_nowww_xdata.py`,
+  `run_p2_charcnn_xdata.py`, `run_p2_xdata_vn_grouped.py`, `run_p2_threshold_transfer.py`,
+  `run_p2_shap_weighting.py` — the composition step at a fixed class prior, the decomposition at a
+  threshold chosen on validation data, both classes cut by the calendar, the protocol contrast on
+  test periods that do not overlap, one row per URL or per host, every host in canonical form in
+  the transfer matrix, the character-CNN in the transfer matrix, PhishVN's diagonal drawn by
+  registrable domain, a threshold carried across corpora, and the TreeSHAP attribution.
+- Some logs under `notebooks/url_benchmark/expected/additional/` come from the drivers above run
+  with a flag: `run_p2_temporal_strict.py --cut 0.5|0.6|0.8` (`windows_cut*.csv`),
+  `run_p2_temporal_strict.py --phish-source chongluadao|tinnhiemmang` (`source_control/`, one
+  phishing feed), `run_p2_hpo.py --families ...` (`hpo_extended.csv`, all seven families) and
+  `run_p2_charcnn.py --emb/--filters/--dropout` (`charcnn_small/large/reg.csv`).
 - `make_p2_bench_assets.py`, `make_p2_revision_assets.py`, `make_p2_shiftmatrix_figure.py`,
   `p2_supp.py` — the table and figure generators.
   They write LaTeX into a manuscript tree that is not part of this repository; they ship so the
