@@ -87,6 +87,16 @@ def ci95(d: np.ndarray, test_frac: float = 0.30) -> tuple[float, float, dict]:
     return t["mean"] - half, t["mean"] + half, t
 
 
+
+def _vn_hosts_nowww(strip: bool = True) -> str:
+    """Distinct PhishVN hosts once a leading www. is removed, by the audit's own host parser."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from audit_p2_harmonisation import host_of
+    h = pd.read_csv("data/processed/vn_compphish.csv", usecols=["url"]).url.map(host_of)
+    if strip:
+        h = h.str.replace(r"^www\.", "", regex=True)
+    return f"{h.nunique():,}".replace(",", "{,}")
+
 # --------------------------------------------------------------------------- protocol, primary
 def _boot_offset(g: pd.DataFrame, boot: pd.DataFrame | None) -> str:
     """Largest gap between the domain bootstrap's point estimate (validation-carved fits) and the
@@ -575,7 +585,9 @@ def harmonisation() -> None:
         " (registrable domains) carrying phishing and benign rows. A host is the exact host string,"
         " so \\texttt{www.}$x$ and $x$ are two hosts on one registrable domain: almost all of the 16{,}855"
         " PhishVN rows that repeat another once the scheme and a leading \\texttt{www.} are set aside"
-        " (Section 3) count in the domain columns, not the host column. PhishVN enters at host"
+        " (Section 3) count in the domain columns, not the host column (with that prefix removed,"
+        " PhishVN has " + _vn_hosts_nowww() + " hosts rather than " + _vn_hosts_nowww(strip=False) + ")."
+        " PhishVN enters at host"
         " level as released. Registrable domains here follow the full Public Suffix List, under which"
         " subdomains of hosting platforms and of provincial zones are separate domains; the split guard"
         " folds those into their parent, which gives PhishVN the " + f"{int(pd.read_csv('data/processed/p2/p2_dup_leakage.csv').unique_regdom.iloc[0]):,}".replace(",", "{,}")

@@ -1008,6 +1008,12 @@ def _dedup_transfer_txt():
             f"${cn[1]:.3f}$ off-diagonal with {cn[2]} cells below chance.")
 
 
+def _prior_of(path):
+    """Phishing share of one PhishVN file, through the label rule every run uses."""
+    from train_url_baseline import add_label
+    return float(add_label(pd.read_csv(path, low_memory=False))["y"].mean())
+
+
 def gen_dedup_sensitivity():
     """The duplicated-host sensitivity arm (run_p2_dedup_audit.py), read off its CSVs.
 
@@ -1088,7 +1094,12 @@ def gen_dedup_sensitivity():
         f"being coarse), and a family's F1 moves by at most ${mv1.max():.3f}$ across the three "
         f"same-corpus designs, the size of the between-family spreads (${sp(full1):.3f}$, "
         f"${sp(dr1):.3f}$ and ${sp(t1):.3f}$). The cross-design movement of "
-        f"Figure~\\ref{{fig:evaldesign}} is therefore largely the duplicated rows. The dated-row "
+        f"Figure~\\ref{{fig:evaldesign}} is therefore largely the duplicated rows. This and the reading of "
+        f"Table~\\ref{{tab:priorcontrol}}, that the composition step is largely the class prior, describe "
+        f"the same rows: the duplicates are almost all undated phishing rows, and removing them moves "
+        f"the phishing share from ${_prior_of('data/processed/vn_compphish.csv'):.3f}$ to "
+        f"${_prior_of('data/processed/p2/dedup_audit/vn_compphish_dedup.csv'):.3f}$, against "
+        f"$\\PriorTemporal$ in the dated design. The dated-row "
         f"results barely move: the temporal spread is ${sp(t1):.3f}$ against ${sp(t0):.3f}$, "
         f"logistic regression still leads CatBoost (by ${t1['LogReg'] - t1['CatBoost']:.3f}$ against "
         f"${t0['LogReg'] - t0['CatBoost']:.3f}$), and the protocol step is unchanged. Transfer "
@@ -1340,9 +1351,9 @@ def tab_trivial_floor():
                                 "designs": [[l_, p_, b_] for l_, p_, b_ in designs]}
     for label, p, best in designs:
         fl = 2 * p / (1 + p)
-        lines.append(f"{label} & {p:.3f} & {fl:.3f} & {best:.3f} ({best - fl:+.3f}) \\\\")
+        lines.append(f"{label} & {p:.3f} & {fl:.3f} & {best:.3f} (${best - fl:+.3f}$) \\\\")
     lines.append(f"Cross-dataset (mean off-diagonal) & n/a & {floor_mean:.3f} & "
-                 f"{off_mean:.3f} ({off_mean - floor_mean:+.3f}) \\\\")
+                 f"{off_mean:.3f} (${off_mean - floor_mean:+.3f}$) \\\\")
     lines += ["\\bottomrule", "\\end{tabular}",
               "\\\\[4pt]",
               "\\begin{tabular}{l cccc}", "\\toprule",
